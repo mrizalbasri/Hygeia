@@ -1,0 +1,13 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+
+# Dependencies and generated output
+node_modules/
+.svelte-kit/
+backend/bin/
+
+# OS files
+.DS_Store
+Thumbs.db
