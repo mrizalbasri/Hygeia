@@ -386,6 +386,18 @@ func (s *Service) GetResult(ctx context.Context, token []byte, id string) (Resul
 		}
 		event := audit.Event{ChainID: r.patientID, Action: "lab_result.view", ResourceType: "lab_result", ResourceID: id, Outcome: "allow", Basis: accessBasis(actor)}
 		allowed := policy.CanViewLabResult(actor, r.access())
+		if !allowed && r.Status == "completed" {
+			grant, err := policy.FindLabResultConsent(ctx, tx, actor, r.episode.PatientUserID, id, s.now())
+			if err != nil {
+				return err
+			}
+			allowed = policy.CanUseLabResultConsent(actor, grant, r.episode.PatientUserID, id, s.now())
+			if allowed {
+				event.Basis = "consent"
+				event.ConsentID = grant.ID
+				event.ConsentExpiresAt = &grant.ExpiresAt
+			}
+		}
 		if !allowed {
 			event.Outcome = "deny"
 			event.Basis = "no_access"
