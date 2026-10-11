@@ -77,7 +77,8 @@ episode diakhiri; hanya permintaan yang belum disetujui yang dibatalkan.
 Consent sudah tersedia untuk satu `lab_result` dan tindakan `view`. Izin terikat
 pada dokter peminta serta kliniknya, dengan durasi 1 jam, 24 jam, atau 7 hari.
 Pasien dapat menolak atau mencabutnya. Scope jenis resource secara keseluruhan,
-resep, dan akses darurat dalam blueprint berikut belum diterapkan. Pembacaan
+dan resep dalam blueprint consent berikut belum diterapkan. Akses darurat
+tersedia terpisah melalui grant dokter+klinik 60 menit (migrasi 8). Pembacaan
 hasil mengunci consent hingga audit selesai dan mengecek waktu setelah menunggu
 kunci, agar pencabutan dan kedaluwarsa tidak dilangkahi.
 
@@ -96,6 +97,16 @@ Tidak ada tabel timeline, dual-write, backfill, atau perubahan format hash.
 Riwayat akses tetap mencakup pembacaan dan penolakan; timeline mengecualikannya.
 Urutan memakai seq rantai dengan cursor eksklusif, bukan offset. Kontrak aktual:
 `08-BACKEND-TIMELINE.md`.
+
+Tahap penyelesaian backend (12 Oktober 2026) menambah admin akun/organisasi,
+ledger administratif append-only, notifikasi transaksional, akses darurat,
+CarePass/QR untuk satu resource dan stream SSE. CarePass hanya menyimpan hash
+token; penebus pertama mengikat grant ke dokter+klinik. Policy di endpoint
+klinis memeriksa grant dengan row lock dan waktu setelah lock. Detail kontrak
+ada pada dokumen 09–13. SSE menggunakan polling PostgreSQL tanpa Redis;
+alokasi notifikasi diserialisasi sampai commit untuk cursor yang tidak melewatkan
+transaksi lebih lambat. Router aktual adalah `net/http`; diagram `chi` dan
+blueprint di bawah menggambarkan rancangan awal, bukan dependensi implementasi.
 
 Keputusan implementasi MVP (11 Oktober 2026): jalur care episode memberi akses
 kepada dokter pengundang yang masih berada di klinik episode, bukan seluruh

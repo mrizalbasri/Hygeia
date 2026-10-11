@@ -36,6 +36,21 @@ immutability hasil. Migrasi 4 menambah `consents` untuk izin baca satu hasil lab
 Migrasi 5 menambah `prescriptions` dan `prescription_items` untuk resep dan
 penugasan apotek yang disetujui pasien. Jalankan migrasi sebelum memakai API baru.
 
+Migrasi 6 menambah ledger admin, 7 inbox notifikasi, 8 grant akses darurat,
+dan 9 CarePass berbatas waktu. Backend inti dan fitur tambahan kini tersedia:
+
+| Modul | Kontrak aktual |
+| --- | --- |
+| Admin akun/organisasi dan ledger | [Admin](../docs/09-BACKEND-ADMIN.md) |
+| Inbox dan read state | [Notifikasi](../docs/10-BACKEND-NOTIFICATIONS.md) |
+| Akses darurat 60 menit dan tinjauan | [Emergency](../docs/11-backend-emergency-api.md) |
+| CarePass/QR dan pencabutan | [CarePass](../docs/12-BACKEND-CAREPASS.md) |
+| SSE/replay notifikasi | [Realtime](../docs/13-BACKEND-REALTIME.md) |
+
+CarePass memerlukan `PUBLIC_APP_URL` berupa origin aplikasi, default development
+`http://localhost:5173`. Production wajib origin HTTPS. QR mengarah ke route
+frontend `/carepass#token=...`; UI scan/redeem harus memakai kontrak backend.
+
 ## Migrasi dan akun demo
 
 Dari folder `backend`, jalankan:
