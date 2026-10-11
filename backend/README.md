@@ -137,8 +137,9 @@ Readiness memeriksa koneksi, belum memeriksa versi skema atau migrasi.
 | GET | `/api/v1/me` | Identitas/peran/organisasi dari DB; HTTP 401 tanpa sesi aktif |
 
 Semua POST/PATCH wajib membawa cookie CSRF dan header `X-CSRF-Token` dari endpoint
-CSRF. Login memerlukan `Content-Type: application/json`. Frontend menangani alur
-ini melalui proxy Vite. Respons autentikasi memakai `Cache-Control: no-store`.
+CSRF. Login memerlukan `Content-Type: application/json`. Pengembang frontend
+perlu menambahkan proxy Vite dan integrasi login; klien API dapat menguji
+endpoint langsung dengan cookie jar. Respons autentikasi memakai `Cache-Control: no-store`.
 Error berbentuk `{ "error": { "code", "message", "request_id" } }`.
 
 Password memakai Argon2id (64 MiB, 3 iterasi, paralelisme 2, salt acak 16 byte).
@@ -153,8 +154,8 @@ perlu ditentukan sebelum deployment. Pembersihan sesi kedaluwarsa belum
 dijadwalkan; otorisasi tetap memeriksa waktu kedaluwarsa pada setiap request.
 
 Tahap ini belum mencakup registrasi publik, verifikasi email, reset password,
-MFA, policy resep, atau audit login berantai hash. Dashboard baru berisi
-identitas pengguna dan navigasi per peran, tanpa data klinis.
+MFA, policy resep, atau audit login berantai hash. Frontend yang di-commit masih
+halaman starter; login dan dashboard per peran belum tersedia.
 
 ## API care episode dan audit
 
@@ -291,10 +292,11 @@ nama tersembunyi `.go-mod` agar tidak ikut ditemukan oleh `go test ./...`.
 - `internal/audit/`: append HMAC transaksional, verifikasi, ringkasan kalimat.
 - `internal/httpapi/`: routing, health, readiness, dan logging request JSON.
 
-Frontend SvelteKit berada di `../frontend` dan dijalankan terpisah pada port
-default `5173`. Proxy Vite meneruskan `/api` ke `127.0.0.1:8080`; server-side
-dashboard memakai `API_BASE_URL` (default `http://127.0.0.1:8080`). Login tersedia
-di `/login`; dashboard diarahkan berdasarkan peran yang dikembalikan backend.
+Frontend SvelteKit berada di `../frontend` dan dapat menjalankan halaman starter
+pada port default `5173`. Checkout yang di-commit belum memuat proxy `/api`,
+halaman `/login`, dashboard, atau helper SSR. Pengembang frontend perlu
+menambahkan integrasi tersebut sesuai
+[panduan API](../docs/05-BACKEND-API.md#integrasi-frontend-yang-perlu-ditambahkan).
 
 Referensi: [pgx](https://github.com/jackc/pgx),
 [PostgreSQL Docker image](https://hub.docker.com/_/postgres).

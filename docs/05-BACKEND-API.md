@@ -1,9 +1,46 @@
 # Kontrak API Hygeia untuk frontend
 
 Backend Go pada `http://127.0.0.1:8080`. Semua endpoint diawali `/api/v1`.
-Pada development, jalankan frontend dengan proxy Vite `/api` yang sudah tersedia.
-Browser memakai URL relatif `/api/v1/...`; autentikasi berbasis cookie sesi.
+Frontend yang di-commit masih halaman starter: route `/login`, dashboard,
+helper sesi, dan proxy `/api` belum tersedia. Dokumen ini adalah kontrak backend
+serta panduan untuk membangun integrasinya. Setup database, migrasi, seed, dan
+API mengikuti [panduan backend](../backend/README.md). API dapat diuji langsung
+dengan klien API yang menyimpan cookie, tanpa menjalankan frontend.
+
+Setelah proxy ditambahkan, browser memakai URL relatif `/api/v1/...`;
+autentikasi berbasis cookie sesi.
 Production memerlukan reverse proxy satu origin dan HTTPS. CORS belum dibuka.
+
+## Integrasi frontend yang perlu ditambahkan
+
+1. Tambahkan konfigurasi `server` berikut ke `defineConfig` pada
+   `frontend/vite.config.ts`, sambil mempertahankan konfigurasi plugins dan test:
+
+   ```typescript
+   server: {
+     proxy: {
+       '/api': { target: 'http://127.0.0.1:8080', changeOrigin: false }
+     }
+   },
+   ```
+
+2. Buat halaman `/login` yang mengambil `/auth/csrf`, lalu POST `/auth/login`
+   dengan JSON email/password, cookie CSRF, dan header `X-CSRF-Token`.
+   Gunakan URL relatif `/api/v1/...` dan `credentials: 'same-origin'` pada fetch.
+3. Muat identitas dari GET `/me`, tangani `401` dengan halaman login, dan gunakan
+   `role` dari respons untuk navigasi dashboard. Logout memakai POST
+   `/auth/logout` dengan CSRF. Jangan menyimpan token sesi di localStorage.
+4. Implementasikan dashboard dan alur episode, laboratorium, consent, serta
+   riwayat akses mengikuti kontrak di bawah. Proxy saja tidak membuat route UI.
+5. Jika memakai SSR SvelteKit, buat helper server untuk meneruskan cookie sesi
+   secara eksplisit ke backend. Teruskan `Set-Cookie` ke respons browser bila
+   login/logout melalui server. URL backend merupakan konfigurasi aplikasi
+   frontend yang perlu dibuat; belum ada helper SSR atau `API_BASE_URL` bawaan.
+
+Jalankan backend pada port 8080 dan frontend pada port yang ditampilkan Vite.
+Permintaan browser diarahkan ke origin frontend melalui proxy; jangan langsung
+memanggil port backend dari browser karena CORS belum diaktifkan. Pada produksi,
+siapkan reverse proxy satu origin dan HTTPS secara terpisah.
 
 ## Autentikasi dan error
 
@@ -195,14 +232,17 @@ async function mutate(path: string, method: 'POST' | 'PATCH', body: unknown) {
   return result;
 }
 
+// Pada form login yang perlu dibuat; password berasal dari input pengguna:
+await mutate('/auth/login', 'POST', { email, password });
 // Sesudah login sebagai dokter:
 await mutate('/episodes', 'POST', { patient_ref: 'HYG-DEMO-001' });
 // Sesudah login sebagai pasien, gunakan ID yang dikembalikan API:
 await mutate('/episodes/<episode-id>', 'PATCH', { action: 'accept' });
 ```
 
-Untuk SSR, teruskan cookie sesi secara eksplisit ke backend seperti pola
-`frontend/src/lib/server/identity.ts`. Jangan memakai helper browser di server.
+Contoh helper browser di atas perlu ditambahkan oleh pengembang frontend setelah
+proxy tersedia. Untuk SSR, implementasikan helper server sesuai langkah integrasi
+di atas; jangan memakai helper browser di server.
 
 ## Alur uji integrasi frontend
 

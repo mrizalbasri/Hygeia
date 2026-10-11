@@ -16,22 +16,15 @@ Dataset demo hanya menggunakan data sintetis.
   lokal yang sudah tersedia.
 - Dokumen kebutuhan bisnis, produk, arsitektur, dan design system.
 
-Halaman login dan dashboard awal per peran sudah terhubung ke backend. API care
-episode, laboratorium, dan audit tersedia; tampilan untuk alur tersebut belum
-dihubungkan. Consent untuk satu hasil lab sudah tersedia, termasuk durasi dan
-pencabutan oleh pasien. Resep dan akses darurat belum diimplementasikan.
+Frontend yang masuk repository masih berupa halaman starter. Halaman `/login`,
+dashboard per peran, dan proxy `/api` belum disertakan. API autentikasi, care
+episode, laboratorium, audit, dan consent untuk satu hasil lab sudah tersedia.
+Frontend perlu diintegrasikan melalui kontrak API. Resep dan akses darurat
+belum diimplementasikan.
 
 ## Menjalankan development
 
-Frontend (pnpm):
-
-```powershell
-cd frontend
-pnpm install
-pnpm dev
-```
-
-Backend (Go 1.26+), pada terminal terpisah:
+Backend (Go 1.26+), dari root repository:
 
 ```powershell
 cd backend
@@ -45,8 +38,31 @@ berisi `DATABASE_URL`, `SESSION_SECRET`, `AUDIT_HMAC_KEY`, `APP_ENV=development`
 yang sesuai. Untuk komputer baru, salin
 `backend/.env.example` ke `backend/.env` dan isi kredensial lokal.
 File `.env`, dependensi, cache, dan hasil build tidak disertakan dalam Git.
-Buka `http://localhost:5173/login`. Email akun demo tercantum pada panduan backend;
-password mengikuti `DEMO_PASSWORD` saat seed pertama kali dijalankan.
+Setelah API berjalan, periksa koneksi backend dari terminal lain:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8080/api/v1/health
+Invoke-RestMethod http://127.0.0.1:8080/api/v1/readyz
+```
+
+Login tersedia melalui `POST /api/v1/auth/login`, bukan halaman web. Ambil token
+dan cookie dari `GET /api/v1/auth/csrf`, lalu kirim JSON login beserta cookie dan
+header `X-CSRF-Token` menggunakan klien API yang menyimpan cookie. Email akun
+demo tercantum pada panduan backend; password mengikuti `DEMO_PASSWORD` saat
+seed pertama kali dijalankan.
+
+Frontend starter dapat dijalankan secara terpisah:
+
+```powershell
+cd frontend
+pnpm install
+pnpm dev
+```
+
+Buka URL root yang ditampilkan Vite (default `http://localhost:5173/`). Route
+`/login` belum tersedia pada checkout ini. Pengembang frontend perlu menambahkan
+proxy `/api`, form login, pengelolaan sesi, serta dashboard sesuai
+[panduan integrasi frontend](docs/05-BACKEND-API.md#integrasi-frontend-yang-perlu-ditambahkan).
 
 Lihat [panduan backend](backend/README.md) untuk konfigurasi PostgreSQL, endpoint
 health/readiness, dan cara mengarahkan cache Go ke drive D jika diperlukan.
