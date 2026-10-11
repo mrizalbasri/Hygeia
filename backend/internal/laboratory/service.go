@@ -398,6 +398,18 @@ func (s *Service) GetResult(ctx context.Context, token []byte, id string) (Resul
 				event.ConsentExpiresAt = &grant.ExpiresAt
 			}
 		}
+		if !allowed && r.Status == "completed" {
+			grant, err := policy.FindEmergencyGrant(ctx, tx, actor, r.episode.PatientUserID, s.now)
+			if err != nil {
+				return err
+			}
+			if grant.ID != "" {
+				allowed = true
+				event.Basis = "break_glass"
+				event.BreakGlassID = grant.ID
+				event.BreakGlassExpiresAt = &grant.ExpiresAt
+			}
+		}
 		if !allowed {
 			event.Outcome = "deny"
 			event.Basis = "no_access"

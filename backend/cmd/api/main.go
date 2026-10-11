@@ -18,6 +18,7 @@ import (
 	"github.com/mrizalbasri/Hygeia/backend/internal/admin"
 	"github.com/mrizalbasri/Hygeia/backend/internal/audit"
 	"github.com/mrizalbasri/Hygeia/backend/internal/auth"
+	"github.com/mrizalbasri/Hygeia/backend/internal/breakglass"
 	"github.com/mrizalbasri/Hygeia/backend/internal/care"
 	"github.com/mrizalbasri/Hygeia/backend/internal/config"
 	"github.com/mrizalbasri/Hygeia/backend/internal/consent"
@@ -88,10 +89,11 @@ func run(logger *slog.Logger) error {
 	prescriptionHandler := &prescription.Handler{Service: &prescription.Service{DB: pool, Audit: auditWriter}, Logger: logger}
 	adminHandler := &admin.Handler{Service: &admin.Service{DB: pool}}
 	notificationHandler := &notification.Handler{Service: &notification.Service{DB: pool}}
+	breakGlassHandler := &breakglass.Handler{Service: &breakglass.Service{DB: pool, Audit: auditWriter}}
 
 	server := &http.Server{
 		Addr:              net.JoinHostPort("", port),
-		Handler:           httpapi.NewAuthenticatedHandler(logger, pool.Ping, authHandler, csrfKey, secure, careHandler.Register, labHandler.Register, consentHandler.Register, prescriptionHandler.Register, adminHandler.Register, notificationHandler.Register),
+		Handler:           httpapi.NewAuthenticatedHandler(logger, pool.Ping, authHandler, csrfKey, secure, careHandler.Register, labHandler.Register, consentHandler.Register, prescriptionHandler.Register, adminHandler.Register, notificationHandler.Register, breakGlassHandler.Register),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,
