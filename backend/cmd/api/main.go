@@ -2,8 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/mrizalbasri/Hygeia/backend/internal/auth"
+	"github.com/mrizalbasri/Hygeia/backend/internal/config"
+	"github.com/mrizalbasri/Hygeia/backend/internal/database"
+	"github.com/mrizalbasri/Hygeia/backend/internal/httpapi"
 	"log/slog"
 	"net"
 	"net/http"
@@ -12,10 +17,6 @@ import (
 	"strconv"
 	"syscall"
 	"time"
-
-	"github.com/joho/godotenv"
-	"github.com/mrizalbasri/Hygeia/backend/internal/database"
-	"github.com/mrizalbasri/Hygeia/backend/internal/httpapi"
 )
 
 func main() {
@@ -27,9 +28,18 @@ func main() {
 }
 
 func run(logger *slog.Logger) error {
-	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return errors.New("could not load .env configuration")
+	if err := config.LoadEnv(); err != nil {
+		return err
 	}
+	csrfKey, err := hex.DecodeString(os.Getenv("SESSION_SECRET"))
+	if err != nil || len(csrfKey) != 32 {
+		return errors.New("SESSION_SECRET must contain 64 hexadecimal characters")
+	}
+	appEnv := os.Getenv("APP_ENV")
+	if appEnv != "" && appEnv != "development" && appEnv != "test" && appEnv != "production" {
+		return errors.New("APP_ENV must be development, test, or production")
+	}
+	secure := appEnv == "production"
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -48,10 +58,14 @@ func run(logger *slog.Logger) error {
 	}
 	defer pool.Close()
 	logger.Info("connected to PostgreSQL")
+	authHandler, err := auth.NewHandler(auth.Store{DB: pool}, secure)
+	if err != nil {
+		return errors.New("could not initialize authentication")
+	}
 
 	server := &http.Server{
 		Addr:              net.JoinHostPort("", port),
-		Handler:           httpapi.NewHandlerWithDatabase(logger, pool.Ping),
+		Handler:           httpapi.NewAuthenticatedHandler(logger, pool.Ping, authHandler, csrfKey, secure),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,

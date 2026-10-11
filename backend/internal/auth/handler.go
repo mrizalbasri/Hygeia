@@ -1,0 +1,216 @@
+package auth
+
+import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"io"
+	"mime"
+	"net"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/gorilla/csrf"
+	"github.com/jackc/pgx/v5"
+	"golang.org/x/time/rate"
+)
+
+const sessionCookie = "hygeia_session"
+const sessionTTL = 8 * time.Hour
+
+type loginLimit struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
+}
+
+type Handler struct {
+	store     Store
+	secure    bool
+	dummyHash string
+	mu        sync.Mutex
+	limits    map[string]*loginLimit
+}
+
+func NewHandler(store Store, secure bool) (*Handler, error) {
+	dummy, err := HashPassword("hygeia-dummy-password-never-a-user")
+	if err != nil {
+		return nil, err
+	}
+	return &Handler{store: store, secure: secure, dummyHash: dummy, limits: make(map[string]*loginLimit)}, nil
+}
+
+func (h *Handler) Register(mux *http.ServeMux) {
+	mux.HandleFunc("GET /api/v1/auth/csrf", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]string{"csrf_token": csrf.Token(r)})
+	})
+	mux.HandleFunc("POST /api/v1/auth/login", h.Login)
+	mux.HandleFunc("POST /api/v1/auth/logout", h.Logout)
+	mux.HandleFunc("GET /api/v1/me", h.Me)
+}
+
+func Protect(next http.Handler, key []byte, secure bool) http.Handler {
+	protected := csrf.Protect(key,
+		csrf.CookieName("hygeia_csrf"), csrf.Path("/"), csrf.Secure(secure),
+		csrf.HttpOnly(true), csrf.SameSite(csrf.SameSiteLaxMode),
+		csrf.ErrorHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			writeError(w, http.StatusForbidden, "csrf_invalid", "Permintaan tidak valid. Muat ulang halaman dan coba lagi.")
+		})),
+	)(next)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		if !secure {
+			r = csrf.PlaintextHTTPRequest(r)
+		}
+		protected.ServeHTTP(w, r)
+	})
+}
+
+func (h *Handler) allowLogin(remoteAddr string) bool {
+	ip, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		ip = remoteAddr
+	}
+	now := time.Now()
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for addr, limit := range h.limits {
+		if now.Sub(limit.lastSeen) > 10*time.Minute {
+			delete(h.limits, addr)
+		}
+	}
+	limit := h.limits[ip]
+	if limit == nil {
+		if len(h.limits) >= 10000 {
+			return false
+		}
+		limit = &loginLimit{limiter: rate.NewLimiter(rate.Every(12*time.Second), 5)}
+		h.limits[ip] = limit
+	}
+	limit.lastSeen = now
+	return limit.limiter.Allow()
+}
+
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	if !h.allowLogin(r.RemoteAddr) {
+		w.Header().Set("Retry-After", "12")
+		writeError(w, http.StatusTooManyRequests, "rate_limited", "Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.")
+		return
+	}
+	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil || mediaType != "application/json" {
+		writeError(w, http.StatusUnsupportedMediaType, "invalid_content_type", "Gunakan application/json.")
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 4096)
+	var input struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "Isi email dan password dengan benar.")
+		return
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		writeError(w, http.StatusBadRequest, "invalid_input", "Isi email dan password dengan benar.")
+		return
+	}
+	email := strings.ToLower(strings.TrimSpace(input.Email))
+	if len(email) > 254 || len(email) < 3 || input.Password == "" || len(input.Password) > 1024 {
+		writeError(w, http.StatusBadRequest, "invalid_input", "Isi email dan password dengan benar.")
+		return
+	}
+	id, hash, err := h.store.Credentials(r.Context(), email)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		writeError(w, http.StatusServiceUnavailable, "unavailable", "Layanan sedang tidak tersedia.")
+		return
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		hash = h.dummyHash
+	}
+	valid := VerifyPassword(input.Password, hash)
+	if !valid || id == "" {
+		writeError(w, http.StatusUnauthorized, "invalid_credentials", "Email atau password tidak sesuai.")
+		return
+	}
+	random := make([]byte, 32)
+	if _, err := rand.Read(random); err != nil {
+		writeError(w, 500, "internal_error", "Tidak dapat membuat sesi.")
+		return
+	}
+	token := base64.RawURLEncoding.EncodeToString(random)
+	tokenHash := sha256.Sum256([]byte(token))
+	expires := time.Now().Add(sessionTTL)
+	if err := h.store.CreateSession(r.Context(), tokenHash[:], id, expires); err != nil {
+		writeError(w, 503, "unavailable", "Tidak dapat membuat sesi.")
+		return
+	}
+	user, err := h.store.UserBySession(r.Context(), tokenHash[:])
+	if err != nil {
+		_ = h.store.DeleteSession(r.Context(), tokenHash[:])
+		if errors.Is(err, pgx.ErrNoRows) {
+			writeError(w, 401, "invalid_credentials", "Email atau password tidak sesuai.")
+		} else {
+			writeError(w, 503, "unavailable", "Layanan sedang tidak tersedia.")
+		}
+		return
+	}
+	// Re-authentication replaces the browser's previous session rather than reusing it.
+	if old, err := r.Cookie(sessionCookie); err == nil {
+		oldHash := sha256.Sum256([]byte(old.Value))
+		if err := h.store.DeleteSession(r.Context(), oldHash[:]); err != nil {
+			_ = h.store.DeleteSession(r.Context(), tokenHash[:])
+			writeError(w, 503, "unavailable", "Tidak dapat mengganti sesi.")
+			return
+		}
+	}
+	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: token, Path: "/", HttpOnly: true, Secure: h.secure, SameSite: http.SameSiteLaxMode, MaxAge: int(sessionTTL.Seconds()), Expires: expires})
+	writeJSON(w, http.StatusOK, map[string]any{"user": user})
+}
+
+func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie(sessionCookie)
+	if err != nil || len(cookie.Value) != 43 {
+		writeError(w, 401, "unauthenticated", "Silakan masuk terlebih dahulu.")
+		return
+	}
+	hash := sha256.Sum256([]byte(cookie.Value))
+	user, err := h.store.UserBySession(r.Context(), hash[:])
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeError(w, 401, "unauthenticated", "Sesi sudah berakhir. Silakan masuk kembali.")
+		return
+	}
+	if err != nil {
+		writeError(w, 503, "unavailable", "Layanan sedang tidak tersedia.")
+		return
+	}
+	writeJSON(w, 200, map[string]any{"user": user})
+}
+
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	if cookie, err := r.Cookie(sessionCookie); err == nil {
+		hash := sha256.Sum256([]byte(cookie.Value))
+		if err := h.store.DeleteSession(r.Context(), hash[:]); err != nil {
+			writeError(w, 503, "unavailable", "Tidak dapat mengakhiri sesi.")
+			return
+		}
+	}
+	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: "", Path: "/", HttpOnly: true, Secure: h.secure, SameSite: http.SameSiteLaxMode, MaxAge: -1, Expires: time.Unix(1, 0)})
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func writeJSON(w http.ResponseWriter, status int, body any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(body)
+}
+
+func writeError(w http.ResponseWriter, status int, code, message string) {
+	writeJSON(w, status, map[string]any{"error": map[string]string{"code": code, "message": message, "request_id": w.Header().Get("X-Request-ID")}})
+}
