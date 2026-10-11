@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/mrizalbasri/Hygeia/backend/internal/auth"
+	"github.com/mrizalbasri/Hygeia/backend/internal/notification"
 )
 
 // Event's field order is the canonical format, version 1. Context keys are sorted
@@ -106,7 +107,13 @@ func (w *Writer) Append(ctx context.Context, tx pgx.Tx, actor auth.User, event E
 		return err
 	}
 	_, err = tx.Exec(ctx, `UPDATE audit_chain_heads SET last_seq=$2,last_hash=$3 WHERE chain_id=$1`, event.ChainID, event.Seq, event.Hash)
-	return err
+	if err != nil {
+		return err
+	}
+	if event.Outcome == "allow" {
+		return notification.Enqueue(ctx, tx, event.ChainID, event.Seq, actor.ID, event.Action, event.ResourceType, event.ResourceID)
+	}
+	return nil
 }
 
 const eventColumns = `chain_id::text,seq,occurred_at,actor_id::text,action,resource_type,resource_id::text,outcome,basis,context,prev_hash,hash`
