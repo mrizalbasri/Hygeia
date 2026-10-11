@@ -11,6 +11,7 @@ import (
 	"github.com/mrizalbasri/Hygeia/backend/internal/auth"
 	"github.com/mrizalbasri/Hygeia/backend/internal/laboratory"
 	"github.com/mrizalbasri/Hygeia/backend/internal/policy"
+	"github.com/mrizalbasri/Hygeia/backend/internal/prescription"
 )
 
 var (
@@ -205,6 +206,9 @@ func (s *Service) Transition(ctx context.Context, token []byte, id, action strin
 		}
 		if next == "ended" {
 			if err := laboratory.CancelPending(ctx, tx, s.Audit, actor, id, result.PatientID); err != nil {
+				return err
+			}
+			if err := prescription.CancelPending(ctx, tx, s.Audit, actor, id, result.PatientID); err != nil {
 				return err
 			}
 		}

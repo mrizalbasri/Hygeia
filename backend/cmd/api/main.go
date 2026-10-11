@@ -23,6 +23,7 @@ import (
 	"github.com/mrizalbasri/Hygeia/backend/internal/database"
 	"github.com/mrizalbasri/Hygeia/backend/internal/httpapi"
 	"github.com/mrizalbasri/Hygeia/backend/internal/laboratory"
+	"github.com/mrizalbasri/Hygeia/backend/internal/prescription"
 )
 
 func main() {
@@ -82,10 +83,11 @@ func run(logger *slog.Logger) error {
 	careHandler := &care.Handler{Service: &care.Service{DB: pool, Audit: auditWriter}, Logger: logger}
 	labHandler := &laboratory.Handler{Service: &laboratory.Service{DB: pool, Audit: auditWriter}, Logger: logger}
 	consentHandler := &consent.Handler{Service: &consent.Service{DB: pool, Audit: auditWriter}, Logger: logger}
+	prescriptionHandler := &prescription.Handler{Service: &prescription.Service{DB: pool, Audit: auditWriter}, Logger: logger}
 
 	server := &http.Server{
 		Addr:              net.JoinHostPort("", port),
-		Handler:           httpapi.NewAuthenticatedHandler(logger, pool.Ping, authHandler, csrfKey, secure, careHandler.Register, labHandler.Register, consentHandler.Register),
+		Handler:           httpapi.NewAuthenticatedHandler(logger, pool.Ping, authHandler, csrfKey, secure, careHandler.Register, labHandler.Register, consentHandler.Register, prescriptionHandler.Register),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,

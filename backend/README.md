@@ -33,7 +33,8 @@ Migrasi 1 membuat `users`, `organizations`, `organization_memberships`, `patient
 dan `sessions`. Migrasi 2 menambah `care_episodes`, `audit_chain_heads`, dan
 `audit_events`. Migrasi 3 menambah `lab_requests`, `lab_results`, dan proteksi
 immutability hasil. Migrasi 4 menambah `consents` untuk izin baca satu hasil lab.
-Tabel resep belum dibuat.
+Migrasi 5 menambah `prescriptions` dan `prescription_items` untuk resep dan
+penugasan apotek yang disetujui pasien. Jalankan migrasi sebelum memakai API baru.
 
 ## Migrasi dan akun demo
 
@@ -240,11 +241,27 @@ consent. Context memuat ID izin dan waktu habis, tanpa nilai hasil. Tes khusus:
 Contoh payload dan panduan frontend ada di
 [`docs/05-BACKEND-API.md`](../docs/05-BACKEND-API.md#consent-untuk-satu-hasil-laboratorium).
 
+## API resep dan apotek
+
+Dokter menerbitkan resep dalam episode aktif melalui `POST /api/v1/prescriptions`.
+Pasien mengambil direktori `GET /api/v1/pharmacies` dan memilih apotek sekaligus
+menyetujui pengiriman lewat `POST /api/v1/prescriptions/{id}/approval`, atau
+menolak resep. Staf apotek tujuan menggunakan
+`PATCH /api/v1/prescriptions/{id}/status` untuk tahapan
+`sent → accepted → preparing → ready → completed`.
+
+Daftar/detail resep mengikuti izin pasien, dokter episode aktif, atau apotek
+yang ditugaskan selama penugasan aktif. Apotek hanya melihat ID, referensi
+pasien, item obat, dan status. Pending dibatalkan saat episode berakhir;
+penugasan yang sudah disetujui tetap dapat diselesaikan. Aksi dan audit berbagi
+transaksi. Kontrak lengkap, validasi, dan contoh payload:
+[`docs/07-BACKEND-PRESCRIPTIONS.md`](../docs/07-BACKEND-PRESCRIPTIONS.md).
+
 ## Validasi dan build
 
 ```powershell
-go test ./...
-go vet ./...
+go test ./cmd/... ./db/... ./internal/...
+go vet ./cmd/... ./db/... ./internal/...
 go build -o bin/hygeia-api.exe ./cmd/api
 ```
 
@@ -258,8 +275,14 @@ Tes care/laboratorium/audit: `go test ./internal/care -run Integration -v`. Tes 
 acak `care_test_<hex>` yang di-commit untuk menguji konkurensi transaksi dan
 dihapus melalui cleanup. Hanya schema tes tersebut yang diubah, termasuk tes
 manipulasi audit. Memerlukan hak CREATE/DROP schema. Tanpa `TEST_DATABASE_URL`,
-tes integrasi dilewati. Gunakan `go test ./...` dengan variabel tersebut untuk
+tes integrasi dilewati. Gunakan `go test ./cmd/... ./db/... ./internal/...` dengan variabel tersebut untuk
 menjalankan seluruh tes unit dan integrasi.
+
+Tes resep memakai fixture care dengan migrasi 1–5. Jalankan
+`go test ./internal/care -run Prescription -v` untuk alur lengkap, proyeksi
+apotek, pembatasan akses, race, dan rollback audit. Tes unit policy/validasi ada
+di `internal/policy` dan `internal/prescription`. Daftar paket eksplisit di atas
+menghindari source sementara di `bin` yang mungkin tersisa dari pekerjaan lokal.
 
 Tes laboratorium memakai fixture care yang sama agar race dengan pengakhiran
 episode diuji lintas modul. Jalankan khusus dengan

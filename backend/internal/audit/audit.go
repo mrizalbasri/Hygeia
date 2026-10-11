@@ -214,6 +214,12 @@ func Summaries(ctx context.Context, tx pgx.Tx, chain string, limit, offset int) 
 		"consent.request": "meminta izin akses hasil laboratorium", "consent.approve": "menyetujui izin akses hasil laboratorium",
 		"consent.deny": "menolak izin akses hasil laboratorium", "consent.revoke": "mencabut izin akses hasil laboratorium",
 		"consent.view": "melihat rincian izin akses", "consent.list": "melihat daftar izin akses",
+		"prescription.create": "membuat resep", "prescription.view": "melihat resep",
+		"prescription.list": "melihat daftar resep", "prescription.approve": "menyetujui pengiriman resep ke apotek",
+		"prescription.reject": "menolak pengiriman resep", "prescription.cancel": "membatalkan resep",
+		"prescription.status": "mengubah status resep", "prescription.accepted": "menerima resep",
+		"prescription.preparing": "menyiapkan resep", "prescription.ready": "menandai resep siap diambil",
+		"prescription.completed": "menyelesaikan resep",
 	}
 	for rows.Next() {
 		event, err := scanEvent(rows)

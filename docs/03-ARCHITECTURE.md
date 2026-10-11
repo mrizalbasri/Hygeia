@@ -81,6 +81,14 @@ resep, dan akses darurat dalam blueprint berikut belum diterapkan. Pembacaan
 hasil mengunci consent hingga audit selesai dan mengecek waktu setelah menunggu
 kunci, agar pencabutan dan kedaluwarsa tidak dilangkahi.
 
+Modul resep sudah tersedia dengan tabel `prescriptions` dan `prescription_items`
+(migrasi 5). Dokter episode aktif menerbitkan resep, pasien memilih apotek
+sekaligus menyetujui pengiriman, kemudian apotek memproses sampai selesai.
+Resep yang belum disetujui dibatalkan saat episode berakhir; penugasan yang sudah
+disetujui tetap dapat diselesaikan. Apotek hanya menerima ID, referensi pasien,
+item obat, dan status selama penugasan aktif. Tidak ada consent lintas dokter
+untuk resep pada implementasi ini. Kontrak aktual: `07-BACKEND-PRESCRIPTIONS.md`.
+
 Keputusan implementasi MVP (11 Oktober 2026): jalur care episode memberi akses
 kepada dokter pengundang yang masih berada di klinik episode, bukan seluruh
 dokter klinik. Undangan memakai kode pasien persis. Metadata undangan/riwayat

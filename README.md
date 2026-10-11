@@ -12,6 +12,8 @@ Dataset demo hanya menggunakan data sintetis.
   audit HMAC per pasien, riwayat akses, dan verifikasi integritas.
 - API laboratorium: pemilihan lab, permintaan tes, persetujuan pasien, antrean
   staf lab, pengiriman hasil terstruktur, serta pembacaan hasil terlindungi.
+- API resep dan apotek: resep dalam episode aktif, pasien memilih apotek dan
+  menyetujui pengiriman, antrean apotek sampai selesai, serta audit setiap akses.
 - Database development terpisah bernama `hygeia` pada instance PostgreSQL Docker
   lokal yang sudah tersedia.
 - Dokumen kebutuhan bisnis, produk, arsitektur, dan design system.
@@ -19,8 +21,8 @@ Dataset demo hanya menggunakan data sintetis.
 Frontend yang masuk repository masih berupa halaman starter. Halaman `/login`,
 dashboard per peran, dan proxy `/api` belum disertakan. API autentikasi, care
 episode, laboratorium, audit, dan consent untuk satu hasil lab sudah tersedia.
-Frontend perlu diintegrasikan melalui kontrak API. Resep dan akses darurat
-belum diimplementasikan.
+Frontend perlu diintegrasikan melalui kontrak API. Akses darurat, timeline
+klinis, notifikasi, dan manajemen admin belum diimplementasikan.
 
 ## Menjalankan development
 
@@ -75,3 +77,5 @@ health/readiness, dan cara mengarahkan cache Go ke drive D jika diperlukan.
 - [Design System](docs/04-DESIGN.md)
 - [Kontrak API dan panduan frontend](docs/05-BACKEND-API.md)
 - [Keputusan implementasi care episode dan audit](docs/06-BACKEND-CARE.md)
+- [Kontrak resep dan alur apotek](docs/07-BACKEND-PRESCRIPTIONS.md)
+- [Rencana implementasi resep dan apotek](docs/plans/2026-10-11-prescriptions-pharmacy.md)

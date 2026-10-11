@@ -258,8 +258,10 @@ Password demo mengikuti `DEMO_PASSWORD` saat seed awal; tidak ada password di
 dokumen/repository. Untuk mesin rekan pengembang, setup `.env`, migrasi, dan seed
 sendiri atau gunakan backend bersama melalui proxy satu origin.
 
-API resep, akses darurat, timeline klinis, dan manajemen admin belum tersedia.
-Riwayat akses mencakup episode, laboratorium, dan consent untuk satu hasil lab.
+API resep dan apotek tersedia; kontrak lengkap dan contoh request/response ada
+di [07-BACKEND-PRESCRIPTIONS.md](07-BACKEND-PRESCRIPTIONS.md).
+Akses darurat, timeline klinis, notifikasi, dan manajemen admin belum tersedia.
+Riwayat akses mencakup episode, laboratorium, consent satu hasil lab, dan resep.
 
 ## Laboratorium
 
