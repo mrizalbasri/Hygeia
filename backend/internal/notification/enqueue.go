@@ -8,6 +8,7 @@ import (
 )
 
 var messages = map[string]string{
+	"carepass.redeem": "CarePass Anda telah ditebus dokter.", "carepass.revoke": "CarePass telah dicabut pasien.",
 	"break_glass.start": "Akses darurat terhadap data Anda dimulai selama 60 menit.", "break_glass.review": "Akses darurat telah ditinjau administrator.",
 	"episode.invite": "Ada undangan perawatan baru.", "episode.accept": "Undangan perawatan diterima.", "episode.reject": "Undangan perawatan ditolak.", "episode.end": "Episode perawatan diakhiri.",
 	"lab_request.create": "Permintaan laboratorium menunggu persetujuan pasien.", "lab_request.approve": "Pengiriman permintaan laboratorium disetujui.", "lab_request.reject": "Pengiriman permintaan laboratorium ditolak.", "lab_request.cancel": "Permintaan laboratorium dibatalkan.", "lab_request.accepted": "Laboratorium menerima permintaan.", "lab_request.in_progress": "Pemeriksaan laboratorium sedang diproses.", "lab_result.submit": "Hasil laboratorium tersedia.",
@@ -24,6 +25,8 @@ func Enqueue(ctx context.Context, tx pgx.Tx, chain string, seq int64, actorID, a
 	}
 	recipients := `SELECT user_id FROM patients WHERE id=$1`
 	switch {
+	case action == "carepass.redeem" || action == "carepass.revoke":
+		recipients += ` UNION SELECT grantee_user_id FROM carepasses WHERE id=$2`
 	case action == "break_glass.start":
 		recipients += ` UNION SELECT id FROM users WHERE role='admin' AND $2::uuid IS NOT NULL`
 	case action == "break_glass.review":

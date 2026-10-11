@@ -20,6 +20,7 @@ import (
 	"github.com/mrizalbasri/Hygeia/backend/internal/auth"
 	"github.com/mrizalbasri/Hygeia/backend/internal/breakglass"
 	"github.com/mrizalbasri/Hygeia/backend/internal/care"
+	"github.com/mrizalbasri/Hygeia/backend/internal/carepass"
 	"github.com/mrizalbasri/Hygeia/backend/internal/config"
 	"github.com/mrizalbasri/Hygeia/backend/internal/consent"
 	"github.com/mrizalbasri/Hygeia/backend/internal/database"
@@ -61,6 +62,10 @@ func run(logger *slog.Logger) error {
 		return errors.New("APP_ENV must be development, test, or production")
 	}
 	secure := appEnv == "production"
+	shareBase, err := carepass.ShareBase(os.Getenv("PUBLIC_APP_URL"), secure)
+	if err != nil {
+		return err
+	}
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -90,10 +95,11 @@ func run(logger *slog.Logger) error {
 	adminHandler := &admin.Handler{Service: &admin.Service{DB: pool}}
 	notificationHandler := &notification.Handler{Service: &notification.Service{DB: pool}}
 	breakGlassHandler := &breakglass.Handler{Service: &breakglass.Service{DB: pool, Audit: auditWriter}}
+	carePassHandler := &carepass.Handler{Service: &carepass.Service{DB: pool, Audit: auditWriter, ShareBaseURL: shareBase}}
 
 	server := &http.Server{
 		Addr:              net.JoinHostPort("", port),
-		Handler:           httpapi.NewAuthenticatedHandler(logger, pool.Ping, authHandler, csrfKey, secure, careHandler.Register, labHandler.Register, consentHandler.Register, prescriptionHandler.Register, adminHandler.Register, notificationHandler.Register, breakGlassHandler.Register),
+		Handler:           httpapi.NewAuthenticatedHandler(logger, pool.Ping, authHandler, csrfKey, secure, careHandler.Register, labHandler.Register, consentHandler.Register, prescriptionHandler.Register, adminHandler.Register, notificationHandler.Register, breakGlassHandler.Register, carePassHandler.Register),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,
