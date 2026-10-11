@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mrizalbasri/Hygeia/backend/db"
+	adminapi "github.com/mrizalbasri/Hygeia/backend/internal/admin"
 	"github.com/mrizalbasri/Hygeia/backend/internal/audit"
 	"github.com/mrizalbasri/Hygeia/backend/internal/auth"
 	"github.com/mrizalbasri/Hygeia/backend/internal/consent"
@@ -86,7 +87,7 @@ func integrationFixture(t *testing.T) *fixture {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	for _, file := range []string{"000001_identity.up.sql", "000002_care_audit.up.sql", "000003_laboratory.up.sql", "000004_consents.up.sql", "000005_prescriptions.up.sql"} {
+	for _, file := range []string{"000001_identity.up.sql", "000002_care_audit.up.sql", "000003_laboratory.up.sql", "000004_consents.up.sql", "000005_prescriptions.up.sql", "000006_admin.up.sql"} {
 		sql, err := db.Migrations.ReadFile("migrations/" + file)
 		if err != nil {
 			t.Fatal(err)
@@ -160,7 +161,8 @@ func integrationFixture(t *testing.T) *fixture {
 	labHandler := &laboratory.Handler{Service: f.labService}
 	consentHandler := &consent.Handler{Service: f.consentService}
 	prescriptionHandler := &prescription.Handler{Service: f.prescriptionService}
-	f.api = httpapi.NewAuthenticatedHandler(slog.New(slog.NewTextHandler(io.Discard, nil)), pool.Ping, login, bytes.Repeat([]byte{4}, 32), false, handler.Register, labHandler.Register, consentHandler.Register, prescriptionHandler.Register)
+	adminHandler := &adminapi.Handler{Service: &adminapi.Service{DB: pool}}
+	f.api = httpapi.NewAuthenticatedHandler(slog.New(slog.NewTextHandler(io.Discard, nil)), pool.Ping, login, bytes.Repeat([]byte{4}, 32), false, handler.Register, labHandler.Register, consentHandler.Register, prescriptionHandler.Register, adminHandler.Register)
 	csrf := httptest.NewRecorder()
 	f.api.ServeHTTP(csrf, httptest.NewRequest("GET", "http://localhost/api/v1/auth/csrf", nil))
 	var body struct {
