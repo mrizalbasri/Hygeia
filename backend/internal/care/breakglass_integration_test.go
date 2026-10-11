@@ -55,7 +55,14 @@ func TestBreakGlassBoundedReadAndReview(t *testing.T) {
 		t.Fatal("resource directory incorrect")
 	}
 	expectStatus(t, f.request("doctor", "GET", "/api/v1/break-glass/"+g.ID+"/resources", "", false), 403)
-	expectStatus(t, f.request("colleague", "GET", "/api/v1/lab-results/"+result.ID, "", false), 200)
+	emergencyResult := f.request("colleague", "GET", "/api/v1/lab-results/"+result.ID, "", false)
+	expectStatus(t, emergencyResult, 200)
+	if strings.Contains(emergencyResult.Body.String(), "Synthetic test, not medical data") {
+		t.Fatal("emergency access leaked clinical note")
+	}
+	if !strings.Contains(emergencyResult.Body.String(), "SYNTHETIC-RESULT-42") {
+		t.Fatal("emergency scope omitted structured result")
+	}
 	note := `{"decision":"appropriate","note":"Synthetic emergency review"}`
 	expectStatus(t, f.request("colleague", "PATCH", "/api/v1/admin/break-glass/"+g.ID, note, true), 403)
 	expectStatus(t, f.request("admin", "PATCH", "/api/v1/admin/break-glass/"+g.ID, note, true), 200)
