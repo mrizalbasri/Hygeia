@@ -55,3 +55,20 @@ Alur resep dapat dijalankan melalui API dari episode aktif sampai selesai,
 akses lintas pasien/organisasi tidak membocorkan item obat, setiap transisi sah
 tercatat dan rantai utuh, kegagalan audit membatalkan transaksi, serta PR berisi
 hanya pekerjaan backend resep/apotek dan dokumentasinya.
+
+## Hasil verifikasi
+
+Implementasi dan kontrak API selesai pada 11 Oktober 2026. PostgreSQL 18 khusus
+pengujian dipakai terpisah dari database aplikasi. Pemeriksaan berikut lulus:
+
+- Seluruh tes unit dan integrasi:
+  `go test ./cmd/... ./db/... ./internal/... -count=1` dengan `TEST_DATABASE_URL`.
+- `go vet ./cmd/... ./db/... ./internal/...` dan build `./cmd/api`.
+- Migrasi `up` dua kali, lalu `version`: versi 5, `dirty: false`.
+- Tes resep mencakup 20 item berurutan, lifecycle, akses/proyeksi, penolakan,
+  episode berakhir, approval/end bersamaan, transisi ganda, pembacaan setelah
+  menunggu lock, integritas rantai, dan rollback ketika audit gagal.
+
+Perubahan frontend lokal yang sudah ada tidak dimasukkan ke commit pekerjaan
+ini. Migrasi database aplikasi dan integrasi UI resep dilakukan saat penerapan
+berikutnya; pengujian ini tidak mengubah database aplikasi.
