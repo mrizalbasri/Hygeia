@@ -23,6 +23,12 @@ func Enqueue(ctx context.Context, tx pgx.Tx, chain string, seq int64, actorID, a
 	if !ok {
 		return nil
 	}
+	// A bigserial ID alone does not imply commit order. Serialize allocations
+	// until commit so an SSE cursor cannot skip a lower ID still in flight.
+	// All producers acquire this after their single patient audit-chain lock.
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(73194730)`); err != nil {
+		return err
+	}
 	recipients := `SELECT user_id FROM patients WHERE id=$1`
 	switch {
 	case action == "carepass.redeem" || action == "carepass.revoke":
