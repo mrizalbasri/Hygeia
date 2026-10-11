@@ -423,6 +423,11 @@ func (s *Service) GetResult(ctx context.Context, token []byte, id string) (Resul
 		}
 		result.TestCode = r.TestCode
 		result.TestName = r.TestName
+		// Emergency scope excludes free-text clinical notes; explicit patient
+		// consent and CarePass continue to expose their authorized resource.
+		if event.Basis == "break_glass" {
+			result.Note = ""
+		}
 		return s.Audit.Append(ctx, tx, actor, event)
 	})
 	return result, err
