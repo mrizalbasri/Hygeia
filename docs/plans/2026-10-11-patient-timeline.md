@@ -52,3 +52,18 @@ Pasien melihat urutan milestone yang akurat tanpa isi klinis atau aktivitas
 pasien lain; halaman berlanjut tanpa duplikasi ketika ada event baru; aksi
 yang gagal tidak muncul; seluruh tes relevan lulus dan PR tidak menyertakan
 perubahan frontend lokal yang sudah ada.
+
+## Hasil verifikasi
+
+Implementasi dan verifikasi selesai. PostgreSQL 18 khusus pengujian digunakan
+dengan schema terisolasi; database aplikasi tidak diubah.
+
+- Tes timeline lulus: seluruh 23 jenis milestone, semua filter, nama historis,
+  isolasi pasien/peran, sesi kedaluwarsa, validasi query, pagination saat insert
+  baru, refresh tanpa tulisan audit, rollback bisnis, dan kegagalan query.
+- Allowlist menolak outcome deny, read, action baru yang belum didukung, dan
+  pasangan action/resource type yang tidak cocok.
+- Regresi seluruh backend lulus dengan `TEST_DATABASE_URL`:
+  `go test ./cmd/... ./db/... ./internal/... -count=1`.
+- `go vet ./cmd/... ./db/... ./internal/...` dan build `./cmd/api` lulus.
+- Tidak ada migrasi; schema tetap versi 5. Frontend lokal tidak disertakan.

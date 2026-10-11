@@ -89,6 +89,14 @@ disetujui tetap dapat diselesaikan. Apotek hanya menerima ID, referensi pasien,
 item obat, dan status selama penugasan aktif. Tidak ada consent lintas dokter
 untuk resep pada implementasi ini. Kontrak aktual: `07-BACKEND-PRESCRIPTIONS.md`.
 
+Timeline perjalanan pasien menggunakan proyeksi allowlist kejadian bisnis
+sukses dari audit yang sudah ada. Modul `timeline` menyediakan query dan
+presentasi milestone; service `care` menyelesaikan identitas pasien dari sesi.
+Tidak ada tabel timeline, dual-write, backfill, atau perubahan format hash.
+Riwayat akses tetap mencakup pembacaan dan penolakan; timeline mengecualikannya.
+Urutan memakai seq rantai dengan cursor eksklusif, bukan offset. Kontrak aktual:
+`08-BACKEND-TIMELINE.md`.
+
 Keputusan implementasi MVP (11 Oktober 2026): jalur care episode memberi akses
 kepada dokter pengundang yang masih berada di klinik episode, bukan seluruh
 dokter klinik. Undangan memakai kode pasien persis. Metadata undangan/riwayat

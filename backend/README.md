@@ -257,6 +257,20 @@ penugasan yang sudah disetujui tetap dapat diselesaikan. Aksi dan audit berbagi
 transaksi. Kontrak lengkap, validasi, dan contoh payload:
 [`docs/07-BACKEND-PRESCRIPTIONS.md`](../docs/07-BACKEND-PRESCRIPTIONS.md).
 
+## Timeline perjalanan pasien
+
+`GET /api/v1/patient/timeline` menyajikan kejadian bisnis sukses pada rantai
+pasien: episode, laboratorium, resep, dan consent. Akses hanya untuk pasien
+pemilik berdasarkan sesi. Filter `kind`, `limit` 1–100, dan cursor eksklusif
+`before_seq` menggantikan offset untuk endpoint ini.
+
+Timeline tidak memuat pembacaan data atau akses ditolak; aktivitas itu tetap
+tersedia pada riwayat akses. Isi hasil lab dan obat tidak disertakan. Proyeksi
+menggunakan audit yang sudah ada tanpa tabel/migrasi baru dan tanpa perubahan
+format hash. Kontrak lengkap:
+[`docs/08-BACKEND-TIMELINE.md`](../docs/08-BACKEND-TIMELINE.md).
+Tes khusus: `go test ./internal/care -run Timeline -v` dengan `TEST_DATABASE_URL`.
+
 ## Validasi dan build
 
 ```powershell
