@@ -26,10 +26,12 @@ import (
 	"github.com/mrizalbasri/Hygeia/backend/internal/audit"
 	"github.com/mrizalbasri/Hygeia/backend/internal/auth"
 	"github.com/mrizalbasri/Hygeia/backend/internal/httpapi"
+	"github.com/mrizalbasri/Hygeia/backend/internal/laboratory"
 )
 
 type fixture struct {
 	service    *Service
+	labService *laboratory.Service
 	pool       *pgxpool.Pool
 	api        http.Handler
 	tokens     map[string][]byte
@@ -80,7 +82,7 @@ func integrationFixture(t *testing.T) *fixture {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	for _, file := range []string{"000001_identity.up.sql", "000002_care_audit.up.sql"} {
+	for _, file := range []string{"000001_identity.up.sql", "000002_care_audit.up.sql", "000003_laboratory.up.sql"} {
 		sql, err := db.Migrations.ReadFile("migrations/" + file)
 		if err != nil {
 			t.Fatal(err)
@@ -91,6 +93,7 @@ func integrationFixture(t *testing.T) *fixture {
 	}
 	writer, _ := audit.NewWriter(bytes.Repeat([]byte{3}, 32))
 	f := &fixture{pool: pool, service: &Service{DB: pool, Audit: writer}, tokens: map[string][]byte{}, cookies: map[string]*http.Cookie{}, ids: map[string]string{}}
+	f.labService = &laboratory.Service{DB: pool, Audit: writer}
 	var clinic, lab, pharmacy, otherLab string
 	for _, org := range []struct {
 		kind string
@@ -144,7 +147,8 @@ func integrationFixture(t *testing.T) *fixture {
 		t.Fatal(err)
 	}
 	handler := &Handler{Service: f.service}
-	f.api = httpapi.NewAuthenticatedHandler(slog.New(slog.NewTextHandler(io.Discard, nil)), pool.Ping, login, bytes.Repeat([]byte{4}, 32), false, handler.Register)
+	labHandler := &laboratory.Handler{Service: f.labService}
+	f.api = httpapi.NewAuthenticatedHandler(slog.New(slog.NewTextHandler(io.Discard, nil)), pool.Ping, login, bytes.Repeat([]byte{4}, 32), false, handler.Register, labHandler.Register)
 	csrf := httptest.NewRecorder()
 	f.api.ServeHTTP(csrf, httptest.NewRequest("GET", "http://localhost/api/v1/auth/csrf", nil))
 	var body struct {

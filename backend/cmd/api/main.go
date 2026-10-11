@@ -21,6 +21,7 @@ import (
 	"github.com/mrizalbasri/Hygeia/backend/internal/config"
 	"github.com/mrizalbasri/Hygeia/backend/internal/database"
 	"github.com/mrizalbasri/Hygeia/backend/internal/httpapi"
+	"github.com/mrizalbasri/Hygeia/backend/internal/laboratory"
 )
 
 func main() {
@@ -78,10 +79,11 @@ func run(logger *slog.Logger) error {
 		return errors.New("could not initialize authentication")
 	}
 	careHandler := &care.Handler{Service: &care.Service{DB: pool, Audit: auditWriter}, Logger: logger}
+	labHandler := &laboratory.Handler{Service: &laboratory.Service{DB: pool, Audit: auditWriter}, Logger: logger}
 
 	server := &http.Server{
 		Addr:              net.JoinHostPort("", port),
-		Handler:           httpapi.NewAuthenticatedHandler(logger, pool.Ping, authHandler, csrfKey, secure, careHandler.Register),
+		Handler:           httpapi.NewAuthenticatedHandler(logger, pool.Ping, authHandler, csrfKey, secure, careHandler.Register, labHandler.Register),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,
