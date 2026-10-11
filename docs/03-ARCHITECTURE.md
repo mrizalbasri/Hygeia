@@ -67,6 +67,26 @@ Aturan yang dijaga: semua akses data terlindungi **harus** lewat paket `policy`.
 
 ## 4. Modul Backend
 
+Tahap laboratorium sudah diimplementasikan dengan kolom hasil terstruktur
+(`value`, `unit`, `reference_range`, `flag`, `note`), satu hasil immutable per
+permintaan. Blueprint `payload jsonb` di bagian model awal di bawah belum
+dipakai. Kontrak aktual mengikuti `05-BACKEND-API.md` dan migrasi SQL.
+Penugasan lab yang sudah disetujui pasien tetap dapat diselesaikan setelah
+episode diakhiri; hanya permintaan yang belum disetujui yang dibatalkan.
+
+Consent sudah tersedia untuk satu `lab_result` dan tindakan `view`. Izin terikat
+pada dokter peminta serta kliniknya, dengan durasi 1 jam, 24 jam, atau 7 hari.
+Pasien dapat menolak atau mencabutnya. Scope jenis resource secara keseluruhan,
+resep, dan akses darurat dalam blueprint berikut belum diterapkan. Pembacaan
+hasil mengunci consent hingga audit selesai dan mengecek waktu setelah menunggu
+kunci, agar pencabutan dan kedaluwarsa tidak dilangkahi.
+
+Keputusan implementasi MVP (11 Oktober 2026): jalur care episode memberi akses
+kepada dokter pengundang yang masih berada di klinik episode, bukan seluruh
+dokter klinik. Undangan memakai kode pasien persis. Metadata undangan/riwayat
+tersedia bagi peserta; akses klinis jalur A tetap memerlukan episode aktif.
+Lihat `06-BACKEND-CARE.md` untuk detail implementasi tahap care dan audit.
+
 | Modul | Tanggung jawab |
 |---|---|
 | `auth` | Login/logout, sesi, hash password, konteks identitas. |

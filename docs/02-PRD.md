@@ -37,12 +37,16 @@ Akses ke data terlindungi hanya terjadi lewat salah satu dari empat jalur. Jika 
 
 | Jalur | Pemicu | Penerima | Cakupan | Durasi |
 |---|---|---|---|---|
-| **A. Care episode** | Dokter mengundang pasien, pasien menerima | Dokter dan klinik pembuat episode | Membuat permintaan lab dan resep, melihat hasil dari episode itu | Selama episode aktif |
+| **A. Care episode** | Dokter mengundang pasien, pasien menerima | Dokter pengundang dalam klinik yang tercatat pada episode | Membuat permintaan lab dan resep, melihat hasil dari episode itu | Selama episode aktif |
 | **B. Berbagi ke penyedia** | Dokter membuat permintaan lab atau resep, pasien menyetujui satu kali | Lab atau apotek tujuan | Hanya permintaan atau resep itu | Selama permintaan/resep itu aktif |
 | **C. Permintaan consent lintas organisasi** | Dokter lain meminta akses ke resource tertentu | Dokter peminta | Satu resource atau satu jenis resource, aksi `view` | Dipilih pasien (misal 1 jam, 24 jam, 7 hari) |
 | **D. Akses darurat** | Dokter menekan "Akses Darurat" dengan alasan | Dokter tersebut | Hasil lab dan resep aktif saja | Singkat (default 60 menit) |
 
 Catatan desain:
+- Keputusan MVP: undangan memakai kode pasien yang cocok persis. Dokter lain,
+  termasuk rekan satu klinik, tidak otomatis mendapat akses dari episode tersebut.
+  Detail undangan dan riwayat episode dapat dibaca pasien dan dokter pengundang;
+  akses data klinis jalur A tetap memerlukan episode aktif.
 - Dokter yang meminta tes **tidak** perlu consent kedua untuk membaca hasilnya sendiri (jalur A). Consent tambahan hanya dibutuhkan ketika data berpindah ke pihak yang belum punya hubungan perawatan (jalur B dan C).
 - Setiap keputusan akses, baik diizinkan maupun ditolak, menghasilkan event audit.
 
