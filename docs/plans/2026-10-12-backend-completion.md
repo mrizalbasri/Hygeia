@@ -7,6 +7,19 @@ Setiap tahap memiliki branch, tes, commit, kontrak API, dan PR; PR tetap terbuka
 Review standar dan kesesuaian spesifikasi dilakukan setelah seluruh tahap.
 Perubahan frontend lokal tidak disertakan. Timeline berada pada PR #4.
 
+## Hasil akhir
+
+Seluruh tahap di bawah sudah diimplementasikan, dicommit, dipush, dan direview.
+PR tetap terbuka. Urutan merge: [#5](https://github.com/mrizalbasri/Hygeia/pull/5)
+→ [#6](https://github.com/mrizalbasri/Hygeia/pull/6)
+→ [#7](https://github.com/mrizalbasri/Hygeia/pull/7)
+→ [#8](https://github.com/mrizalbasri/Hygeia/pull/8)
+→ [#9](https://github.com/mrizalbasri/Hygeia/pull/9)
+→ [#4](https://github.com/mrizalbasri/Hygeia/pull/4).
+Timeline ditempatkan terakhir dan branch-nya sudah menggabungkan seluruh tahap,
+sehingga hasil integrasi dapat diuji. Detail verifikasi dan hasil review:
+[backend-review](2026-10-12-backend-review.md).
+
 ## Urutan dan rancangan
 
 1. **Admin minimal** (`codex/backend-admin`, base main): daftar/buat organisasi,
