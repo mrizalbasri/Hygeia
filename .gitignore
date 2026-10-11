@@ -5,6 +5,7 @@
 
 # Dependencies and generated output
 node_modules/
+.pnpm-store/
 .svelte-kit/
 backend/bin/
 

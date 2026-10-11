@@ -1,0 +1,3 @@
+BEGIN;
+DROP TABLE consents;
+COMMIT;

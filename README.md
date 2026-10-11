@@ -7,17 +7,51 @@ Dataset demo hanya menggunakan data sintetis.
 ## Status awal
 
 - Frontend SvelteKit, TypeScript, dan Tailwind CSS.
-- Backend Go dengan health check dan readiness PostgreSQL.
+- Backend Go dengan migrasi, akun demo, sesi cookie, CSRF, login/logout, dan `/me`.
+- API care episode (undangan, persetujuan, penolakan, pengakhiran), policy akses,
+  audit HMAC per pasien, riwayat akses, dan verifikasi integritas.
+- API laboratorium: pemilihan lab, permintaan tes, persetujuan pasien, antrean
+  staf lab, pengiriman hasil terstruktur, serta pembacaan hasil terlindungi.
 - Database development terpisah bernama `hygeia` pada instance PostgreSQL Docker
   lokal yang sudah tersedia.
 - Dokumen kebutuhan bisnis, produk, arsitektur, dan design system.
 
-Fitur login, migrasi tabel bisnis, alur perawatan, consent, dan audit belum
-diimplementasikan.
+Frontend yang masuk repository masih berupa halaman starter. Halaman `/login`,
+dashboard per peran, dan proxy `/api` belum disertakan. API autentikasi, care
+episode, laboratorium, audit, dan consent untuk satu hasil lab sudah tersedia.
+Frontend perlu diintegrasikan melalui kontrak API. Resep dan akses darurat
+belum diimplementasikan.
 
 ## Menjalankan development
 
-Frontend (pnpm):
+Backend (Go 1.26+), dari root repository:
+
+```powershell
+cd backend
+go run ./cmd/migrate up
+go run ./cmd/seed
+go run ./cmd/api
+```
+
+Sebelum menjalankan backend, pastikan PostgreSQL tersedia dan `backend/.env`
+berisi `DATABASE_URL`, `SESSION_SECRET`, `AUDIT_HMAC_KEY`, `APP_ENV=development`, dan `DEMO_PASSWORD`
+yang sesuai. Untuk komputer baru, salin
+`backend/.env.example` ke `backend/.env` dan isi kredensial lokal.
+File `.env`, dependensi, cache, dan hasil build tidak disertakan dalam Git.
+Setelah API berjalan, periksa koneksi backend dari terminal lain:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8080/api/v1/health
+Invoke-RestMethod http://127.0.0.1:8080/api/v1/readyz
+```
+
+Login tersedia melalui `POST /api/v1/auth/login`, bukan halaman web. Ambil token
+dan cookie dari `GET /api/v1/auth/csrf`, lalu kirim JSON login beserta cookie dan
+header `X-CSRF-Token` menggunakan klien API yang menyimpan cookie. Email akun
+demo tercantum pada panduan backend; password mengikuti `DEMO_PASSWORD` saat
+seed pertama kali dijalankan.
+
+Frontend starter dapat dijalankan secara terpisah:
 
 ```powershell
 cd frontend
@@ -25,17 +59,10 @@ pnpm install
 pnpm dev
 ```
 
-Backend (Go 1.26+), pada terminal terpisah:
-
-```powershell
-cd backend
-go run ./cmd/api
-```
-
-Sebelum menjalankan backend, pastikan PostgreSQL tersedia dan `backend/.env`
-berisi `DATABASE_URL` yang sesuai. Untuk komputer baru, salin
-`backend/.env.example` ke `backend/.env` dan isi kredensial lokal.
-File `.env`, dependensi, cache, dan hasil build tidak disertakan dalam Git.
+Buka URL root yang ditampilkan Vite (default `http://localhost:5173/`). Route
+`/login` belum tersedia pada checkout ini. Pengembang frontend perlu menambahkan
+proxy `/api`, form login, pengelolaan sesi, serta dashboard sesuai
+[panduan integrasi frontend](docs/05-BACKEND-API.md#integrasi-frontend-yang-perlu-ditambahkan).
 
 Lihat [panduan backend](backend/README.md) untuk konfigurasi PostgreSQL, endpoint
 health/readiness, dan cara mengarahkan cache Go ke drive D jika diperlukan.
@@ -46,3 +73,5 @@ health/readiness, dan cara mengarahkan cache Go ke drive D jika diperlukan.
 - [Product Requirements](docs/02-PRD.md)
 - [System Architecture](docs/03-ARCHITECTURE.md)
 - [Design System](docs/04-DESIGN.md)
+- [Kontrak API dan panduan frontend](docs/05-BACKEND-API.md)
+- [Keputusan implementasi care episode dan audit](docs/06-BACKEND-CARE.md)

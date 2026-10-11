@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/hmac"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -13,9 +15,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/joho/godotenv"
+	"github.com/mrizalbasri/Hygeia/backend/internal/audit"
+	"github.com/mrizalbasri/Hygeia/backend/internal/auth"
+	"github.com/mrizalbasri/Hygeia/backend/internal/care"
+	"github.com/mrizalbasri/Hygeia/backend/internal/config"
+	"github.com/mrizalbasri/Hygeia/backend/internal/consent"
 	"github.com/mrizalbasri/Hygeia/backend/internal/database"
 	"github.com/mrizalbasri/Hygeia/backend/internal/httpapi"
+	"github.com/mrizalbasri/Hygeia/backend/internal/laboratory"
 )
 
 func main() {
@@ -27,9 +34,29 @@ func main() {
 }
 
 func run(logger *slog.Logger) error {
-	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return errors.New("could not load .env configuration")
+	if err := config.LoadEnv(); err != nil {
+		return err
 	}
+	csrfKey, err := hex.DecodeString(os.Getenv("SESSION_SECRET"))
+	if err != nil || len(csrfKey) != 32 {
+		return errors.New("SESSION_SECRET must contain 64 hexadecimal characters")
+	}
+	auditKey, err := hex.DecodeString(os.Getenv("AUDIT_HMAC_KEY"))
+	if err != nil || len(auditKey) != 32 {
+		return errors.New("AUDIT_HMAC_KEY must contain 64 hexadecimal characters")
+	}
+	if hmac.Equal(auditKey, csrfKey) {
+		return errors.New("AUDIT_HMAC_KEY must be different from SESSION_SECRET")
+	}
+	auditWriter, err := audit.NewWriter(auditKey)
+	if err != nil {
+		return err
+	}
+	appEnv := os.Getenv("APP_ENV")
+	if appEnv != "" && appEnv != "development" && appEnv != "test" && appEnv != "production" {
+		return errors.New("APP_ENV must be development, test, or production")
+	}
+	secure := appEnv == "production"
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -48,10 +75,17 @@ func run(logger *slog.Logger) error {
 	}
 	defer pool.Close()
 	logger.Info("connected to PostgreSQL")
+	authHandler, err := auth.NewHandler(auth.Store{DB: pool}, secure)
+	if err != nil {
+		return errors.New("could not initialize authentication")
+	}
+	careHandler := &care.Handler{Service: &care.Service{DB: pool, Audit: auditWriter}, Logger: logger}
+	labHandler := &laboratory.Handler{Service: &laboratory.Service{DB: pool, Audit: auditWriter}, Logger: logger}
+	consentHandler := &consent.Handler{Service: &consent.Service{DB: pool, Audit: auditWriter}, Logger: logger}
 
 	server := &http.Server{
 		Addr:              net.JoinHostPort("", port),
-		Handler:           httpapi.NewHandlerWithDatabase(logger, pool.Ping),
+		Handler:           httpapi.NewAuthenticatedHandler(logger, pool.Ping, authHandler, csrfKey, secure, careHandler.Register, labHandler.Register, consentHandler.Register),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,
