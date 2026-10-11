@@ -144,15 +144,8 @@ func (h *Handler) stream(w http.ResponseWriter, r *http.Request) {
 			after = n.ID
 		}
 		if len(b.Notifications) < streamBatchSize {
-			select {
-			case <-r.Context().Done():
+			if !waitForPoll(r.Context(), poll.C, heartbeat.C, write) {
 				return
-			case <-heartbeat.C:
-				if !write(": heartbeat\n\n") {
-					return
-				}
-				continue
-			case <-poll.C:
 			}
 		}
 		b, err = h.Service.since(r.Context(), token, after)
@@ -163,6 +156,23 @@ func (h *Handler) stream(w http.ResponseWriter, r *http.Request) {
 				write("event: unavailable\ndata: {}\n\n")
 			}
 			return
+		}
+	}
+}
+
+// Heartbeats keep the connection alive while waiting; only a poll releases the
+// caller to fetch a fresh authenticated batch. They never replay consumed data.
+func waitForPoll(ctx context.Context, poll, heartbeat <-chan time.Time, write func(string) bool) bool {
+	for {
+		select {
+		case <-ctx.Done():
+			return false
+		case <-poll:
+			return true
+		case <-heartbeat:
+			if !write(": heartbeat\n\n") {
+				return false
+			}
 		}
 	}
 }
