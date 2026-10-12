@@ -207,6 +207,7 @@ func (s *Service) Get(ctx context.Context, token []byte, id string) (any, error)
 		}
 		event := audit.Event{ChainID: p.patientID, Action: "prescription.view", ResourceType: "prescription", ResourceID: p.ID, Outcome: "allow", Basis: accessBasis(actor)}
 		allowed := policy.CanViewPrescription(actor, p.access())
+		var expiresAt *time.Time
 		if !allowed && policy.IsActivePrescription(p.Status) {
 			grant, err := policy.FindEmergencyGrant(ctx, tx, actor, p.episode.PatientUserID, s.now)
 			if err != nil {
@@ -217,7 +218,14 @@ func (s *Service) Get(ctx context.Context, token []byte, id string) (any, error)
 				event.Basis = "break_glass"
 				event.BreakGlassID = grant.ID
 				event.BreakGlassExpiresAt = &grant.ExpiresAt
+				expiresAt = &grant.ExpiresAt
 			}
+		}
+		if allowed && expiresAt != nil {
+			if err := audit.LockChain(ctx, tx, p.patientID); err != nil {
+				return err
+			}
+			allowed = s.now().Before(*expiresAt)
 		}
 		if !allowed {
 			return s.reject(ctx, tx, actor, p, "prescription.view", ErrForbidden)

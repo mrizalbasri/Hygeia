@@ -386,6 +386,7 @@ func (s *Service) GetResult(ctx context.Context, token []byte, id string) (Resul
 		}
 		event := audit.Event{ChainID: r.patientID, Action: "lab_result.view", ResourceType: "lab_result", ResourceID: id, Outcome: "allow", Basis: accessBasis(actor)}
 		allowed := policy.CanViewLabResult(actor, r.access())
+		var expiresAt *time.Time
 		if !allowed && r.Status == "completed" {
 			grant, err := policy.FindLabResultConsent(ctx, tx, actor, r.episode.PatientUserID, id, s.now())
 			if err != nil {
@@ -396,6 +397,7 @@ func (s *Service) GetResult(ctx context.Context, token []byte, id string) (Resul
 				event.Basis = "consent"
 				event.ConsentID = grant.ID
 				event.ConsentExpiresAt = &grant.ExpiresAt
+				expiresAt = &grant.ExpiresAt
 			}
 		}
 		if !allowed && r.Status == "completed" {
@@ -408,7 +410,14 @@ func (s *Service) GetResult(ctx context.Context, token []byte, id string) (Resul
 				event.Basis = "break_glass"
 				event.BreakGlassID = grant.ID
 				event.BreakGlassExpiresAt = &grant.ExpiresAt
+				expiresAt = &grant.ExpiresAt
 			}
+		}
+		if allowed && expiresAt != nil {
+			if err := audit.LockChain(ctx, tx, r.patientID); err != nil {
+				return err
+			}
+			allowed = s.now().Before(*expiresAt)
 		}
 		if !allowed {
 			event.Outcome = "deny"
