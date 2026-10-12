@@ -91,6 +91,13 @@ func (h *Handler) stream(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+	if h.Shutdown != nil {
+		stop := context.AfterFunc(h.Shutdown, cancel)
+		defer stop()
+	}
+	r = r.WithContext(ctx)
 	after, err := cursor(r)
 	if err != nil {
 		apiutil.Failure(w, r, err)
@@ -117,6 +124,9 @@ func (h *Handler) stream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Accel-Buffering", "no")
 	write := func(value string) bool {
+		if r.Context().Err() != nil {
+			return false
+		}
 		if err := controller.SetWriteDeadline(time.Now().Add(5 * time.Second)); err != nil && !errors.Is(err, http.ErrNotSupported) {
 			return false
 		}

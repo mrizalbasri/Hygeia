@@ -50,6 +50,7 @@ type fixture struct {
 	patientID           string
 	csrf                string
 	csrfCookie          *http.Cookie
+	stopStreams         context.CancelFunc
 }
 
 // Uses a unique, committed schema to exercise independent concurrent transactions.
@@ -169,7 +170,10 @@ func integrationFixture(t *testing.T) *fixture {
 	consentHandler := &consent.Handler{Service: f.consentService}
 	prescriptionHandler := &prescription.Handler{Service: f.prescriptionService}
 	adminHandler := &adminapi.Handler{Service: &adminapi.Service{DB: pool}}
-	notificationHandler := &notification.Handler{Service: &notification.Service{DB: pool}}
+	streamContext, stopStreams := context.WithCancel(context.Background())
+	f.stopStreams = stopStreams
+	t.Cleanup(stopStreams)
+	notificationHandler := &notification.Handler{Service: &notification.Service{DB: pool}, Shutdown: streamContext}
 	breakGlassHandler := &breakglass.Handler{Service: f.breakGlassService}
 	carePassHandler := &carepass.Handler{Service: f.carePassService}
 	f.api = httpapi.NewAuthenticatedHandler(slog.New(slog.NewTextHandler(io.Discard, nil)), pool.Ping, login, bytes.Repeat([]byte{4}, 32), false, handler.Register, labHandler.Register, consentHandler.Register, prescriptionHandler.Register, adminHandler.Register, notificationHandler.Register, breakGlassHandler.Register, carePassHandler.Register)

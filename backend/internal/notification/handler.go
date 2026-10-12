@@ -1,6 +1,7 @@
 package notification
 
 import (
+	"context"
 	"github.com/mrizalbasri/Hygeia/backend/internal/apiutil"
 	"github.com/mrizalbasri/Hygeia/backend/internal/auth"
 	"net/http"
@@ -10,9 +11,11 @@ import (
 
 type Handler struct {
 	Service *Service
-	mu      sync.Mutex
-	streams map[string]int
-	total   int
+	// Shutdown cancels streams without interrupting ordinary JSON requests.
+	Shutdown context.Context
+	mu       sync.Mutex
+	streams  map[string]int
+	total    int
 }
 
 func (h *Handler) Register(mux *http.ServeMux) {

@@ -34,6 +34,11 @@ tidak ditahan saat menunggu client. Write deadline setiap frame 5 detik,
 terpisah dari WriteTimeout request JSON. Tidak mendukung HEAD untuk streaming.
 Skala multi-instance memerlukan kuota bersama jika batas global diperlukan.
 
+Saat aplikasi menerima sinyal shutdown, context khusus stream dibatalkan
+sebelum `http.Server.Shutdown`. SSE segera keluar dari poll dan melepas kuota;
+request JSON yang sedang berjalan tetap diberi waktu untuk selesai. Deadline
+write 5 detik tetap membatasi client lambat yang sedang menerima frame.
+
 Reverse proxy harus meneruskan stream tanpa buffering/cache, menjaga idle
 timeout di atas 15 detik dan menggunakan origin yang sama dengan aplikasi.
 Header `X-Accel-Buffering: no` membantu Nginx; pastikan konfigurasi proxy mendukung.
