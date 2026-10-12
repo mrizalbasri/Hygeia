@@ -28,6 +28,8 @@ akses anonim. Metadata mengembalikan ID resource; detail memakai endpoint lab
 atau resep yang ada. CarePass tidak mengizinkan perubahan atau resource lain.
 Berbeda dari akses darurat, pasien boleh membagikan resep historis secara eksplisit.
 
+Expiry diperiksa ulang setelah lock kepala audit terakhir. Grant yang habis
+selama menunggu menghasilkan 403 tanpa payload klinis serta event audit deny.
 Expiry dan revoke diperiksa setelah row lock di setiap pembacaan; perpindahan
 klinik membatalkan kecocokan grant. Revoke idempotent, tanpa menghidupkan token
 kembali. Izin episode/consent yang terpisah tetap berlaku jika masih sah.
