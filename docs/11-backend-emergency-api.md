@@ -20,6 +20,8 @@ admin melihat metadata, alasan dan catatan, tanpa isi hasil lab/resep.
 Directory hanya menampilkan ID hasil lab selesai dan resep berstatus
 sent/accepted/preparing/ready. Gunakan endpoint detail lab/resep yang sudah ada.
 Grant diperiksa di setiap detail, termasuk waktu setelah menunggu row lock.
+Pengecekan expiry diulang setelah lock kepala audit diperoleh. Jika grant habis
+selama menunggu, response 403 tanpa isi klinis dan audit mencatat denial.
 Tidak memberi hak perubahan, daftar pasien global, atau akses resep selesai.
 
 Start, tinjauan, directory dan pembacaan klinis diaudit pada rantai HMAC pasien.
