@@ -49,6 +49,28 @@ Binary/cache/cluster tes berada di direktori bin yang diabaikan Git.
 
 ## Penyerahan
 
+### Perbaikan setelah review lokal lanjutan
+
+Review lanjutan terhadap `f18b2f4` mereproduksi dua kasus yang belum tercakup:
+expiry selama menunggu lock kepala audit dan shutdown dengan stream SSE aktif.
+Keduanya diperbaiki pada branch pemilik dan diteruskan ke branch integrasi:
+
+- `98c2ea2` (PR #7): pembacaan grant mengunci kepala audit setelah resource/grant,
+  lalu memeriksa expiry sebelum response klinis dan audit allow. Expiry selama
+  menunggu menghasilkan 403 dan audit deny. Urutan lock tetap konsisten.
+- `a02ca78` (PR #8): jalur CarePass menerapkan pengecekan yang sama. Tes lab dan
+  resep masing-masing mencakup grant valid serta expired, tanpa payload bocor,
+  dan verifikasi integritas rantai audit.
+- `c873854` (PR #9): signal context aplikasi membatalkan hanya SSE; context
+  request JSON biasa tidak dibatalkan. Tes HTTP membuktikan stream berhenti,
+  request biasa tetap drain, dan Shutdown selesai sebelum deadline.
+
+Seluruh verifikasi tetap lokal dengan PostgreSQL khusus tes; tidak menambah CI.
+HEAD integrasi kode yang diuji ulang: `3872626`. Regresi seluruh paket, vet,
+build API dan tes reproduksi lokal overlay semuanya lulus setelah perbaikan.
+Tes reproduksi lokal kini dijadikan regresi source agar kasus tidak berulang.
+Tidak ada migrasi tambahan atau perubahan file frontend.
+
 | Urutan | PR | Cakupan | Base |
 | --- | --- | --- | --- |
 | 1 | [#5](https://github.com/mrizalbasri/Hygeia/pull/5) | Admin | main |
