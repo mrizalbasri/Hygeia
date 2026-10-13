@@ -55,13 +55,13 @@ Review lanjutan terhadap `f18b2f4` mereproduksi dua kasus yang belum tercakup:
 expiry selama menunggu lock kepala audit dan shutdown dengan stream SSE aktif.
 Keduanya diperbaiki pada branch pemilik dan diteruskan ke branch integrasi:
 
-- `98c2ea2` (PR #7): pembacaan grant mengunci kepala audit setelah resource/grant,
+- `98c2ea2` (PR #12): pembacaan grant mengunci kepala audit setelah resource/grant,
   lalu memeriksa expiry sebelum response klinis dan audit allow. Expiry selama
   menunggu menghasilkan 403 dan audit deny. Urutan lock tetap konsisten.
-- `a02ca78` (PR #8): jalur CarePass menerapkan pengecekan yang sama. Tes lab dan
+- `a02ca78` (PR #13): jalur CarePass menerapkan pengecekan yang sama. Tes lab dan
   resep masing-masing mencakup grant valid serta expired, tanpa payload bocor,
   dan verifikasi integritas rantai audit.
-- `c873854` (PR #9): signal context aplikasi membatalkan hanya SSE; context
+- `c873854` (PR #14): signal context aplikasi membatalkan hanya SSE; context
   request JSON biasa tidak dibatalkan. Tes HTTP membuktikan stream berhenti,
   request biasa tetap drain, dan Shutdown selesai sebelum deadline.
 
@@ -73,17 +73,22 @@ Tidak ada migrasi tambahan atau perubahan file frontend.
 
 | Urutan | PR | Cakupan | Base |
 | --- | --- | --- | --- |
-| 1 | [#5](https://github.com/mrizalbasri/Hygeia/pull/5) | Admin | main |
-| 2 | [#6](https://github.com/mrizalbasri/Hygeia/pull/6) | Notifikasi | backend-admin |
-| 3 | [#7](https://github.com/mrizalbasri/Hygeia/pull/7) | Akses darurat | backend-notifications |
-| 4 | [#8](https://github.com/mrizalbasri/Hygeia/pull/8) | CarePass/QR | backend-break-glass |
-| 5 | [#9](https://github.com/mrizalbasri/Hygeia/pull/9) | SSE dan regresi keamanan | backend-carepass |
-| 6 | [#4](https://github.com/mrizalbasri/Hygeia/pull/4) | Timeline dan hasil integrasi | backend-notification-stream |
+| 1 | [#10](https://github.com/mrizalbasri/Hygeia/pull/10) | Admin | main |
+| 2 | [#11](https://github.com/mrizalbasri/Hygeia/pull/11) | Notifikasi | backend-admin |
+| 3 | [#12](https://github.com/mrizalbasri/Hygeia/pull/12) | Akses darurat | backend-notifications |
+| 4 | [#13](https://github.com/mrizalbasri/Hygeia/pull/13) | CarePass/QR | backend-break-glass |
+| 5 | [#14](https://github.com/mrizalbasri/Hygeia/pull/14) | SSE dan regresi keamanan | backend-carepass |
+| 6 | [#15](https://github.com/mrizalbasri/Hygeia/pull/15) | Timeline dan hasil integrasi | backend-notification-stream |
 
-Semua branch memakai prefix `codex/`. PR belum di-merge. Gunakan merge commit
+Pada 13 Oktober 2026, nama branch lokal dan remote diganti sesuai preferensi
+pengguna: `feature/` untuk fitur dan `fix/` untuk perbaikan. PR #10–#15
+menggantikan PR #5, #6, #7, #8, #9, dan #4 yang ditutup saat rename branch.
+Commit implementasi tetap sama; tautan dan dokumentasi diperbarui.
+
+Semua branch fitur memakai prefix `feature/`. PR belum di-merge. Gunakan merge commit
 dan pertahankan branch base selama PR turunannya masih terbuka; jika memakai
 squash/rebase, rebase dan retarget PR turunan terlebih dahulu agar diff tidak
-mengulang commit tahap sebelumnya. PR #4 adalah branch gabungan akhir.
+mengulang commit tahap sebelumnya. PR #15 adalah branch gabungan akhir.
 
 SSE membatasi koneksi per proses dan menserialisasi alokasi notifikasi sampai
 commit, sesuai volume MVP. Production memerlukan `PUBLIC_APP_URL` HTTPS dan

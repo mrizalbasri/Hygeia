@@ -38,7 +38,7 @@ status resource saat ini menghilangkan tahapan historis. Proyeksi audit dipilih.
 
 ## Tahapan
 
-1. Buat branch `codex/backend-patient-timeline` dan commit rencana.
+1. Buat branch `feature/backend-patient-timeline` dan commit rencana.
 2. Implementasikan proyeksi, endpoint, validasi, dan pagination cursor.
 3. Uji perjalanan episode/lab/resep/consent, isolasi pasien/peran, penolakan
    parameter, pengecualian akses gagal/read, teks historis, pagination saat
