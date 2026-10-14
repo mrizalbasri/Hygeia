@@ -260,7 +260,9 @@ sendiri atau gunakan backend bersama melalui proxy satu origin.
 
 API resep dan apotek tersedia; kontrak lengkap dan contoh request/response ada
 di [07-BACKEND-PRESCRIPTIONS.md](07-BACKEND-PRESCRIPTIONS.md).
-Akses darurat, timeline klinis, notifikasi, dan manajemen admin belum tersedia.
+Timeline perjalanan pasien tersedia melalui `GET /patient/timeline`; kontrak
+filter dan pagination cursor ada di [08-BACKEND-TIMELINE.md](08-BACKEND-TIMELINE.md).
+Akses darurat, notifikasi, dan manajemen admin belum tersedia.
 Riwayat akses mencakup episode, laboratorium, consent satu hasil lab, dan resep.
 
 ## Laboratorium

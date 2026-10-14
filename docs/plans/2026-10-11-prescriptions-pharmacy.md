@@ -37,7 +37,7 @@ merupakan pekerjaan lanjutan terpisah.
 
 ## Tahapan dan commit
 
-1. Dokumentasikan rencana dan buat branch `codex/backend-prescriptions-pharmacy`.
+1. Dokumentasikan rencana dan buat branch `feature/backend-prescriptions-pharmacy`.
 2. Tambahkan migrasi 5 untuk prescriptions dan prescription_items; policy,
    service, handler; registrasi API; pembatalan pending saat episode berakhir;
    ringkasan audit dalam bahasa Indonesia.

@@ -90,6 +90,14 @@ disetujui tetap dapat diselesaikan. Apotek hanya menerima ID, referensi pasien,
 item obat, dan status selama penugasan aktif. Tidak ada consent lintas dokter
 untuk resep pada implementasi ini. Kontrak aktual: `07-BACKEND-PRESCRIPTIONS.md`.
 
+Timeline perjalanan pasien menggunakan proyeksi allowlist kejadian bisnis
+sukses dari audit yang sudah ada. Modul `timeline` menyediakan query dan
+presentasi milestone; service `care` menyelesaikan identitas pasien dari sesi.
+Tidak ada tabel timeline, dual-write, backfill, atau perubahan format hash.
+Riwayat akses tetap mencakup pembacaan dan penolakan; timeline mengecualikannya.
+Urutan memakai seq rantai dengan cursor eksklusif, bukan offset. Kontrak aktual:
+`08-BACKEND-TIMELINE.md`.
+
 Tahap penyelesaian backend (12 Oktober 2026) menambah admin akun/organisasi,
 ledger administratif append-only, notifikasi transaksional, akses darurat,
 CarePass/QR untuk satu resource dan stream SSE. CarePass hanya menyimpan hash
