@@ -178,6 +178,15 @@ func (s *Service) Resources(ctx context.Context, token []byte, id string, limit,
 			}
 			return apiutil.ErrForbidden
 		}
+		if err := audit.LockChain(ctx, tx, g.patientID); err != nil {
+			return err
+		}
+		if !s.now().Before(g.ExpiresAt) {
+			if err := s.record(ctx, tx, a, g, "break_glass.resources", "deny"); err != nil {
+				return err
+			}
+			return apiutil.ErrForbidden
+		}
 		rows, err := tx.Query(ctx, `SELECT id,resource_type FROM (
  SELECT l.id::text AS id,'lab_result' AS resource_type FROM lab_results l JOIN lab_requests r ON r.id=l.lab_request_id JOIN care_episodes e ON e.id=r.episode_id WHERE e.patient_id=$1 AND r.status='completed'
  UNION ALL SELECT r.id::text,'prescription' FROM prescriptions r JOIN care_episodes e ON e.id=r.episode_id WHERE e.patient_id=$1 AND r.status IN ('sent','accepted','preparing','ready')) resources ORDER BY resource_type,id LIMIT $2 OFFSET $3`, g.patientID, limit, offset)
