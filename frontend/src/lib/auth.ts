@@ -5,6 +5,7 @@ export type User = {
 	email: string;
 	full_name: string;
 	role: Role;
+	patient_ref?: string;
 	organization: { id: string; name: string; type: string } | null;
 };
 

@@ -1,100 +1,62 @@
 # Hygeia Frontend
 
-Halaman `/` menampilkan landing page Hygeia dengan aset brand, penjelasan peran,
-alur perawatan, izin data, dan FAQ. Halaman `/login` memakai backend Go melalui
-proxy `/api`, lalu pengguna diarahkan ke `/dashboard/{role}` berdasarkan identitas
-dari backend. Dashboard pasien membaca perawatan, permintaan lab, resep, dan
-timeline. Dashboard staf masih berupa ruang awal dengan identitas akun.
+SvelteKit dengan landing Hygeia, login cookie sesi, dan dashboard sesuai peran.
+Backend Go di `127.0.0.1:8080`; browser memakai proxy `/api` satu origin.
+SSR meneruskan cookie melalui `API_BASE_URL` (lihat `src/env.ts`).
 
-Form persetujuan, pemilihan apotek, dan detail nilai hasil lab belum tersedia
-pada web. Penjelasan alur di landing membedakan kemampuan backend dari antarmuka
-demo yang sudah dapat dicoba. Semua data demo bersifat sintetis.
+Pasien: ringkasan, kode pasien, undangan/perawatan, persetujuan pemeriksaan,
+hasil lab, resep dan pilihan apotek, izin dokter, CarePass, timeline, riwayat
+akses/verifikasi audit, riwayat akses darurat, dan notifikasi langsung.
+Dokter: undangan, pemeriksaan, hasil, resep multiobat, permintaan izin,
+penebusan CarePass, akses darurat, dan notifikasi.
+Lab/apotek/admin masih memakai shell awal. Rencana tugas lab/apotek ada di
+[handoff pengembang](../docs/plans/2026-10-15-patient-doctor-and-provider-handoff.md).
 
-Jalankan backend dan database terlebih dahulu (lihat `../backend/README.md`),
-lalu `pnpm install` dan `pnpm dev` dari folder ini. Store pnpm berada di
-`.pnpm-store/` lokal yang diabaikan Git, untuk menghindari cache di drive C.
+## Menjalankan
 
-Untuk tes browser kelima peran pada akun demo yang sudah di-seed:
+Jalankan database/API sesuai [panduan backend](../backend/README.md), lalu:
 
 ```powershell
-# Jalankan backend di :8080 dan pnpm dev di :5173 sebelum tes.
-node --env-file=../backend/.env tests/auth.e2e.mjs
+pnpm install
+pnpm dev
 ```
 
-Tes memakai Microsoft Edge terpasang (`PLAYWRIGHT_CHANNEL=chrome` untuk Chrome)
-dan menulis screenshot lokal ke `.test-results/`. Password dibaca dari
-`DEMO_PASSWORD`, tidak ditulis di source. `TEST_WEB_URL` dapat dipakai jika alamat
-frontend berbeda dari `http://localhost:5173`.
+Buka port yang dilaporkan Vite. Akun demo tersedia dari seed backend; password
+berasal dari `backend/.env`. Jangan commit file `.env` atau data pasien.
+Production membutuhkan adapter deployment dan reverse proxy HTTPS satu origin.
 
-Untuk pengujian UI tanpa backend atau database:
+## Pengujian
 
 ```powershell
+pnpm check
+pnpm lint
+pnpm build
+$env:PLAYWRIGHT_CHANNEL='msedge'
+pnpm test -- --run
 node tests/dashboard-theme.e2e.mjs
+node tests/clinical-workflows.e2e.js
 ```
 
-Tes menjalankan API fixture di `127.0.0.1:18081` dan Vite di `127.0.0.1:5177`,
-lalu menutup keduanya. Cakupan: pilihan peran dan FAQ dengan keyboard, tautan
-landing, aset ponsel, tujuh lebar layar, detail resep, filter timeline, keadaan
-kosong/gagal, dan pemulihan. Identitas dan catatan pada fixture adalah sintetis.
-Tes ini tidak membuktikan otorisasi backend maupun keberhasilan login akun demo.
+Dua tes E2E fixture menjalankan server sendiri dan menutupnya setelah selesai.
+Tes mencakup landing/mobile, persetujuan/penolakan, CSRF, konflik 409, detail 403,
+503/retry, cursor bigint, API 401 dan SSE session-ended. Screenshot di
+`.test-results/` diabaikan Git. Edge harus terpasang; unit tests juga dapat memakai
+Chromium Playwright dengan mengosongkan `PLAYWRIGHT_CHANNEL`.
 
-Build produksi dan lint file frontend yang diubah telah lolos. `pnpm check`
-masih menemukan error pada contoh bawaan `Welcome.svelte.spec.ts`: impor `page`
-dari `vitest/browser` tidak tersedia pada versi dependensi yang terpasang.
+Uji integrasi API demo lokal (opt-in):
 
-## Catatan scaffold Svelte
-
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
-
-## Creating a project
-
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project
-npx sv create my-app
+```powershell
+$env:HYGEIA_LIVE_TEST='1'
+node tests/clinical-workflows.live.js
 ```
 
-To recreate this project with the same configuration:
+Tes membaca `DEMO_PASSWORD` dari `backend/.env`, memerlukan API aktif di :8080,
+lalu menjalankan Vite di :5185. Tes membuat organisasi/akun sintetis unik dan
+menyelesaikan alur dokter/pasien melalui browser. Tindakan lab/apotek dilakukan
+melalui API sampai frontend petugas selesai. Data sintetis sengaja dipertahankan
+untuk reproduksi audit; tidak mengubah akun lama. Jangan jalankan pada produksi.
 
-```sh
-# recreate this project
-pnpm dlx sv@1.1.1 create --template minimal --types ts --add prettier eslint tailwindcss="plugins:none" vitest="usages:unit,component" --install pnpm .
-```
-
-## Adding features
-
-Add features to your project with `sv add`:
-
-```sh
-npx sv add
-```
-
-For example, to add Tailwind CSS:
-
-```sh
-npx sv add tailwindcss
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+Modul shared berada di `src/lib/workflows`: `api.ts` untuk CSRF/error/cursor,
+`PagedList` untuk pagination, `DirectoryPicker` untuk direktori, `ClinicalDetail`
+untuk pembacaan berotorisasi, serta `Notifications` untuk inbox/SSE. Setiap mutasi
+memuat ulang daftar; server tetap menentukan izin dan status.
