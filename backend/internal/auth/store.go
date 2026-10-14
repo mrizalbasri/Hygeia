@@ -13,6 +13,7 @@ type User struct {
 	Email        string        `json:"email"`
 	FullName     string        `json:"full_name"`
 	Role         string        `json:"role"`
+	PatientRef   *string       `json:"patient_ref,omitempty"`
 	Organization *Organization `json:"organization"`
 }
 
@@ -49,12 +50,13 @@ func (s Store) UserBySession(ctx context.Context, tokenHash []byte) (User, error
 	var user User
 	var orgID, orgName, orgType *string
 	err := s.DB.QueryRow(ctx, `
-SELECT u.id::text, u.email, u.full_name, u.role, o.id::text, o.name, o.type
+SELECT u.id::text, u.email, u.full_name, u.role, o.id::text, o.name, o.type, p.patient_ref
 FROM sessions s JOIN users u ON u.id=s.user_id
+LEFT JOIN patients p ON p.user_id=u.id AND u.role='patient'
 LEFT JOIN organization_memberships m ON m.user_id=u.id AND m.staff_role=u.role
 LEFT JOIN organizations o ON o.id=m.organization_id
 WHERE s.token_hash=$1 AND s.expires_at>now() AND u.disabled_at IS NULL`, tokenHash).Scan(
-		&user.ID, &user.Email, &user.FullName, &user.Role, &orgID, &orgName, &orgType,
+		&user.ID, &user.Email, &user.FullName, &user.Role, &orgID, &orgName, &orgType, &user.PatientRef,
 	)
 	if err != nil {
 		return User{}, err

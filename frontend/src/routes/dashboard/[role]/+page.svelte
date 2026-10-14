@@ -3,11 +3,19 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { authMutation, roles } from '#lib/auth.js';
-	import PatientDashboard from '#lib/PatientDashboard.svelte';
-	import HealthIcon from '#lib/HealthIcon.svelte';
+	import ClinicalWorkspace from '#lib/workflows/ClinicalWorkspace.svelte';
+	import { menus } from '#lib/workflows/api.js';
+	import { page } from '$app/state';
 	import type { PageProps } from './$types';
 	let { data }: PageProps = $props();
 	let role = $derived(roles[data.user.role]);
+	let clinical = $derived(data.user.role === 'patient' || data.user.role === 'doctor');
+	let menu = $derived(data.user.role === 'doctor' ? menus.doctor : menus.patient);
+	let activeView = $derived(
+		menu.some(([id]) => id === page.url.searchParams.get('view'))
+			? page.url.searchParams.get('view')
+			: menu[0][0]
+	);
 	let pending = $state(false);
 	let ready = $state(false);
 	let message = $state('');
@@ -40,16 +48,18 @@
 		>
 		<p class="eyebrow muted workspace-label">RUANG {role.label.toUpperCase()}</p>
 		<nav aria-label="Menu utama">
-			<a
-				class="nav-active"
-				href={resolve('/dashboard/[role]', { role: data.user.role })}
-				aria-current="page"><span aria-hidden="true">⌂</span>Beranda</a
-			>{#if data.user.role === 'patient'}
-				<a href="#perawatan"><HealthIcon name="care" />Perawatan saya</a>
-				<a href="#pemeriksaan"><HealthIcon name="lab" />Pemeriksaan</a>
-				<a href="#obat"><HealthIcon name="medicine" />Resep & obat</a>
-				<a href="#riwayat"><HealthIcon name="history" />Riwayat</a>
-			{:else}{#each role.items as item (item)}<button
+			{#if clinical}
+				{#each menu as [id, label] (id)}<a
+						class:nav-active={activeView === id}
+						aria-current={activeView === id ? 'page' : undefined}
+						href={resolve(`/dashboard/[role]?view=${id}`, { role: data.user.role })}>{label}</a
+					>{/each}
+			{:else}
+				<a
+					class="nav-active"
+					href={resolve('/dashboard/[role]', { role: data.user.role })}
+					aria-current="page"><span aria-hidden="true">⌂</span>Beranda</a
+				>{#each role.items as item (item)}<button
 						class="nav-upcoming"
 						disabled
 						title="Segera tersedia">{item}<span aria-hidden="true">·</span></button
@@ -71,9 +81,9 @@
 			</div>
 		</header>
 		<main class="dashboard-content" class:patient-content={data.user.role === 'patient'}>
-			{#if data.user.role === 'patient'}
+			{#if clinical}
 				{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
-				<PatientDashboard user={data.user} />
+				<ClinicalWorkspace user={data.user} />
 			{:else}
 				<p class="eyebrow muted">SELAMAT DATANG, {data.user.full_name.toUpperCase()}</p>
 				<h1>{role.title}</h1>
