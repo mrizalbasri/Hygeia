@@ -20,11 +20,11 @@ Dataset demo hanya menggunakan data sintetis.
   lokal yang sudah tersedia.
 - Dokumen kebutuhan bisnis, produk, arsitektur, dan design system.
 
-Frontend yang masuk repository masih berupa halaman starter. Halaman `/login`,
-dashboard per peran, dan proxy `/api` belum disertakan. API autentikasi, care
-episode, laboratorium, audit, dan consent untuk satu hasil lab sudah tersedia.
-Frontend perlu diintegrasikan melalui kontrak API. Akses darurat, notifikasi,
-dan manajemen admin belum diimplementasikan.
+Frontend menyediakan landing page, login/logout melalui proxy `/api`, dan
+dashboard per peran. Dashboard pasien membaca perawatan, permintaan lab, resep,
+dan timeline; dashboard staf masih berupa ruang awal. Form tindakan klinis,
+persetujuan, dan pemilihan apotek belum diintegrasikan pada web. Kontrak backend
+dan dokumentasi modul tetap menjadi acuan untuk integrasi berikutnya.
 
 ## Menjalankan development
 
@@ -49,13 +49,11 @@ Invoke-RestMethod http://127.0.0.1:8080/api/v1/health
 Invoke-RestMethod http://127.0.0.1:8080/api/v1/readyz
 ```
 
-Login tersedia melalui `POST /api/v1/auth/login`, bukan halaman web. Ambil token
-dan cookie dari `GET /api/v1/auth/csrf`, lalu kirim JSON login beserta cookie dan
-header `X-CSRF-Token` menggunakan klien API yang menyimpan cookie. Email akun
-demo tercantum pada panduan backend; password mengikuti `DEMO_PASSWORD` saat
-seed pertama kali dijalankan.
+Login web tersedia pada `/login`; frontend mengambil CSRF dan mengirim login
+ke backend melalui proxy satu origin. Email akun demo tercantum pada panduan
+backend; password mengikuti `DEMO_PASSWORD` saat seed pertama kali dijalankan.
 
-Frontend starter dapat dijalankan secara terpisah:
+Frontend dapat dijalankan secara terpisah:
 
 ```powershell
 cd frontend
@@ -63,10 +61,11 @@ pnpm install
 pnpm dev
 ```
 
-Buka URL root yang ditampilkan Vite (default `http://localhost:5173/`). Route
-`/login` belum tersedia pada checkout ini. Pengembang frontend perlu menambahkan
-proxy `/api`, form login, pengelolaan sesi, serta dashboard sesuai
-[panduan integrasi frontend](docs/05-BACKEND-API.md#integrasi-frontend-yang-perlu-ditambahkan).
+Buka URL root yang ditampilkan Vite (default `http://localhost:5173/`) untuk
+landing page, atau `/login` untuk masuk ke dashboard. Proxy development menuju
+backend pada `127.0.0.1:8080`. Untuk produksi, arahkan `/api` ke backend pada
+origin yang sama. Lihat [panduan frontend](frontend/README.md) untuk cakupan dan
+pengujian serta [kontrak API](docs/05-BACKEND-API.md) untuk integrasi lanjutan.
 
 Lihat [panduan backend](backend/README.md) untuk konfigurasi PostgreSQL, endpoint
 health/readiness, dan cara mengarahkan cache Go ke drive D jika diperlukan.
