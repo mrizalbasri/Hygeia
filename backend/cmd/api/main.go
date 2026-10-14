@@ -93,7 +93,7 @@ func run(logger *slog.Logger) error {
 	consentHandler := &consent.Handler{Service: &consent.Service{DB: pool, Audit: auditWriter}, Logger: logger}
 	prescriptionHandler := &prescription.Handler{Service: &prescription.Service{DB: pool, Audit: auditWriter}, Logger: logger}
 	adminHandler := &admin.Handler{Service: &admin.Service{DB: pool}}
-	notificationHandler := &notification.Handler{Service: &notification.Service{DB: pool}}
+	notificationHandler := &notification.Handler{Service: &notification.Service{DB: pool}, Shutdown: ctx}
 	breakGlassHandler := &breakglass.Handler{Service: &breakglass.Service{DB: pool, Audit: auditWriter}}
 	carePassHandler := &carepass.Handler{Service: &carepass.Service{DB: pool, Audit: auditWriter, ShareBaseURL: shareBase}}
 

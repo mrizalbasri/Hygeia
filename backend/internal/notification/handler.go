@@ -1,17 +1,27 @@
 package notification
 
 import (
+	"context"
 	"github.com/mrizalbasri/Hygeia/backend/internal/apiutil"
 	"github.com/mrizalbasri/Hygeia/backend/internal/auth"
 	"net/http"
 	"strconv"
+	"sync"
 )
 
-type Handler struct{ Service *Service }
+type Handler struct {
+	Service *Service
+	// Shutdown cancels streams without interrupting ordinary JSON requests.
+	Shutdown context.Context
+	mu       sync.Mutex
+	streams  map[string]int
+	total    int
+}
 
 func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/notifications", h.list)
 	mux.HandleFunc("GET /api/v1/notifications/unread-count", h.unread)
+	mux.HandleFunc("GET /api/v1/notifications/stream", h.stream)
 	mux.HandleFunc("PATCH /api/v1/notifications/{id}", h.read)
 }
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
