@@ -8,6 +8,7 @@ import (
 )
 
 var messages = map[string]string{
+	"break_glass.start": "Akses darurat terhadap data Anda dimulai selama 60 menit.", "break_glass.review": "Akses darurat telah ditinjau administrator.",
 	"episode.invite": "Ada undangan perawatan baru.", "episode.accept": "Undangan perawatan diterima.", "episode.reject": "Undangan perawatan ditolak.", "episode.end": "Episode perawatan diakhiri.",
 	"lab_request.create": "Permintaan laboratorium menunggu persetujuan pasien.", "lab_request.approve": "Pengiriman permintaan laboratorium disetujui.", "lab_request.reject": "Pengiriman permintaan laboratorium ditolak.", "lab_request.cancel": "Permintaan laboratorium dibatalkan.", "lab_request.accepted": "Laboratorium menerima permintaan.", "lab_request.in_progress": "Pemeriksaan laboratorium sedang diproses.", "lab_result.submit": "Hasil laboratorium tersedia.",
 	"prescription.create": "Resep menunggu pilihan apotek dan persetujuan pasien.", "prescription.approve": "Resep dikirim ke apotek pilihan pasien.", "prescription.reject": "Pengiriman resep ditolak.", "prescription.cancel": "Resep dibatalkan.", "prescription.accepted": "Apotek menerima resep.", "prescription.preparing": "Apotek sedang menyiapkan resep.", "prescription.ready": "Resep siap diambil.", "prescription.completed": "Pemenuhan resep selesai.",
@@ -23,6 +24,10 @@ func Enqueue(ctx context.Context, tx pgx.Tx, chain string, seq int64, actorID, a
 	}
 	recipients := `SELECT user_id FROM patients WHERE id=$1`
 	switch {
+	case action == "break_glass.start":
+		recipients += ` UNION SELECT id FROM users WHERE role='admin' AND $2::uuid IS NOT NULL`
+	case action == "break_glass.review":
+		recipients += ` UNION SELECT doctor_user_id FROM break_glass_sessions WHERE id=$2`
 	case strings.HasPrefix(action, "episode."):
 		recipients += ` UNION SELECT doctor_id FROM care_episodes WHERE id=$2`
 	case strings.HasPrefix(action, "lab_request.") || action == "lab_result.submit":

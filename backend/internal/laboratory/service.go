@@ -386,6 +386,7 @@ func (s *Service) GetResult(ctx context.Context, token []byte, id string) (Resul
 		}
 		event := audit.Event{ChainID: r.patientID, Action: "lab_result.view", ResourceType: "lab_result", ResourceID: id, Outcome: "allow", Basis: accessBasis(actor)}
 		allowed := policy.CanViewLabResult(actor, r.access())
+		var expiresAt *time.Time
 		if !allowed && r.Status == "completed" {
 			grant, err := policy.FindLabResultConsent(ctx, tx, actor, r.episode.PatientUserID, id, s.now())
 			if err != nil {
@@ -396,7 +397,27 @@ func (s *Service) GetResult(ctx context.Context, token []byte, id string) (Resul
 				event.Basis = "consent"
 				event.ConsentID = grant.ID
 				event.ConsentExpiresAt = &grant.ExpiresAt
+				expiresAt = &grant.ExpiresAt
 			}
+		}
+		if !allowed && r.Status == "completed" {
+			grant, err := policy.FindEmergencyGrant(ctx, tx, actor, r.episode.PatientUserID, s.now)
+			if err != nil {
+				return err
+			}
+			if grant.ID != "" {
+				allowed = true
+				event.Basis = "break_glass"
+				event.BreakGlassID = grant.ID
+				event.BreakGlassExpiresAt = &grant.ExpiresAt
+				expiresAt = &grant.ExpiresAt
+			}
+		}
+		if allowed && expiresAt != nil {
+			if err := audit.LockChain(ctx, tx, r.patientID); err != nil {
+				return err
+			}
+			allowed = s.now().Before(*expiresAt)
 		}
 		if !allowed {
 			event.Outcome = "deny"
@@ -411,6 +432,11 @@ func (s *Service) GetResult(ctx context.Context, token []byte, id string) (Resul
 		}
 		result.TestCode = r.TestCode
 		result.TestName = r.TestName
+		// Emergency scope excludes free-text clinical notes; explicit patient
+		// consent and CarePass continue to expose their authorized resource.
+		if event.Basis == "break_glass" {
+			result.Note = ""
+		}
 		return s.Audit.Append(ctx, tx, actor, event)
 	})
 	return result, err

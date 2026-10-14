@@ -24,6 +24,14 @@ type DB interface {
 type Service struct {
 	DB    DB
 	Audit *audit.Writer
+	Now   func() time.Time
+}
+
+func (s *Service) now() time.Time {
+	if s.Now != nil {
+		return s.Now()
+	}
+	return time.Now()
 }
 
 // Business denials are audited and committed. Infrastructure failures roll back
@@ -197,10 +205,32 @@ func (s *Service) Get(ctx context.Context, token []byte, id string) (any, error)
 		if err != nil {
 			return err
 		}
-		if !policy.CanViewPrescription(actor, p.access()) {
+		event := audit.Event{ChainID: p.patientID, Action: "prescription.view", ResourceType: "prescription", ResourceID: p.ID, Outcome: "allow", Basis: accessBasis(actor)}
+		allowed := policy.CanViewPrescription(actor, p.access())
+		var expiresAt *time.Time
+		if !allowed && policy.IsActivePrescription(p.Status) {
+			grant, err := policy.FindEmergencyGrant(ctx, tx, actor, p.episode.PatientUserID, s.now)
+			if err != nil {
+				return err
+			}
+			if grant.ID != "" {
+				allowed = true
+				event.Basis = "break_glass"
+				event.BreakGlassID = grant.ID
+				event.BreakGlassExpiresAt = &grant.ExpiresAt
+				expiresAt = &grant.ExpiresAt
+			}
+		}
+		if allowed && expiresAt != nil {
+			if err := audit.LockChain(ctx, tx, p.patientID); err != nil {
+				return err
+			}
+			allowed = s.now().Before(*expiresAt)
+		}
+		if !allowed {
 			return s.reject(ctx, tx, actor, p, "prescription.view", ErrForbidden)
 		}
-		if err := s.record(ctx, tx, actor, p, "prescription.view", "allow", accessBasis(actor)); err != nil {
+		if err := s.Audit.Append(ctx, tx, actor, event); err != nil {
 			return err
 		}
 		result = p.view(actor)

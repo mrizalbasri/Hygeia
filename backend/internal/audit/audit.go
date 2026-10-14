@@ -31,8 +31,10 @@ type Event struct {
 	PrevHash     []byte         `json:"prev_hash"`
 	Hash         []byte         `json:"hash"`
 	// Optional grant details enter the existing canonical context, preserving v1 hashes.
-	ConsentID        string     `json:"-"`
-	ConsentExpiresAt *time.Time `json:"-"`
+	ConsentID           string     `json:"-"`
+	ConsentExpiresAt    *time.Time `json:"-"`
+	BreakGlassID        string     `json:"-"`
+	BreakGlassExpiresAt *time.Time `json:"-"`
 }
 
 type Writer struct{ key []byte }
@@ -69,13 +71,30 @@ func (w *Writer) digest(event Event) ([]byte, error) {
 	return hash.Sum(nil), nil
 }
 
+func lockHead(ctx context.Context, tx pgx.Tx, chain string) (int64, []byte, error) {
+	if _, err := tx.Exec(ctx, `INSERT INTO audit_chain_heads(chain_id,last_hash) VALUES($1,$2) ON CONFLICT DO NOTHING`, chain, make([]byte, 32)); err != nil {
+		return 0, nil, err
+	}
+	var seq int64
+	var hash []byte
+	err := tx.QueryRow(ctx, `SELECT last_seq,last_hash FROM audit_chain_heads WHERE chain_id=$1 FOR UPDATE`, chain).Scan(&seq, &hash)
+	return seq, hash, err
+}
+
+// LockChain lets clinical readers recheck grant expiry after the last blocking
+// lock, before reading data and recording allow. Acquire resource and grant
+// locks first and retain this lock until the business transaction commits.
+func LockChain(ctx context.Context, tx pgx.Tx, chain string) error {
+	_, _, err := lockHead(ctx, tx, chain)
+	return err
+}
+
 // Append must share the caller's business transaction. The per-patient head lock
 // serializes concurrent writers without locking unrelated patient chains.
 func (w *Writer) Append(ctx context.Context, tx pgx.Tx, actor auth.User, event Event) error {
-	if _, err := tx.Exec(ctx, `INSERT INTO audit_chain_heads(chain_id,last_hash) VALUES($1,$2) ON CONFLICT DO NOTHING`, event.ChainID, make([]byte, 32)); err != nil {
-		return err
-	}
-	if err := tx.QueryRow(ctx, `SELECT last_seq,last_hash FROM audit_chain_heads WHERE chain_id=$1 FOR UPDATE`, event.ChainID).Scan(&event.Seq, &event.PrevHash); err != nil {
+	var err error
+	event.Seq, event.PrevHash, err = lockHead(ctx, tx, event.ChainID)
+	if err != nil {
 		return err
 	}
 	event.Version = 1
@@ -83,6 +102,12 @@ func (w *Writer) Append(ctx context.Context, tx pgx.Tx, actor auth.User, event E
 	event.OccurredAt = time.Now().UTC().Truncate(time.Microsecond)
 	event.ActorID = actor.ID
 	event.Context = map[string]any{"actor_name": actor.FullName, "actor_role": actor.Role}
+	if event.BreakGlassID != "" {
+		event.Context["break_glass_id"] = event.BreakGlassID
+		if event.BreakGlassExpiresAt != nil {
+			event.Context["break_glass_expires_at"] = event.BreakGlassExpiresAt.UTC().Format("2006-01-02T15:04:05.000000Z")
+		}
+	}
 	if event.ConsentID != "" {
 		event.Context["consent_id"] = event.ConsentID
 		if event.ConsentExpiresAt != nil {
@@ -209,6 +234,7 @@ func Summaries(ctx context.Context, tx pgx.Tx, chain string, limit, offset int) 
 	defer rows.Close()
 	result := make([]Summary, 0)
 	descriptions := map[string]string{
+		"break_glass.start": "memulai akses darurat", "break_glass.resources": "melihat daftar resource darurat", "break_glass.review": "meninjau akses darurat",
 		"episode.invite": "mengirim undangan perawatan", "episode.accept": "menerima undangan perawatan",
 		"episode.reject": "menolak undangan perawatan", "episode.end": "mengakhiri episode perawatan",
 		"episode.view": "melihat detail episode perawatan", "episode.list": "melihat daftar episode perawatan",
@@ -246,6 +272,10 @@ func Summaries(ctx context.Context, tx pgx.Tx, chain string, limit, offset int) 
 		expires, _ := event.Context["consent_expires_at"].(string)
 		if event.Outcome == "allow" && event.Basis == "consent" {
 			message = name + " " + description + " dengan izin Anda, berlaku sampai " + expires + "."
+		}
+		if event.Outcome == "allow" && event.Basis == "break_glass" {
+			until, _ := event.Context["break_glass_expires_at"].(string)
+			message = name + " " + description + " melalui akses darurat, berlaku sampai " + until + "."
 		}
 		result = append(result, Summary{Seq: event.Seq, OccurredAt: event.OccurredAt, ActorName: name, Action: event.Action, ResourceID: event.ResourceID, Outcome: event.Outcome, Basis: event.Basis, Message: message, ConsentID: consentID, ConsentExpiresAt: expires})
 	}
