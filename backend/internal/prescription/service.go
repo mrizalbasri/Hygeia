@@ -208,6 +208,19 @@ func (s *Service) Get(ctx context.Context, token []byte, id string) (any, error)
 		event := audit.Event{ChainID: p.patientID, Action: "prescription.view", ResourceType: "prescription", ResourceID: p.ID, Outcome: "allow", Basis: accessBasis(actor)}
 		allowed := policy.CanViewPrescription(actor, p.access())
 		var expiresAt *time.Time
+		if !allowed {
+			grant, err := policy.FindCarePassGrant(ctx, tx, actor, p.episode.PatientUserID, "prescription", p.ID, s.now)
+			if err != nil {
+				return err
+			}
+			if grant.ID != "" {
+				allowed = true
+				event.Basis = "carepass"
+				event.CarePassID = grant.ID
+				event.CarePassExpiresAt = &grant.ExpiresAt
+				expiresAt = &grant.ExpiresAt
+			}
+		}
 		if !allowed && policy.IsActivePrescription(p.Status) {
 			grant, err := policy.FindEmergencyGrant(ctx, tx, actor, p.episode.PatientUserID, s.now)
 			if err != nil {

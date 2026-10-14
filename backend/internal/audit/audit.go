@@ -35,6 +35,8 @@ type Event struct {
 	ConsentExpiresAt    *time.Time `json:"-"`
 	BreakGlassID        string     `json:"-"`
 	BreakGlassExpiresAt *time.Time `json:"-"`
+	CarePassID          string     `json:"-"`
+	CarePassExpiresAt   *time.Time `json:"-"`
 }
 
 type Writer struct{ key []byte }
@@ -102,6 +104,12 @@ func (w *Writer) Append(ctx context.Context, tx pgx.Tx, actor auth.User, event E
 	event.OccurredAt = time.Now().UTC().Truncate(time.Microsecond)
 	event.ActorID = actor.ID
 	event.Context = map[string]any{"actor_name": actor.FullName, "actor_role": actor.Role}
+	if event.CarePassID != "" {
+		event.Context["carepass_id"] = event.CarePassID
+		if event.CarePassExpiresAt != nil {
+			event.Context["carepass_expires_at"] = event.CarePassExpiresAt.UTC().Format("2006-01-02T15:04:05.000000Z")
+		}
+	}
 	if event.BreakGlassID != "" {
 		event.Context["break_glass_id"] = event.BreakGlassID
 		if event.BreakGlassExpiresAt != nil {
@@ -234,6 +242,7 @@ func Summaries(ctx context.Context, tx pgx.Tx, chain string, limit, offset int) 
 	defer rows.Close()
 	result := make([]Summary, 0)
 	descriptions := map[string]string{
+		"carepass.create": "membuat CarePass", "carepass.redeem": "menebus CarePass", "carepass.revoke": "mencabut CarePass",
 		"break_glass.start": "memulai akses darurat", "break_glass.resources": "melihat daftar resource darurat", "break_glass.review": "meninjau akses darurat",
 		"episode.invite": "mengirim undangan perawatan", "episode.accept": "menerima undangan perawatan",
 		"episode.reject": "menolak undangan perawatan", "episode.end": "mengakhiri episode perawatan",
@@ -276,6 +285,10 @@ func Summaries(ctx context.Context, tx pgx.Tx, chain string, limit, offset int) 
 		if event.Outcome == "allow" && event.Basis == "break_glass" {
 			until, _ := event.Context["break_glass_expires_at"].(string)
 			message = name + " " + description + " melalui akses darurat, berlaku sampai " + until + "."
+		}
+		if event.Outcome == "allow" && event.Basis == "carepass" {
+			until, _ := event.Context["carepass_expires_at"].(string)
+			message = name + " " + description + " dengan CarePass, berlaku sampai " + until + "."
 		}
 		result = append(result, Summary{Seq: event.Seq, OccurredAt: event.OccurredAt, ActorName: name, Action: event.Action, ResourceID: event.ResourceID, Outcome: event.Outcome, Basis: event.Basis, Message: message, ConsentID: consentID, ConsentExpiresAt: expires})
 	}

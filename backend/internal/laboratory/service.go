@@ -401,6 +401,19 @@ func (s *Service) GetResult(ctx context.Context, token []byte, id string) (Resul
 			}
 		}
 		if !allowed && r.Status == "completed" {
+			grant, err := policy.FindCarePassGrant(ctx, tx, actor, r.episode.PatientUserID, "lab_result", id, s.now)
+			if err != nil {
+				return err
+			}
+			if grant.ID != "" {
+				allowed = true
+				event.Basis = "carepass"
+				event.CarePassID = grant.ID
+				event.CarePassExpiresAt = &grant.ExpiresAt
+				expiresAt = &grant.ExpiresAt
+			}
+		}
+		if !allowed && r.Status == "completed" {
 			grant, err := policy.FindEmergencyGrant(ctx, tx, actor, r.episode.PatientUserID, s.now)
 			if err != nil {
 				return err
