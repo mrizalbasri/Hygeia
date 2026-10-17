@@ -18,11 +18,12 @@ Dataset demo hanya menggunakan data sintetis.
   lokal yang sudah tersedia.
 - Dokumen kebutuhan bisnis, produk, arsitektur, dan design system.
 
-Frontend yang masuk repository masih berupa halaman starter. Halaman `/login`,
-dashboard per peran, dan proxy `/api` belum disertakan. API autentikasi, care
-episode, laboratorium, audit, dan consent untuk satu hasil lab sudah tersedia.
-Frontend perlu diintegrasikan melalui kontrak API. Akses darurat, timeline
-klinis, notifikasi, dan manajemen admin belum diimplementasikan.
+Frontend menyediakan halaman `/login`, proxy `/api`, pengelolaan sesi cookie,
+serta dashboard role-aware untuk staf laboratorium dan apotek. Dashboard lab
+mendukung antrean, transisi status, dan input hasil terstruktur; dashboard apotek
+mendukung antrean dan transisi status resep sampai selesai. Alur care episode,
+consent, dan dashboard peran lain masih perlu diintegrasikan. Akses darurat,
+timeline klinis, notifikasi, dan manajemen admin belum diimplementasikan.
 
 ## Menjalankan development
 
@@ -53,7 +54,7 @@ header `X-CSRF-Token` menggunakan klien API yang menyimpan cookie. Email akun
 demo tercantum pada panduan backend; password mengikuti `DEMO_PASSWORD` saat
 seed pertama kali dijalankan.
 
-Frontend starter dapat dijalankan secara terpisah:
+Frontend dapat dijalankan secara terpisah:
 
 ```powershell
 cd frontend
@@ -61,9 +62,9 @@ pnpm install
 pnpm dev
 ```
 
-Buka URL root yang ditampilkan Vite (default `http://localhost:5173/`). Route
-`/login` belum tersedia pada checkout ini. Pengembang frontend perlu menambahkan
-proxy `/api`, form login, pengelolaan sesi, serta dashboard sesuai
+Buka URL root yang ditampilkan Vite (default `http://localhost:5173/`). Login
+tersedia di `/login`; gunakan akun demo pada panduan backend. Dashboard
+laboratorium dan apotek memanggil API melalui proxy `/api` sesuai
 [panduan integrasi frontend](docs/05-BACKEND-API.md#integrasi-frontend-yang-perlu-ditambahkan).
 
 Lihat [panduan backend](backend/README.md) untuk konfigurasi PostgreSQL, endpoint
