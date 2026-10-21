@@ -27,12 +27,14 @@ const vite = spawn(
 let output = '';
 vite.stdout.on('data', (data) => (output += data));
 vite.stderr.on('data', (data) => (output += data));
+// eslint-disable-next-line no-control-regex
+const stripAnsi = (str) => str.replace(/\x1b\[[0-9;]*m/g, '');
 const base = 'http://127.0.0.1:5186';
 let browser;
 try {
-	for (let attempt = 0; attempt < 100 && !output.includes(`${base}/`); attempt++)
+	for (let attempt = 0; attempt < 100 && !stripAnsi(output).includes(`${base}/`); attempt++)
 		await new Promise((resolve) => setTimeout(resolve, 200));
-	assert.ok(output.includes(`${base}/`), output);
+	assert.ok(stripAnsi(output).includes(`${base}/`), output);
 	browser = await chromium.launch({ channel: 'msedge', headless: true });
 	const context = await browser.newContext();
 	await context.addCookies([{ name: 'hygeia_session', value: 'fixture', url: base }]);

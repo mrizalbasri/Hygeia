@@ -42,7 +42,8 @@ try {
 	await new Promise((resolve, reject) => {
 		const deadline = Date.now() + 30000;
 		const poll = setInterval(() => {
-			if (output.includes('http://127.0.0.1:5177/')) {
+			// eslint-disable-next-line no-control-regex
+			if (output.replace(/\x1b\[[0-9;]*m/g, '').includes('http://127.0.0.1:5177/')) {
 				clearInterval(poll);
 				resolve();
 			} else if (Date.now() > deadline || vite.exitCode !== null) {

@@ -85,11 +85,17 @@ async function clickSaved(page, name) {
 		);
 	}
 }
+// eslint-disable-next-line no-control-regex
+const stripAnsi = (str) => str.replace(/\x1b\[[0-9;]*m/g, '');
 const errors = [];
 try {
-	for (let attempt = 0; attempt < 100 && !output.includes('http://127.0.0.1:5185/'); attempt++)
+	for (
+		let attempt = 0;
+		attempt < 100 && !stripAnsi(output).includes('http://127.0.0.1:5185/');
+		attempt++
+	)
 		await new Promise((resolve) => setTimeout(resolve, 200));
-	assert.ok(output.includes('http://127.0.0.1:5185/'), output);
+	assert.ok(stripAnsi(output).includes('http://127.0.0.1:5185/'), output);
 	const admin = await login('admin@demo.hygeia.test', password);
 	const organizations = {};
 	for (const type of ['clinic', 'laboratory', 'pharmacy']) {
