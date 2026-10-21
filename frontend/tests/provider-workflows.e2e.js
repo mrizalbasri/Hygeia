@@ -19,10 +19,22 @@ const pharmacyUser = {
 	organization: { id: 'org-pharmacy-1', name: 'Apotek Sehat Demo', type: 'pharmacy' }
 };
 
+const adminUser = {
+	id: 'fixture-admin-staff',
+	full_name: 'Administrator Sintetis',
+	email: 'admin@example.test',
+	role: 'admin',
+	organization: null
+};
+
 const server = createServer((request, response) => {
 	response.setHeader('Content-Type', 'application/json');
 	const cookie = request.headers.cookie || '';
-	const user = cookie.includes('role=pharmacy') ? pharmacyUser : labUser;
+	const user = cookie.includes('role=admin')
+		? adminUser
+		: cookie.includes('role=pharmacy')
+			? pharmacyUser
+			: labUser;
 	response.end(JSON.stringify({ user }));
 });
 
@@ -265,10 +277,93 @@ try {
 		await context.close();
 	}
 
+	// --- 3. Test Admin Workflow ---
+	{
+		const context = await browser.newContext();
+		await context.addCookies([
+			{ name: 'hygeia_session', value: 'fixture', url: base },
+			{ name: 'role', value: 'admin', url: base }
+		]);
+		const page = await context.newPage();
+		const errors = [];
+		page.on('pageerror', (err) => errors.push(err.message));
+
+		const orgs = [{ id: 'org-1', name: 'Klinik Pratama', type: 'clinic' }];
+		const users = [
+			{
+				id: 'u-1',
+				email: 'maya@example.test',
+				full_name: 'dr. Maya',
+				role: 'doctor',
+				organization_name: 'Klinik Pratama',
+				disabled_at: null
+			}
+		];
+		const chains = [{ chain_id: 'chain-1', patient_ref: 'HYG-DEMO-001', events: 10 }];
+		const adminMutations = [];
+
+		await page.route('**/api/v1/**', async (route) => {
+			const req = route.request();
+			const url = new URL(req.url());
+			const path = url.pathname.replace('/api/v1', '');
+			const send = (json, status = 200) => route.fulfill({ status, json });
+
+			if (path === '/me') return send({ user: adminUser });
+			if (path === '/auth/csrf') return send({ csrf_token: 'csrf-fixture' });
+
+			if (req.method() === 'GET') {
+				if (path === '/admin/organizations')
+					return send({ organizations: orgs, limit: 20, offset: 0 });
+				if (path === '/admin/users') return send({ users, limit: 20, offset: 0 });
+				if (path === '/admin/audit-chains') return send({ chains, limit: 20, offset: 0 });
+				if (path.startsWith('/audit/verify')) {
+					return send({ chain: 'chain-1', events: 10, intact: true });
+				}
+				if (path === '/admin/break-glass') return send({ sessions: [], limit: 20, offset: 0 });
+				if (path === '/admin/activity') return send({ activity: [], limit: 20, offset: 0 });
+				if (path === '/notifications/unread-count') return send({ unread_count: 0 });
+				if (path.startsWith('/notifications'))
+					return send({ notifications: [], next_before_id: '' });
+			}
+
+			if (req.method() === 'POST' && path === '/admin/organizations') {
+				assert.equal(req.headers()['x-csrf-token'], 'csrf-fixture');
+				const data = req.postDataJSON();
+				adminMutations.push({ path, data });
+				const newOrg = { id: 'org-new', name: data.name, type: data.type };
+				orgs.push(newOrg);
+				return send({ organization: newOrg }, 201);
+			}
+
+			return send({});
+		});
+
+		await page.goto(`${base}/dashboard/admin`);
+		await page.getByRole('heading', { name: 'Kelola Platform Hygeia', exact: true }).waitFor();
+		await page.getByText('Klinik Pratama', { exact: true }).waitFor();
+
+		// Create new organization
+		await page.getByText('Tambah organisasi baru', { exact: true }).click();
+		await page.locator('input[name="name"]').fill('Lab Sentra Diagnostika');
+		await page.locator('select[name="type"]').selectOption('laboratory');
+		await page.getByRole('button', { name: 'Daftarkan organisasi', exact: true }).click();
+		await page.getByText('Lab Sentra Diagnostika', { exact: true }).waitFor();
+
+		// View audit chains and verify
+		await page.getByRole('link', { name: 'Status audit', exact: true }).click();
+		await page.getByText('Pasien: HYG-DEMO-001', { exact: true }).waitFor();
+		await page.getByRole('button', { name: 'Verifikasi Integritas HMAC', exact: true }).click();
+		await page.getByText('UTUH & TERVERIFIKASI (HMAC VALID)', { exact: false }).waitFor();
+
+		assert.equal(errors.length, 0, `Browser errors: ${errors.join(', ')}`);
+		await context.close();
+	}
+
 	console.log('PASS Laboratory workspace queue lifecycle, result modal, and receipt banner');
 	console.log(
 		'PASS Pharmacy workspace queue lifecycle, medication details, and completion confirmation'
 	);
+	console.log('PASS Admin workspace organizations, audit HMAC verification, and role wiring');
 	console.log('PASS Role wiring, notifications navigation, and clean browser state');
 } finally {
 	await browser?.close();

@@ -6,6 +6,7 @@
 	import ClinicalWorkspace from '#lib/workflows/ClinicalWorkspace.svelte';
 	import LaboratoryWorkspace from '#lib/workflows/LaboratoryWorkspace.svelte';
 	import PharmacyWorkspace from '#lib/workflows/PharmacyWorkspace.svelte';
+	import AdminWorkspace from '#lib/workflows/AdminWorkspace.svelte';
 	import { menus } from '#lib/workflows/api.js';
 	import { page } from '$app/state';
 	import type { PageProps } from './$types';
@@ -14,7 +15,8 @@
 	let clinical = $derived(data.user.role === 'patient' || data.user.role === 'doctor');
 	let isLab = $derived(data.user.role === 'lab');
 	let isPharmacy = $derived(data.user.role === 'pharmacy');
-	let hasWorkspace = $derived(clinical || isLab || isPharmacy);
+	let isAdmin = $derived(data.user.role === 'admin');
+	let hasWorkspace = $derived(clinical || isLab || isPharmacy || isAdmin);
 	let menu = $derived(
 		data.user.role === 'doctor'
 			? menus.doctor
@@ -24,7 +26,9 @@
 					? menus.lab
 					: data.user.role === 'pharmacy'
 						? menus.pharmacy
-						: []
+						: data.user.role === 'admin'
+							? menus.admin
+							: []
 	);
 	let activeView = $derived(
 		menu.some(([id]) => id === page.url.searchParams.get('view'))
@@ -105,6 +109,9 @@
 			{:else if isPharmacy}
 				{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
 				<PharmacyWorkspace user={data.user} />
+			{:else if isAdmin}
+				{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
+				<AdminWorkspace user={data.user} />
 			{:else}
 				<p class="eyebrow muted">SELAMAT DATANG, {data.user.full_name.toUpperCase()}</p>
 				<h1>{role.title}</h1>

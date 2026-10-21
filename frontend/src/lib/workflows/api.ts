@@ -43,6 +43,16 @@ export type Entry = {
 	flag?: string;
 	note?: string;
 	name?: string;
+	full_name?: string;
+	email?: string;
+	role?: string;
+	type?: string;
+	disabled_at?: string | null;
+	chain_id?: string;
+	events?: number;
+	review_note?: string;
+	action?: string;
+	actor_id?: string;
 };
 export type Payload = { [key: string]: unknown };
 export type Run = (path: string, body: Payload, method?: 'POST' | 'PATCH') => Promise<boolean>;
@@ -154,7 +164,12 @@ export const statusText: Record<string, string> = {
 	ready: 'Siap diambil',
 	denied: 'Ditolak',
 	revoked: 'Dicabut',
-	expired: 'Kedaluwarsa'
+	expired: 'Kedaluwarsa',
+	appropriate: 'Sesuai prosedur',
+	needs_followup: 'Perlu tindak lanjut',
+	unconscious: 'Pasien tidak sadar',
+	unreachable_patient: 'Pasien tidak dapat dihubungi',
+	life_threatening: 'Kondisi mengancam nyawa'
 };
 export const formText = (form: FormData, name: string) => String(form.get(name) || '').trim();
 export const uuidPattern =
@@ -200,6 +215,14 @@ export const menus = {
 	],
 	pharmacy: [
 		['queue', 'Antrean resep'],
+		['notifications', 'Notifikasi']
+	],
+	admin: [
+		['organizations', 'Organisasi'],
+		['users', 'Akun'],
+		['audit', 'Status audit'],
+		['breakglass', 'Tinjauan akses darurat'],
+		['activity', 'Log aktivitas'],
 		['notifications', 'Notifikasi']
 	]
 };
