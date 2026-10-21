@@ -35,7 +35,10 @@ try {
 	for (let attempt = 0; attempt < 100 && !stripAnsi(output).includes(`${base}/`); attempt++)
 		await new Promise((resolve) => setTimeout(resolve, 200));
 	assert.ok(stripAnsi(output).includes(`${base}/`), output);
-	browser = await chromium.launch({ channel: 'msedge', headless: true });
+	browser = await chromium.launch({
+		...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}),
+		headless: true
+	});
 	const context = await browser.newContext();
 	await context.addCookies([{ name: 'hygeia_session', value: 'fixture', url: base }]);
 	const page = await context.newPage();

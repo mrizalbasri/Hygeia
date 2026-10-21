@@ -52,7 +52,10 @@ try {
 			}
 		}, 100);
 	});
-	browser = await chromium.launch({ channel: 'msedge', headless: true });
+	browser = await chromium.launch({
+		...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}),
+		headless: true
+	});
 	const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
 	await context.addCookies([
 		{ name: 'hygeia_session', value: 'visual-fixture', url: 'http://127.0.0.1:5177' }

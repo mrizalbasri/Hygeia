@@ -159,6 +159,19 @@ export const statusText: Record<string, string> = {
 export const formText = (form: FormData, name: string) => String(form.get(name) || '').trim();
 export const uuidPattern =
 	'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
+export type LabResultInput = {
+	value: string;
+	unit?: string;
+	reference_range?: string;
+	flag: 'normal' | 'high' | 'low' | 'abnormal' | 'unknown';
+	note?: string;
+};
+export type ResultReceipt = {
+	id: string;
+	lab_request_id: string;
+	status: 'completed';
+	submitted_at: string;
+};
 export const menus = {
 	patient: [
 		['overview', 'Ringkasan'],
@@ -179,6 +192,14 @@ export const menus = {
 		['consents', 'Permintaan akses'],
 		['sharing', 'Tebus CarePass'],
 		['emergency', 'Akses darurat'],
+		['notifications', 'Notifikasi']
+	],
+	lab: [
+		['queue', 'Permintaan masuk'],
+		['notifications', 'Notifikasi']
+	],
+	pharmacy: [
+		['queue', 'Antrean resep'],
 		['notifications', 'Notifikasi']
 	]
 };
