@@ -42,7 +42,8 @@ try {
 	await new Promise((resolve, reject) => {
 		const deadline = Date.now() + 30000;
 		const poll = setInterval(() => {
-			if (output.includes('http://127.0.0.1:5177/')) {
+			// eslint-disable-next-line no-control-regex
+			if (output.replace(/\x1b\[[0-9;]*m/g, '').includes('http://127.0.0.1:5177/')) {
 				clearInterval(poll);
 				resolve();
 			} else if (Date.now() > deadline || vite.exitCode !== null) {
@@ -240,8 +241,9 @@ try {
 	assert.equal(await page.locator('.patient-timeline li').count(), 1);
 	await page.getByRole('button', { name: 'Semua', exact: true }).click();
 	assert.equal(await page.locator('.patient-timeline li').count(), 2);
-	await page.locator('nav').getByRole('link', { name: 'Resep & obat' }).click();
-	assert.equal(new URL(page.url()).hash, '#obat');
+	await page.locator('nav').getByRole('link', { name: 'Resep & apotek' }).click();
+	await page.waitForURL('**?view=prescriptions');
+	assert.equal(new URL(page.url()).searchParams.get('view'), 'prescriptions');
 	await mkdir('.test-results', { recursive: true });
 	for (const width of [1440, 1024, 768, 390, 320]) {
 		await page.setViewportSize({ width, height: 1000 });
@@ -256,6 +258,7 @@ try {
 		'PASS fixture data, medication details, timeline filters, navigation, five screen widths'
 	);
 	mode = 'empty';
+	await page.goto('http://127.0.0.1:5177/dashboard/patient');
 	await page.getByRole('button', { name: 'Perbarui data' }).click();
 	await page.getByRole('heading', { name: 'Belum ada resep', exact: true }).waitFor();
 	await page.getByRole('heading', { name: 'Perjalanan Anda dimulai di sini.' }).waitFor();

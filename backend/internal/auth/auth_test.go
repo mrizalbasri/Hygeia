@@ -103,6 +103,9 @@ func TestAuthenticationIntegration(t *testing.T) {
 	if err := tx.QueryRow(ctx, `INSERT INTO users(email,password_hash,full_name,role) VALUES('test@hygeia.test',$1,'Synthetic Patient','patient') RETURNING id::text`, hash).Scan(&userID); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := tx.Exec(ctx, `INSERT INTO patients(user_id,patient_ref) VALUES($1,'SYNTHETIC-SELF-REF')`, userID); err != nil {
+		t.Fatal(err)
+	}
 	handler, err := NewHandler(Store{DB: tx}, false)
 	if err != nil {
 		t.Fatal(err)
@@ -170,6 +173,12 @@ func TestAuthenticationIntegration(t *testing.T) {
 	cookies := append(append([]*http.Cookie{}, csrfCookies...), session)
 	if got := request("GET", "/api/v1/me", "", "", cookies, ""); got.Code != 200 || strings.Contains(got.Body.String(), "password_hash") {
 		t.Fatalf("me: %d", got.Code)
+	}
+	var identity struct {
+		User User `json:"user"`
+	}
+	if err := json.Unmarshal(request("GET", "/api/v1/me", "", "", cookies, "").Body.Bytes(), &identity); err != nil || identity.User.PatientRef == nil || *identity.User.PatientRef != "SYNTHETIC-SELF-REF" {
+		t.Fatalf("patient cannot read own reference: %v", err)
 	}
 	if got := request("GET", "/api/v1/me", "", "", nil, ""); got.Code != 401 {
 		t.Fatal("unauthenticated access allowed")

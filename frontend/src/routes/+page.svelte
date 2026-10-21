@@ -73,12 +73,12 @@
 		{
 			question: 'Apakah riwayat perawatan sama dengan riwayat akses?',
 			answer:
-				'Berbeda. Timeline perawatan mencatat kejadian seperti undangan, proses lab, resep, dan keputusan persetujuan. Riwayat akses mencatat aktivitas melihat data. Dashboard pasien saat ini menampilkan timeline perawatan.'
+				'Berbeda. Timeline perawatan mencatat undangan, proses lab, resep, dan persetujuan. Riwayat akses mencatat aktivitas melihat data. Keduanya tersedia di menu terpisah pada ruang pasien.'
 		},
 		{
 			question: 'Bagaimana resep sampai ke apotek?',
 			answer:
-				'Dalam alur Hygeia, dokter menerbitkan resep, lalu pasien memilih apotek dan menyetujui pengirimannya. Apotek tujuan memperbarui status penyiapan hingga selesai. Form pilihan apotek dan persetujuan masih perlu diintegrasikan ke antarmuka web.'
+				'Dokter menerbitkan resep, lalu pasien memilih apotek dan menyetujui pengirimannya dari menu Resep & apotek. Pasien bisa mengikuti status penyiapannya. Antarmuka petugas apotek masih dalam pengembangan.'
 		},
 		{
 			question: 'Apakah Hygeia menentukan obat atau diagnosis?',
@@ -88,7 +88,7 @@
 		{
 			question: 'Apa yang sudah bisa saya coba sekarang?',
 			answer:
-				'Dengan akun demo dari pengelola, Anda dapat masuk dan melihat dashboard sesuai peran. Ruang pasien sudah menampilkan daftar perawatan, permintaan lab, resep beserta aturan pakai, dan timeline. Data demo bersifat sintetis. Form tindakan seperti persetujuan dan pemilihan apotek belum tersedia di web.'
+				'Dengan akun demo dari pengelola, pasien dapat menyetujui perawatan dan pemeriksaan, memilih apotek, mengatur izin, serta membagikan CarePass. Dokter dapat mengundang pasien, meminta pemeriksaan, menerbitkan resep, dan membaca data sesuai izin. Data demo bersifat sintetis.'
 		}
 	];
 	const features = [
@@ -208,8 +208,8 @@
 				</div>
 			</div>
 			<p class="audience-implementation-note">
-				Alur di atas menggambarkan cara kerja Hygeia. Beberapa tindakan belum tersedia di versi demo
-				web.
+				Ruang pasien dan dokter sudah terhubung ke API. Antarmuka petugas laboratorium dan apotek
+				masih dalam pengembangan.
 			</p>
 		</section>
 
