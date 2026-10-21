@@ -234,7 +234,9 @@ API resep dan apotek tersedia; kontrak lengkap dan contoh request/response ada
 di [07-BACKEND-PRESCRIPTIONS.md](07-BACKEND-PRESCRIPTIONS.md).
 Timeline perjalanan pasien tersedia melalui `GET /patient/timeline`; kontrak
 filter dan pagination cursor ada di [08-BACKEND-TIMELINE.md](08-BACKEND-TIMELINE.md).
-Akses darurat, notifikasi, dan manajemen admin belum tersedia.
+Modul tambahan tersedia: [admin](09-BACKEND-ADMIN.md),
+[notifikasi](10-BACKEND-NOTIFICATIONS.md), [akses darurat](11-backend-emergency-api.md),
+[CarePass](12-BACKEND-CAREPASS.md), dan [SSE](13-BACKEND-REALTIME.md).
 Riwayat akses mencakup episode, laboratorium, consent satu hasil lab, dan resep.
 
 ## Laboratorium
@@ -423,8 +425,9 @@ dan daftar kosong tidak menambah event rantai pasien.
 8. Ulangi dengan permintaan baru untuk reject dan pengakhiran episode sebelum/
    sesudah approve. Pengakhiran tidak menghapus hasil yang sudah terkirim.
 
-Frontend baru mengintegrasikan endpoint ini; notifikasi dan timeline klinis
-otomatis belum tersedia. Gunakan refresh setelah mutasi untuk mengambil status terbaru.
+Frontend pasien/dokter mengintegrasikan endpoint ini, timeline, dan notifikasi
+SSE. Gunakan refresh setelah mutasi untuk mengambil status terbaru; event SSE
+memberi notifikasi, bukan payload hasil klinis. UI staf lab mengikuti rencana handoff.
 
 ## Consent untuk satu hasil laboratorium
 
@@ -537,6 +540,7 @@ sehingga rantai episode/lab yang sudah ada tetap dapat diverifikasi.
    data hasil dari tampilan ketika mendapat `403`, `401`, atau `503`.
 8. Pasien periksa riwayat akses dan verifikasi rantai setelah aktivitas tersebut.
 
-UI consent, notifikasi, persetujuan satu jenis resource, dan koreksi hasil
-belum tersedia. Tes backend: `go test ./internal/care -run Consent -v` dengan
+UI consent dan notifikasi tersedia untuk pasien/dokter. Persetujuan satu jenis
+resource dan koreksi hasil belum tersedia; consent tetap untuk satu hasil lab.
+Tes backend: `go test ./internal/care -run Consent -v` dengan
 `TEST_DATABASE_URL` lokal; setiap fixture menggunakan schema terpisah.

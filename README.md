@@ -4,7 +4,7 @@ Prototipe pertukaran data kesehatan antara pasien, dokter, laboratorium, dan
 apotek, dengan persetujuan pasien dan audit akses yang dapat diverifikasi.
 Dataset demo hanya menggunakan data sintetis.
 
-## Status awal
+## Status implementasi
 
 - Frontend SvelteKit, TypeScript, dan Tailwind CSS.
 - Backend Go dengan migrasi, akun demo, sesi cookie, CSRF, login/logout, dan `/me`.
@@ -20,11 +20,13 @@ Dataset demo hanya menggunakan data sintetis.
   lokal yang sudah tersedia.
 - Dokumen kebutuhan bisnis, produk, arsitektur, dan design system.
 
-Frontend menyediakan landing page, login/logout melalui proxy `/api`, dan
-dashboard per peran. Dashboard pasien membaca perawatan, permintaan lab, resep,
-dan timeline; dashboard staf masih berupa ruang awal. Form tindakan klinis,
-persetujuan, dan pemilihan apotek belum diintegrasikan pada web. Kontrak backend
-dan dokumentasi modul tetap menjadi acuan untuk integrasi berikutnya.
+Frontend menyediakan landing page, login/logout melalui proxy `/api`, dashboard
+per peran, dan workflow pasien/dokter: perawatan, lab, resep, consent, CarePass,
+akses darurat, timeline, audit, dan notifikasi. Backend lab/apotek/admin tersedia;
+antarmuka ketiga peran tersebut masih berupa ruang awal. Kontrak backend dan
+[rencana handoff](docs/plans/2026-10-15-patient-doctor-and-provider-handoff.md)
+menjadi acuan integrasi berikutnya. Bukti dan batas kesiapan dicatat pada
+[hasil verifikasi backend](docs/14-BACKEND-READINESS.md).
 
 ## Menjalankan development
 
