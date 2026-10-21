@@ -4,7 +4,7 @@ Prototipe pertukaran data kesehatan antara pasien, dokter, laboratorium, dan
 apotek, dengan persetujuan pasien dan audit akses yang dapat diverifikasi.
 Dataset demo hanya menggunakan data sintetis.
 
-## Status awal
+## Status implementasi
 
 - Frontend SvelteKit, TypeScript, dan Tailwind CSS.
 - Backend Go dengan migrasi, akun demo, sesi cookie, CSRF, login/logout, dan `/me`.
@@ -14,15 +14,19 @@ Dataset demo hanya menggunakan data sintetis.
   staf lab, pengiriman hasil terstruktur, serta pembacaan hasil terlindungi.
 - API resep dan apotek: resep dalam episode aktif, pasien memilih apotek dan
   menyetujui pengiriman, antrean apotek sampai selesai, serta audit setiap akses.
+- Timeline perjalanan pasien: kejadian episode, lab, resep, dan consent;
+  filter jenis dan pagination cursor, hanya untuk pasien pemilik.
 - Database development terpisah bernama `hygeia` pada instance PostgreSQL Docker
   lokal yang sudah tersedia.
 - Dokumen kebutuhan bisnis, produk, arsitektur, dan design system.
 
-Frontend yang masuk repository masih berupa halaman starter. Halaman `/login`,
-dashboard per peran, dan proxy `/api` belum disertakan. API autentikasi, care
-episode, laboratorium, audit, dan consent untuk satu hasil lab sudah tersedia.
-Frontend perlu diintegrasikan melalui kontrak API. Akses darurat, timeline
-klinis, notifikasi, dan manajemen admin belum diimplementasikan.
+Frontend menyediakan landing page, login/logout melalui proxy `/api`, dashboard
+per peran, dan workflow pasien/dokter: perawatan, lab, resep, consent, CarePass,
+akses darurat, timeline, audit, dan notifikasi. Backend lab/apotek/admin tersedia;
+antarmuka ketiga peran tersebut masih berupa ruang awal. Kontrak backend dan
+[rencana handoff](docs/plans/2026-10-15-patient-doctor-and-provider-handoff.md)
+menjadi acuan integrasi berikutnya. Bukti dan batas kesiapan dicatat pada
+[hasil verifikasi backend](docs/14-BACKEND-READINESS.md).
 
 ## Menjalankan development
 
@@ -47,13 +51,11 @@ Invoke-RestMethod http://127.0.0.1:8080/api/v1/health
 Invoke-RestMethod http://127.0.0.1:8080/api/v1/readyz
 ```
 
-Login tersedia melalui `POST /api/v1/auth/login`, bukan halaman web. Ambil token
-dan cookie dari `GET /api/v1/auth/csrf`, lalu kirim JSON login beserta cookie dan
-header `X-CSRF-Token` menggunakan klien API yang menyimpan cookie. Email akun
-demo tercantum pada panduan backend; password mengikuti `DEMO_PASSWORD` saat
-seed pertama kali dijalankan.
+Login web tersedia pada `/login`; frontend mengambil CSRF dan mengirim login
+ke backend melalui proxy satu origin. Email akun demo tercantum pada panduan
+backend; password mengikuti `DEMO_PASSWORD` saat seed pertama kali dijalankan.
 
-Frontend starter dapat dijalankan secara terpisah:
+Frontend dapat dijalankan secara terpisah:
 
 ```powershell
 cd frontend
@@ -61,10 +63,11 @@ pnpm install
 pnpm dev
 ```
 
-Buka URL root yang ditampilkan Vite (default `http://localhost:5173/`). Route
-`/login` belum tersedia pada checkout ini. Pengembang frontend perlu menambahkan
-proxy `/api`, form login, pengelolaan sesi, serta dashboard sesuai
-[panduan integrasi frontend](docs/05-BACKEND-API.md#integrasi-frontend-yang-perlu-ditambahkan).
+Buka URL root yang ditampilkan Vite (default `http://localhost:5173/`) untuk
+landing page, atau `/login` untuk masuk ke dashboard. Proxy development menuju
+backend pada `127.0.0.1:8080`. Untuk produksi, arahkan `/api` ke backend pada
+origin yang sama. Lihat [panduan frontend](frontend/README.md) untuk cakupan dan
+pengujian serta [kontrak API](docs/05-BACKEND-API.md) untuk integrasi lanjutan.
 
 Lihat [panduan backend](backend/README.md) untuk konfigurasi PostgreSQL, endpoint
 health/readiness, dan cara mengarahkan cache Go ke drive D jika diperlukan.
@@ -78,4 +81,5 @@ health/readiness, dan cara mengarahkan cache Go ke drive D jika diperlukan.
 - [Kontrak API dan panduan frontend](docs/05-BACKEND-API.md)
 - [Keputusan implementasi care episode dan audit](docs/06-BACKEND-CARE.md)
 - [Kontrak resep dan alur apotek](docs/07-BACKEND-PRESCRIPTIONS.md)
+- [Kontrak timeline perjalanan pasien](docs/08-BACKEND-TIMELINE.md)
 - [Rencana implementasi resep dan apotek](docs/plans/2026-10-11-prescriptions-pharmacy.md)

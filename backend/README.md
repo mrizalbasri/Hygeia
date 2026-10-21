@@ -36,6 +36,21 @@ immutability hasil. Migrasi 4 menambah `consents` untuk izin baca satu hasil lab
 Migrasi 5 menambah `prescriptions` dan `prescription_items` untuk resep dan
 penugasan apotek yang disetujui pasien. Jalankan migrasi sebelum memakai API baru.
 
+Migrasi 6 menambah ledger admin, 7 inbox notifikasi, 8 grant akses darurat,
+dan 9 CarePass berbatas waktu. Backend inti dan fitur tambahan kini tersedia:
+
+| Modul | Kontrak aktual |
+| --- | --- |
+| Admin akun/organisasi dan ledger | [Admin](../docs/09-BACKEND-ADMIN.md) |
+| Inbox dan read state | [Notifikasi](../docs/10-BACKEND-NOTIFICATIONS.md) |
+| Akses darurat 60 menit dan tinjauan | [Emergency](../docs/11-backend-emergency-api.md) |
+| CarePass/QR dan pencabutan | [CarePass](../docs/12-BACKEND-CAREPASS.md) |
+| SSE/replay notifikasi | [Realtime](../docs/13-BACKEND-REALTIME.md) |
+
+CarePass memerlukan `PUBLIC_APP_URL` berupa origin aplikasi, default development
+`http://localhost:5173`. Production wajib origin HTTPS. QR mengarah ke route
+frontend `/carepass#token=...`; UI scan/redeem harus memakai kontrak backend.
+
 ## Migrasi dan akun demo
 
 Dari folder `backend`, jalankan:
@@ -138,8 +153,8 @@ Readiness memeriksa koneksi, belum memeriksa versi skema atau migrasi.
 | GET | `/api/v1/me` | Identitas/peran/organisasi dari DB; HTTP 401 tanpa sesi aktif |
 
 Semua POST/PATCH wajib membawa cookie CSRF dan header `X-CSRF-Token` dari endpoint
-CSRF. Login memerlukan `Content-Type: application/json`. Pengembang frontend
-perlu menambahkan proxy Vite dan integrasi login; klien API dapat menguji
+CSRF. Login memerlukan `Content-Type: application/json`. Frontend sudah menyediakan
+proxy Vite dan integrasi login; klien API dapat menguji
 endpoint langsung dengan cookie jar. Respons autentikasi memakai `Cache-Control: no-store`.
 Error berbentuk `{ "error": { "code", "message", "request_id" } }`.
 
@@ -154,9 +169,9 @@ proxy, klien bisa berbagi bucket; kebijakan trusted proxy/limiter terdistribusi
 perlu ditentukan sebelum deployment. Pembersihan sesi kedaluwarsa belum
 dijadwalkan; otorisasi tetap memeriksa waktu kedaluwarsa pada setiap request.
 
-Tahap ini belum mencakup registrasi publik, verifikasi email, reset password,
-MFA, policy resep, atau audit login berantai hash. Frontend yang di-commit masih
-halaman starter; login dan dashboard per peran belum tersedia.
+Autentikasi belum mencakup registrasi publik, verifikasi email, reset password,
+MFA, atau audit login berantai hash. Akun dikelola melalui API admin. Login,
+dashboard per peran, dan workflow pasien/dokter tersedia pada frontend.
 
 ## API care episode dan audit
 
@@ -218,7 +233,8 @@ Semua mutasi mengunci episode sebelum permintaan. Persetujuan yang bersamaan
 dengan pengakhiran episode mengikuti urutan lock: jika persetujuan menang,
 penugasan lab tetap berlaku; jika pengakhiran menang, permintaan dibatalkan.
 Nilai hasil tidak disalin ke audit atau log. Dukungan PDF, koreksi hasil,
-penarikan persetujuan yang sudah diberikan, dan notifikasi belum tersedia.
+dan penarikan persetujuan penyedia yang sudah diberikan belum tersedia.
+Notifikasi perubahan status tersedia melalui inbox dan SSE.
 Kontrak payload dan contoh lengkap ada di panduan API frontend.
 
 ## API consent
@@ -257,6 +273,20 @@ penugasan yang sudah disetujui tetap dapat diselesaikan. Aksi dan audit berbagi
 transaksi. Kontrak lengkap, validasi, dan contoh payload:
 [`docs/07-BACKEND-PRESCRIPTIONS.md`](../docs/07-BACKEND-PRESCRIPTIONS.md).
 
+## Timeline perjalanan pasien
+
+`GET /api/v1/patient/timeline` menyajikan kejadian bisnis sukses pada rantai
+pasien: episode, laboratorium, resep, dan consent. Akses hanya untuk pasien
+pemilik berdasarkan sesi. Filter `kind`, `limit` 1–100, dan cursor eksklusif
+`before_seq` menggantikan offset untuk endpoint ini.
+
+Timeline tidak memuat pembacaan data atau akses ditolak; aktivitas itu tetap
+tersedia pada riwayat akses. Isi hasil lab dan obat tidak disertakan. Proyeksi
+menggunakan audit yang sudah ada tanpa tabel/migrasi baru dan tanpa perubahan
+format hash. Kontrak lengkap:
+[`docs/08-BACKEND-TIMELINE.md`](../docs/08-BACKEND-TIMELINE.md).
+Tes khusus: `go test ./internal/care -run Timeline -v` dengan `TEST_DATABASE_URL`.
+
 ## Validasi dan build
 
 ```powershell
@@ -278,7 +308,7 @@ manipulasi audit. Memerlukan hak CREATE/DROP schema. Tanpa `TEST_DATABASE_URL`,
 tes integrasi dilewati. Gunakan `go test ./cmd/... ./db/... ./internal/...` dengan variabel tersebut untuk
 menjalankan seluruh tes unit dan integrasi.
 
-Tes resep memakai fixture care dengan migrasi 1–5. Jalankan
+Tes resep memakai fixture care dengan seluruh migrasi 1–9. Jalankan
 `go test ./internal/care -run Prescription -v` untuk alur lengkap, proyeksi
 apotek, pembatasan akses, race, dan rollback audit. Tes unit policy/validasi ada
 di `internal/policy` dan `internal/prescription`. Daftar paket eksplisit di atas
@@ -315,11 +345,14 @@ nama tersembunyi `.go-mod` agar tidak ikut ditemukan oleh `go test ./...`.
 - `internal/audit/`: append HMAC transaksional, verifikasi, ringkasan kalimat.
 - `internal/httpapi/`: routing, health, readiness, dan logging request JSON.
 
-Frontend SvelteKit berada di `../frontend` dan dapat menjalankan halaman starter
-pada port default `5173`. Checkout yang di-commit belum memuat proxy `/api`,
-halaman `/login`, dashboard, atau helper SSR. Pengembang frontend perlu
-menambahkan integrasi tersebut sesuai
-[panduan API](../docs/05-BACKEND-API.md#integrasi-frontend-yang-perlu-ditambahkan).
+Frontend SvelteKit berada di `../frontend`, pada port default `5173`, dengan
+proxy `/api`, halaman `/login`, dashboard, helper SSR, dan workflow pasien/dokter.
+Antarmuka lab/apotek/admin masih memerlukan integrasi sesuai
+[panduan API](../docs/05-BACKEND-API.md) dan
+[rencana handoff](../docs/plans/2026-10-15-patient-doctor-and-provider-handoff.md).
+
+Lihat [hasil kesiapan backend](../docs/14-BACKEND-READINESS.md) untuk bukti
+verifikasi terbaru, urutan menjalankan layanan, dan batas kesiapan deployment.
 
 Referensi: [pgx](https://github.com/jackc/pgx),
 [PostgreSQL Docker image](https://hub.docker.com/_/postgres).

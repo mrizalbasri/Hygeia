@@ -12,6 +12,7 @@ import (
 	"github.com/mrizalbasri/Hygeia/backend/internal/laboratory"
 	"github.com/mrizalbasri/Hygeia/backend/internal/policy"
 	"github.com/mrizalbasri/Hygeia/backend/internal/prescription"
+	"github.com/mrizalbasri/Hygeia/backend/internal/timeline"
 )
 
 var (
@@ -292,6 +293,19 @@ func (s *Service) AccessSummary(ctx context.Context, token []byte, limit, offset
 			return err
 		}
 		result, err = audit.Summaries(ctx, tx, chain, limit, offset)
+		return err
+	})
+	return result, err
+}
+
+func (s *Service) Timeline(ctx context.Context, token []byte, options timeline.Options) (timeline.Page, error) {
+	var result timeline.Page
+	err := s.transact(ctx, token, func(ctx context.Context, tx pgx.Tx, actor auth.User) error {
+		chain, err := patientChain(ctx, tx, actor)
+		if err != nil {
+			return err
+		}
+		result, err = timeline.List(ctx, tx, chain, options)
 		return err
 	})
 	return result, err

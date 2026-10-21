@@ -18,12 +18,15 @@ import (
 	"github.com/mrizalbasri/Hygeia/backend/internal/admin"
 	"github.com/mrizalbasri/Hygeia/backend/internal/audit"
 	"github.com/mrizalbasri/Hygeia/backend/internal/auth"
+	"github.com/mrizalbasri/Hygeia/backend/internal/breakglass"
 	"github.com/mrizalbasri/Hygeia/backend/internal/care"
+	"github.com/mrizalbasri/Hygeia/backend/internal/carepass"
 	"github.com/mrizalbasri/Hygeia/backend/internal/config"
 	"github.com/mrizalbasri/Hygeia/backend/internal/consent"
 	"github.com/mrizalbasri/Hygeia/backend/internal/database"
 	"github.com/mrizalbasri/Hygeia/backend/internal/httpapi"
 	"github.com/mrizalbasri/Hygeia/backend/internal/laboratory"
+	"github.com/mrizalbasri/Hygeia/backend/internal/notification"
 	"github.com/mrizalbasri/Hygeia/backend/internal/prescription"
 )
 
@@ -59,6 +62,10 @@ func run(logger *slog.Logger) error {
 		return errors.New("APP_ENV must be development, test, or production")
 	}
 	secure := appEnv == "production"
+	shareBase, err := carepass.ShareBase(os.Getenv("PUBLIC_APP_URL"), secure)
+	if err != nil {
+		return err
+	}
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -86,10 +93,13 @@ func run(logger *slog.Logger) error {
 	consentHandler := &consent.Handler{Service: &consent.Service{DB: pool, Audit: auditWriter}, Logger: logger}
 	prescriptionHandler := &prescription.Handler{Service: &prescription.Service{DB: pool, Audit: auditWriter}, Logger: logger}
 	adminHandler := &admin.Handler{Service: &admin.Service{DB: pool}}
+	notificationHandler := &notification.Handler{Service: &notification.Service{DB: pool}, Shutdown: ctx}
+	breakGlassHandler := &breakglass.Handler{Service: &breakglass.Service{DB: pool, Audit: auditWriter}}
+	carePassHandler := &carepass.Handler{Service: &carepass.Service{DB: pool, Audit: auditWriter, ShareBaseURL: shareBase}}
 
 	server := &http.Server{
 		Addr:              net.JoinHostPort("", port),
-		Handler:           httpapi.NewAuthenticatedHandler(logger, pool.Ping, authHandler, csrfKey, secure, careHandler.Register, labHandler.Register, consentHandler.Register, prescriptionHandler.Register, adminHandler.Register),
+		Handler:           httpapi.NewAuthenticatedHandler(logger, pool.Ping, authHandler, csrfKey, secure, careHandler.Register, labHandler.Register, consentHandler.Register, prescriptionHandler.Register, adminHandler.Register, notificationHandler.Register, breakGlassHandler.Register, carePassHandler.Register),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,

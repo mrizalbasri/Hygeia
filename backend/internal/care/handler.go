@@ -7,11 +7,13 @@ import (
 	"log/slog"
 	"mime"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/mrizalbasri/Hygeia/backend/internal/auth"
+	"github.com/mrizalbasri/Hygeia/backend/internal/timeline"
 )
 
 type Handler struct {
@@ -28,6 +30,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/episodes/{id}", h.get)
 	mux.HandleFunc("PATCH /api/v1/episodes/{id}", h.transition)
 	mux.HandleFunc("GET /api/v1/patient/access-summary", h.summary)
+	mux.HandleFunc("GET /api/v1/patient/timeline", h.timeline)
 	mux.HandleFunc("GET /api/v1/audit/verify", h.verify)
 }
 
@@ -49,6 +52,8 @@ func (h *Handler) respondError(w http.ResponseWriter, r *http.Request, err error
 		apiError(w, 403, "forbidden", "Akses tidak diizinkan.")
 	case errors.Is(err, ErrConflict):
 		apiError(w, 409, "invalid_state", "Status episode tidak mengizinkan tindakan ini.")
+	case errors.Is(err, timeline.ErrInvalidOptions):
+		apiError(w, 400, "invalid_input", "Parameter timeline tidak valid.")
 	default:
 		// Avoid database errors containing query parameters or connection secrets.
 		if h.Logger != nil {
@@ -191,6 +196,51 @@ func (h *Handler) summary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jsonResponse(w, 200, map[string]any{"events": events, "limit": limit, "offset": offset})
+}
+
+func timelineOptions(r *http.Request) (timeline.Options, bool) {
+	options := timeline.Options{Limit: 20}
+	query, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil {
+		return options, false
+	}
+	for key, values := range query {
+		if len(values) != 1 {
+			return options, false
+		}
+		switch key {
+		case "kind":
+			options.Kind = values[0]
+		case "limit":
+			options.Limit, err = strconv.Atoi(values[0])
+			if err != nil {
+				return options, false
+			}
+		case "before_seq":
+			options.BeforeSeq, err = strconv.ParseInt(values[0], 10, 64)
+			if err != nil || options.BeforeSeq <= 0 {
+				return options, false
+			}
+		default:
+			// Patient identity comes from the session, never a query selector.
+			return options, false
+		}
+	}
+	return options, options.Valid()
+}
+
+func (h *Handler) timeline(w http.ResponseWriter, r *http.Request) {
+	options, ok := timelineOptions(r)
+	if !ok {
+		apiError(w, 400, "invalid_input", "Parameter timeline tidak valid.")
+		return
+	}
+	page, err := h.Service.Timeline(r.Context(), auth.SessionHash(r), options)
+	if err != nil {
+		h.respondError(w, r, err)
+		return
+	}
+	jsonResponse(w, 200, page)
 }
 
 func (h *Handler) verify(w http.ResponseWriter, r *http.Request) {
