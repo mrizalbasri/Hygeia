@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
+import { waitForServer } from './server-ready.js';
 
 const labUser = {
 	id: 'fixture-lab-staff',
@@ -59,9 +60,10 @@ const base = 'http://127.0.0.1:5187';
 let browser;
 
 try {
-	for (let attempt = 0; attempt < 100 && !stripAnsi(output).includes(`${base}/`); attempt++)
-		await new Promise((resolve) => setTimeout(resolve, 200));
-	assert.ok(stripAnsi(output).includes(`${base}/`), output);
+	await waitForServer(base, {
+		output: () => stripAnsi(output),
+		isAlive: () => vite.exitCode === null
+	});
 
 	browser = await chromium.launch({
 		...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}),
@@ -295,11 +297,25 @@ try {
 				email: 'maya@example.test',
 				full_name: 'dr. Maya',
 				role: 'doctor',
-				organization_name: 'Klinik Pratama',
+				organization_id: 'org-1',
 				disabled_at: null
 			}
 		];
 		const chains = [{ chain_id: 'chain-1', patient_ref: 'HYG-DEMO-001', events: 10 }];
+		const breakglassSessions = [
+			{
+				id: 'bg-1',
+				patient_ref: 'HYG-DEMO-001',
+				doctor_user_id: 'u-1',
+				organization_id: 'org-1',
+				reason_code: 'life_threatening',
+				reason_text: 'Pasien tidak sadar dan membutuhkan tindakan segera.',
+				starts_at: '2026-10-22T00:00:00Z',
+				expires_at: '2026-10-22T01:00:00Z',
+				review_decision: null,
+				review_note: null
+			}
+		];
 		const adminMutations = [];
 
 		await page.route('**/api/v1/**', async (route) => {
@@ -319,7 +335,8 @@ try {
 				if (path.startsWith('/audit/verify')) {
 					return send({ chain: 'chain-1', events: 10, intact: true });
 				}
-				if (path === '/admin/break-glass') return send({ sessions: [], limit: 20, offset: 0 });
+				if (path === '/admin/break-glass')
+					return send({ sessions: breakglassSessions, limit: 20, offset: 0 });
 				if (path === '/admin/activity') return send({ activity: [], limit: 20, offset: 0 });
 				if (path === '/notifications/unread-count') return send({ unread_count: 0 });
 				if (path.startsWith('/notifications'))
@@ -333,6 +350,24 @@ try {
 				const newOrg = { id: 'org-new', name: data.name, type: data.type };
 				orgs.push(newOrg);
 				return send({ organization: newOrg }, 201);
+			}
+
+			if (req.method() === 'PATCH' && path === '/admin/users/u-1') {
+				assert.equal(req.headers()['x-csrf-token'], 'csrf-fixture');
+				const data = req.postDataJSON();
+				adminMutations.push({ path, data });
+				Object.assign(users[0], data);
+				if (data.disabled) users[0].disabled_at = '2026-10-22T00:00:00Z';
+				return send({ user: users[0] });
+			}
+
+			if (req.method() === 'PATCH' && path === '/admin/break-glass/bg-1') {
+				assert.equal(req.headers()['x-csrf-token'], 'csrf-fixture');
+				const data = req.postDataJSON();
+				adminMutations.push({ path, data });
+				breakglassSessions[0].review_decision = data.decision;
+				breakglassSessions[0].review_note = data.note;
+				return send({ session: breakglassSessions[0] });
 			}
 
 			return send({});
@@ -349,11 +384,60 @@ try {
 		await page.getByRole('button', { name: 'Daftarkan organisasi', exact: true }).click();
 		await page.getByText('Lab Sentra Diagnostika', { exact: true }).waitFor();
 
+		// User list resolves organization IDs, and rename starts from full_name.
+		await page.getByRole('link', { name: 'Akun', exact: true }).click();
+		await page.getByRole('heading', { name: 'dr. Maya', exact: true }).waitFor();
+		await page
+			.locator('article.wf-row')
+			.filter({ hasText: 'dr. Maya' })
+			.getByText('Klinik Pratama', { exact: true })
+			.waitFor();
+		await page.getByRole('button', { name: 'Ubah nama', exact: true }).click();
+		const renameDialog = page.locator('dialog[open]');
+		const renameInput = renameDialog.locator('input[name="full_name"]');
+		await renameInput.waitFor();
+		assert.equal(await renameInput.inputValue(), 'dr. Maya');
+		await renameInput.fill('dr. Maya Putri');
+		await renameDialog.getByRole('button', { name: 'Simpan nama baru', exact: true }).click();
+		await page.getByRole('heading', { name: 'dr. Maya Putri', exact: true }).waitFor();
+
+		// Disable the account and confirm the status refresh.
+		await page.getByRole('button', { name: 'Nonaktifkan akun', exact: true }).click();
+		await page.getByText('Dinonaktifkan', { exact: true }).waitFor();
+
+		// Break-glass review uses the fields returned by the admin API.
+		await page.getByRole('link', { name: 'Tinjauan akses darurat', exact: true }).click();
+		await page.getByText('Dokter ID:', { exact: false }).waitFor();
+		await page.locator('article.wf-row').getByText('Klinik Pratama', { exact: true }).waitFor();
+		await page.getByRole('button', { name: 'Tinjau akses darurat ini', exact: true }).click();
+		const reviewDialog = page.locator('dialog[open]');
+		await reviewDialog
+			.locator('textarea[name="note"]')
+			.fill('Alasan darurat sesuai prosedur dan telah diverifikasi.');
+		await reviewDialog
+			.getByRole('button', { name: 'Simpan Keputusan Peninjauan', exact: true })
+			.click();
+		await page.getByText('Sesuai prosedur', { exact: true }).waitFor();
+
 		// View audit chains and verify
 		await page.getByRole('link', { name: 'Status audit', exact: true }).click();
 		await page.getByText('Pasien: HYG-DEMO-001', { exact: true }).waitFor();
 		await page.getByRole('button', { name: 'Verifikasi Integritas HMAC', exact: true }).click();
 		await page.getByText('UTUH & TERVERIFIKASI (HMAC VALID)', { exact: false }).waitFor();
+
+		const renameMutation = adminMutations.find(
+			(mutation) => mutation.path === '/admin/users/u-1' && mutation.data.full_name
+		);
+		assert.equal(renameMutation.data.full_name, 'dr. Maya Putri');
+		const disableMutation = adminMutations.find(
+			(mutation) => mutation.path === '/admin/users/u-1' && mutation.data.disabled === true
+		);
+		assert.ok(disableMutation, 'disable account mutation was sent');
+		const reviewMutation = adminMutations.find(
+			(mutation) => mutation.path === '/admin/break-glass/bg-1'
+		);
+		assert.equal(reviewMutation.data.decision, 'appropriate');
+		assert.match(reviewMutation.data.note, /sesuai prosedur/);
 
 		assert.equal(errors.length, 0, `Browser errors: ${errors.join(', ')}`);
 		await context.close();
@@ -363,7 +447,9 @@ try {
 	console.log(
 		'PASS Pharmacy workspace queue lifecycle, medication details, and completion confirmation'
 	);
-	console.log('PASS Admin workspace organizations, audit HMAC verification, and role wiring');
+	console.log(
+		'PASS Admin workspace organizations, account updates, break-glass review, audit verification, and role wiring'
+	);
 	console.log('PASS Role wiring, notifications navigation, and clean browser state');
 } finally {
 	await browser?.close();

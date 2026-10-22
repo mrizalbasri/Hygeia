@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
+import { waitForServer } from './server-ready.js';
 
 const user = {
 	id: 'fixture-patient',
@@ -32,9 +33,10 @@ const stripAnsi = (str) => str.replace(/\x1b\[[0-9;]*m/g, '');
 const base = 'http://127.0.0.1:5186';
 let browser;
 try {
-	for (let attempt = 0; attempt < 100 && !stripAnsi(output).includes(`${base}/`); attempt++)
-		await new Promise((resolve) => setTimeout(resolve, 200));
-	assert.ok(stripAnsi(output).includes(`${base}/`), output);
+	await waitForServer(base, {
+		output: () => stripAnsi(output),
+		isAlive: () => vite.exitCode === null
+	});
 	browser = await chromium.launch({
 		...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}),
 		headless: true

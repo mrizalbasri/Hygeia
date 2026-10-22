@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { waitForServer } from './server-ready.js';
 
 // Local fixtures exercise the UI without reading or changing patient records.
 const user = {
@@ -39,18 +40,10 @@ vite.stderr.on('data', (data) => {
 });
 let browser;
 try {
-	await new Promise((resolve, reject) => {
-		const deadline = Date.now() + 30000;
-		const poll = setInterval(() => {
-			// eslint-disable-next-line no-control-regex
-			if (output.replace(/\x1b\[[0-9;]*m/g, '').includes('http://127.0.0.1:5177/')) {
-				clearInterval(poll);
-				resolve();
-			} else if (Date.now() > deadline || vite.exitCode !== null) {
-				clearInterval(poll);
-				reject(new Error(output || 'Vite did not start'));
-			}
-		}, 100);
+	await waitForServer('http://127.0.0.1:5177', {
+		// eslint-disable-next-line no-control-regex
+		output: () => output.replace(/\x1b\[[0-9;]*m/g, ''),
+		isAlive: () => vite.exitCode === null
 	});
 	browser = await chromium.launch({
 		...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}),
