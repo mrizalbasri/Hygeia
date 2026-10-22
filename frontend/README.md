@@ -9,7 +9,11 @@ hasil lab, resep dan pilihan apotek, izin dokter, CarePass, timeline, riwayat
 akses/verifikasi audit, riwayat akses darurat, dan notifikasi langsung.
 Dokter: undangan, pemeriksaan, hasil, resep multiobat, permintaan izin,
 penebusan CarePass, akses darurat, dan notifikasi.
-Lab/apotek/admin masih memakai shell awal. Rencana tugas lab/apotek ada di
+Laboratorium: antrean permintaan yang sudah disetujui pasien, transisi
+sent→accepted→in_progress, dan penyerahan hasil terstruktur sekali pakai.
+Apotek: antrean resep, transisi sent→accepted→preparing→ready→completed, dan
+konfirmasi penyerahan. Admin: organisasi, akun, status audit HMAC, tinjauan
+akses darurat, dan log aktivitas. Kontrak dan urutan kerja ada di
 [handoff pengembang](../docs/plans/2026-10-15-patient-doctor-and-provider-handoff.md).
 
 ## Menjalankan
@@ -35,13 +39,17 @@ $env:PLAYWRIGHT_CHANNEL='msedge'
 pnpm test -- --run
 node tests/dashboard-theme.e2e.mjs
 node tests/clinical-workflows.e2e.js
+node tests/provider-workflows.e2e.js
 ```
 
-Dua tes E2E fixture menjalankan server sendiri dan menutupnya setelah selesai.
+Tiga tes E2E fixture menjalankan server sendiri dan menutupnya setelah selesai.
 Tes mencakup landing/mobile, persetujuan/penolakan, CSRF, konflik 409, detail 403,
-503/retry, cursor bigint, API 401 dan SSE session-ended. Screenshot di
-`.test-results/` diabaikan Git. Edge harus terpasang; unit tests juga dapat memakai
-Chromium Playwright dengan mengosongkan `PLAYWRIGHT_CHANNEL`.
+503/retry, cursor bigint, API 401 dan SSE session-ended, lifecycle antrean
+lab/apotek, serta pengelolaan akun/organisasi dan tinjauan akses darurat admin.
+Screenshot di `.test-results/` diabaikan Git. Tes memakai Chromium Playwright
+secara default; set `PLAYWRIGHT_CHANNEL='msedge'` untuk memakai Edge. Deteksi
+kesiapan server memakai polling HTTP karena Vite 8 tidak selalu mencetak URL
+dev server pada stdout non-TTY.
 
 Uji integrasi API demo lokal (opt-in):
 

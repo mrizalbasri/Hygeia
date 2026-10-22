@@ -96,11 +96,12 @@ menggunakan limit/offset. Jangan memakai payload pasien/dokter sebagai proyeksi
 provider. SSE hanya memberi notifikasi; baca resource kembali melalui API
 yang menjalankan otorisasi.
 
-Tidak ada PR teman yang perlu dicocokkan menurut klarifikasi pengguna.
-Pada pemeriksaan GitHub, PR backend #10–#15 sudah merged. PR #16 dan #17 masih
-terbuka untuk frontend; antarmuka lab/apotek/admin masih ruang awal, sementara
-API backend masing-masing sudah tersedia. Dokumen review 12 Oktober adalah
-catatan historis dan tidak menggantikan status terkini ini.
+Seluruh PR backend #10–#15 serta frontend #16, #17, dan #19 sudah merged. PR #20
+menambahkan antarmuka laboratorium, apotek, dan admin di atas API yang sudah
+tersedia, termasuk lifecycle antrean, penyerahan hasil, pengelolaan akun dan
+organisasi, verifikasi rantai audit, serta tinjauan akses darurat. Verifikasi UI
+dan E2E dicatat pada PR tersebut. Dokumen review 12 Oktober adalah catatan
+historis dan tidak menggantikan status terkini ini.
 
 ## Mengulang pengujian backend
 

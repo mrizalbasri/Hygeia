@@ -21,11 +21,12 @@ Dataset demo hanya menggunakan data sintetis.
 - Dokumen kebutuhan bisnis, produk, arsitektur, dan design system.
 
 Frontend menyediakan landing page, login/logout melalui proxy `/api`, dashboard
-per peran, dan workflow pasien/dokter: perawatan, lab, resep, consent, CarePass,
-akses darurat, timeline, audit, dan notifikasi. Backend lab/apotek/admin tersedia;
-antarmuka ketiga peran tersebut masih berupa ruang awal. Kontrak backend dan
+per peran, serta workflow pasien, dokter, laboratorium, apotek, dan admin:
+perawatan, lab, resep, consent, CarePass, akses darurat, timeline, audit,
+notifikasi, antrean lab/apotek, pengelolaan akun dan organisasi, serta tinjauan
+akses darurat. Kontrak backend dan
 [rencana handoff](docs/plans/2026-10-15-patient-doctor-and-provider-handoff.md)
-menjadi acuan integrasi berikutnya. Bukti dan batas kesiapan dicatat pada
+menjadi acuan integrasi. Bukti dan batas kesiapan dicatat pada
 [hasil verifikasi backend](docs/14-BACKEND-READINESS.md).
 
 ## Menjalankan development
