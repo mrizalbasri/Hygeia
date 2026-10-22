@@ -80,3 +80,30 @@ Selesai bila: hanya resep yang disetujui dan ditujukan ke apotek sendiri muncul;
 - Integrasi demo lokal: undangan/accept, lab/approval/hasil, resep/pilih apotek/status ready, end episode, consent approve/revoke, CarePass create/redeem/revoke, akses darurat/direktori/detail, audit utuh (57 event), notifikasi/read dan timeline lolos. Lab/apotek diuji melalui API.
 - Pasien/dokter pada 320/375/414/768/1440 px tanpa overflow halaman; screenshot diperiksa. Landing diuji tujuh lebar layar.
 - Perubahan identitas menambahkan `patient_ref` akun sendiri tanpa membuka direktori pasien. Tes backend memakai PostgreSQL sementara di loopback :15432, schema transaksi di-rollback; seluruh paket source `./internal/... ./cmd/... ./db` lolos. Folder `backend/bin` berisi arsip lokal yang bukan source Git dan dikecualikan dari perintah ini.
+
+## Hasil implementasi penyedia dan admin (PR #20)
+
+- `LaboratoryWorkspace.svelte`: antrean proyeksi `LabQueueRequest`, transisi
+  `sent → accepted → in_progress`, form hasil dengan batas 500/100/200/2000
+  karakter, pengiriman sekali pakai, receipt, dan pengeluaran dari antrean.
+- `PharmacyWorkspace.svelte`: antrean `QueuePrescription`, transisi
+  `sent → accepted → preparing → ready → completed`, detail obat tanpa data
+  episode/pasien tambahan, dan konfirmasi sebelum penyerahan selesai.
+- `AdminWorkspace.svelte`: organisasi, akun, status audit HMAC, tinjauan akses
+  darurat, log aktivitas, dan notifikasi. Daftar pengguna menampilkan nama
+  organisasi melalui pemetaan `organization_id` ke direktori organisasi karena
+  API hanya mengembalikan ID. Tinjauan akses darurat menampilkan ID dokter dan
+  nama organisasi; nama dokter belum tersedia pada respons admin, sehingga
+  ditampilkan sebagai ID, bukan ditebak.
+- Semua mutasi memakai `api()` bersama (CSRF baru, timeout, `ApiError.status`,
+  request ID). 403/409 memuat ulang daftar; tidak ada payload lama yang
+  dipertahankan sebagai izin.
+- E2E `provider-workflows.e2e.js` mencakup lifecycle lab dan apotek, hasil dan
+  receipt, konfirmasi penyelesaian, pembuatan organisasi, ubah nama akun,
+  nonaktifkan akun, tinjauan akses darurat, dan verifikasi rantai audit.
+- Ketiga tes E2E memakai polling HTTP untuk menunggu Vite, karena Vite 8 tidak
+  selalu mencetak URL dev server pada stdout non-TTY. `pnpm check`, `pnpm lint`,
+  `pnpm build`, Vitest, dan ketiga E2E lolos pada branch PR.
+- Batas: respons admin break-glass belum memuat nama dokter; UI menampilkan ID
+  dokter dan nama organisasi dari direktori. Penambahan nama dokter pada backend
+  dapat dilakukan terpisah tanpa mengubah kontrak klinis.

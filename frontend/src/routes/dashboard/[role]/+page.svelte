@@ -4,17 +4,36 @@
 	import { resolve } from '$app/paths';
 	import { authMutation, roles } from '#lib/auth.js';
 	import ClinicalWorkspace from '#lib/workflows/ClinicalWorkspace.svelte';
+	import LaboratoryWorkspace from '#lib/workflows/LaboratoryWorkspace.svelte';
+	import PharmacyWorkspace from '#lib/workflows/PharmacyWorkspace.svelte';
+	import AdminWorkspace from '#lib/workflows/AdminWorkspace.svelte';
 	import { menus } from '#lib/workflows/api.js';
 	import { page } from '$app/state';
 	import type { PageProps } from './$types';
 	let { data }: PageProps = $props();
 	let role = $derived(roles[data.user.role]);
 	let clinical = $derived(data.user.role === 'patient' || data.user.role === 'doctor');
-	let menu = $derived(data.user.role === 'doctor' ? menus.doctor : menus.patient);
+	let isLab = $derived(data.user.role === 'lab');
+	let isPharmacy = $derived(data.user.role === 'pharmacy');
+	let isAdmin = $derived(data.user.role === 'admin');
+	let hasWorkspace = $derived(clinical || isLab || isPharmacy || isAdmin);
+	let menu = $derived(
+		data.user.role === 'doctor'
+			? menus.doctor
+			: data.user.role === 'patient'
+				? menus.patient
+				: data.user.role === 'lab'
+					? menus.lab
+					: data.user.role === 'pharmacy'
+						? menus.pharmacy
+						: data.user.role === 'admin'
+							? menus.admin
+							: []
+	);
 	let activeView = $derived(
 		menu.some(([id]) => id === page.url.searchParams.get('view'))
 			? page.url.searchParams.get('view')
-			: menu[0][0]
+			: menu[0]?.[0] || 'overview'
 	);
 	let pending = $state(false);
 	let ready = $state(false);
@@ -48,7 +67,7 @@
 		>
 		<p class="eyebrow muted workspace-label">RUANG {role.label.toUpperCase()}</p>
 		<nav aria-label="Menu utama">
-			{#if clinical}
+			{#if hasWorkspace}
 				{#each menu as [id, label] (id)}<a
 						class:nav-active={activeView === id}
 						aria-current={activeView === id ? 'page' : undefined}
@@ -84,6 +103,15 @@
 			{#if clinical}
 				{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
 				<ClinicalWorkspace user={data.user} />
+			{:else if isLab}
+				{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
+				<LaboratoryWorkspace user={data.user} />
+			{:else if isPharmacy}
+				{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
+				<PharmacyWorkspace user={data.user} />
+			{:else if isAdmin}
+				{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
+				<AdminWorkspace user={data.user} />
 			{:else}
 				<p class="eyebrow muted">SELAMAT DATANG, {data.user.full_name.toUpperCase()}</p>
 				<h1>{role.title}</h1>

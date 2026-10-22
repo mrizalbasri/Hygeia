@@ -12,7 +12,9 @@ export type Entry = {
 	status?: string;
 	patient_ref?: string;
 	doctor_name?: string;
+	doctor_user_id?: string;
 	organization_name?: string;
+	organization_id?: string | null;
 	episode_id?: string;
 	test_name?: string;
 	test_code?: string;
@@ -43,6 +45,16 @@ export type Entry = {
 	flag?: string;
 	note?: string;
 	name?: string;
+	full_name?: string;
+	email?: string;
+	role?: string;
+	type?: string;
+	disabled_at?: string | null;
+	chain_id?: string;
+	events?: number;
+	review_note?: string;
+	action?: string;
+	actor_id?: string;
 };
 export type Payload = { [key: string]: unknown };
 export type Run = (path: string, body: Payload, method?: 'POST' | 'PATCH') => Promise<boolean>;
@@ -154,11 +166,29 @@ export const statusText: Record<string, string> = {
 	ready: 'Siap diambil',
 	denied: 'Ditolak',
 	revoked: 'Dicabut',
-	expired: 'Kedaluwarsa'
+	expired: 'Kedaluwarsa',
+	appropriate: 'Sesuai prosedur',
+	needs_followup: 'Perlu tindak lanjut',
+	unconscious: 'Pasien tidak sadar',
+	unreachable_patient: 'Pasien tidak dapat dihubungi',
+	life_threatening: 'Kondisi mengancam nyawa'
 };
 export const formText = (form: FormData, name: string) => String(form.get(name) || '').trim();
 export const uuidPattern =
 	'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
+export type LabResultInput = {
+	value: string;
+	unit?: string;
+	reference_range?: string;
+	flag: 'normal' | 'high' | 'low' | 'abnormal' | 'unknown';
+	note?: string;
+};
+export type ResultReceipt = {
+	id: string;
+	lab_request_id: string;
+	status: 'completed';
+	submitted_at: string;
+};
 export const menus = {
 	patient: [
 		['overview', 'Ringkasan'],
@@ -179,6 +209,22 @@ export const menus = {
 		['consents', 'Permintaan akses'],
 		['sharing', 'Tebus CarePass'],
 		['emergency', 'Akses darurat'],
+		['notifications', 'Notifikasi']
+	],
+	lab: [
+		['queue', 'Permintaan masuk'],
+		['notifications', 'Notifikasi']
+	],
+	pharmacy: [
+		['queue', 'Antrean resep'],
+		['notifications', 'Notifikasi']
+	],
+	admin: [
+		['organizations', 'Organisasi'],
+		['users', 'Akun'],
+		['audit', 'Status audit'],
+		['breakglass', 'Tinjauan akses darurat'],
+		['activity', 'Log aktivitas'],
 		['notifications', 'Notifikasi']
 	]
 };
