@@ -32,8 +32,10 @@
 		success = $state(''),
 		revision = $state(0);
 
-	// Organizations cache for user creation form
+	// Organizations cache for the user creation form and organization names.
 	let orgList = $state<{ id: string; name: string; type: string }[]>([]);
+	let orgNames = $derived(new Map(orgList.map((org) => [org.id, org.name])));
+	const orgLabel = (id?: string | null) => (id ? orgNames.get(id) || id : '');
 
 	// Audit verification result
 	let verifyResult = $state<{
@@ -176,7 +178,7 @@
 	// Rename User
 	function openRenameUser(item: Entry) {
 		selectedUser = item;
-		renameUserValue = item.name || '';
+		renameUserValue = item.full_name || item.name || '';
 		renameUserDialog?.showModal();
 	}
 
@@ -200,7 +202,7 @@
 		const actionName = willDisable ? 'dinonaktifkan' : 'diaktifkan kembali';
 		const ok = await run(`/admin/users/${item.id}`, { disabled: willDisable }, 'PATCH');
 		if (ok) {
-			success = `Akun ${item.name || item.email} telah berhasil ${actionName}.`;
+			success = `Akun ${item.full_name || item.email} telah berhasil ${actionName}.`;
 		}
 	}
 
@@ -409,15 +411,15 @@
 				{#snippet children(item)}
 					<div class="wf-row-heading">
 						<div>
-							<h2>{item.name || item.full_name}</h2>
+							<h2>{item.full_name || item.name}</h2>
 							<p>
 								Email: <strong>{item.email}</strong> · Peran:
 								<strong>{roles[item.role as keyof typeof roles]?.label || item.role}</strong>
 								{#if item.patient_ref}
 									· Kode pasien: <code>{item.patient_ref}</code>
 								{/if}
-								{#if item.organization_name}
-									· Organisasi: <em>{item.organization_name}</em>
+								{#if item.organization_id}
+									· Organisasi: <em>{orgLabel(item.organization_id)}</em>
 								{/if}
 							</p>
 						</div>
@@ -509,7 +511,10 @@
 						<div>
 							<h2>Akses Darurat: Pasien {item.patient_ref}</h2>
 							<p>
-								Dokter: <strong>{item.doctor_name}</strong> ({item.organization_name})
+								Dokter ID: <code>{item.doctor_user_id}</code>
+								{#if item.organization_id}
+									· Organisasi: <strong>{orgLabel(item.organization_id)}</strong>
+								{/if}
 							</p>
 							<p>
 								Alasan: <strong>{statusText[item.reason_code || ''] || item.reason_code}</strong>
@@ -532,7 +537,9 @@
 								<strong>Keputusan Tinjauan:</strong>
 								{statusText[item.review_decision] || item.review_decision}
 							</p>
-							<p><strong>Catatan Administrator:</strong> {item.review_note}</p>
+							{#if item.review_note}
+								<p><strong>Catatan Administrator:</strong> {item.review_note}</p>
+							{/if}
 						</div>
 					{:else}
 						<div class="wf-actions">
@@ -685,8 +692,11 @@
 	</header>
 	{#if selectedBreakglass}
 		<p class="muted">
-			Dokter: <strong>{selectedBreakglass.doctor_name}</strong> · Pasien:
-			<strong>{selectedBreakglass.patient_ref}</strong>
+			Dokter ID: <code>{selectedBreakglass.doctor_user_id}</code>
+			{#if selectedBreakglass.organization_id}
+				· Organisasi: <strong>{orgLabel(selectedBreakglass.organization_id)}</strong>
+			{/if}
+			· Pasien: <strong>{selectedBreakglass.patient_ref}</strong>
 		</p>
 		<p>Alasan darurat: <em>"{selectedBreakglass.reason_text}"</em></p>
 		<form onsubmit={submitBreakglassReview}>

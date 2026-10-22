@@ -12,7 +12,9 @@ export type Entry = {
 	status?: string;
 	patient_ref?: string;
 	doctor_name?: string;
+	doctor_user_id?: string;
 	organization_name?: string;
+	organization_id?: string | null;
 	episode_id?: string;
 	test_name?: string;
 	test_code?: string;
