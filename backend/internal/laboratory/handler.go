@@ -32,6 +32,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH /api/v1/lab-requests/{id}/status", h.status)
 	mux.HandleFunc("POST /api/v1/lab-requests/{id}/result", h.submit)
 	mux.HandleFunc("GET /api/v1/lab-results/{id}", h.result)
+	mux.HandleFunc("POST /api/v1/lab-results/{id}/corrections", h.correct)
 }
 
 func jsonResponse(w http.ResponseWriter, status int, body any) {
@@ -263,4 +264,30 @@ func (h *Handler) result(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jsonResponse(w, 200, map[string]any{"result": result})
+}
+
+func (h *Handler) correct(w http.ResponseWriter, r *http.Request) {
+	id, ok := resourceID(w, r)
+	if !ok {
+		return
+	}
+	var input CorrectionInput
+	if !decode(w, r, &input) {
+		return
+	}
+	input.Reason = strings.TrimSpace(input.Reason)
+	if len(input.Reason) < 5 || len(input.Reason) > 500 {
+		apiError(w, 400, "invalid_input", "Alasan koreksi harus antara 5 dan 500 karakter.")
+		return
+	}
+	if !validResult(ResultInput{Value: input.Value, Unit: input.Unit, ReferenceRange: input.ReferenceRange, Flag: input.Flag, Note: input.Note}) {
+		invalid(w)
+		return
+	}
+	corr, err := h.Service.CorrectResult(r.Context(), auth.SessionHash(r), id, input)
+	if err != nil {
+		h.respondError(w, r, err)
+		return
+	}
+	jsonResponse(w, 201, map[string]any{"correction": corr})
 }

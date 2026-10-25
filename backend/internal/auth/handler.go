@@ -6,16 +6,19 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"mime"
 	"net"
 	"net/http"
+	"net/mail"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/gorilla/csrf"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/time/rate"
 )
 
@@ -48,6 +51,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 		writeJSON(w, http.StatusOK, map[string]string{"csrf_token": csrf.Token(r)})
 	})
 	mux.HandleFunc("POST /api/v1/auth/login", h.Login)
+	mux.HandleFunc("POST /api/v1/auth/register", h.RegisterPatient)
 	mux.HandleFunc("POST /api/v1/auth/logout", h.Logout)
 	mux.HandleFunc("GET /api/v1/me", h.Me)
 }
@@ -172,6 +176,87 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: token, Path: "/", HttpOnly: true, Secure: h.secure, SameSite: http.SameSiteLaxMode, MaxAge: int(sessionTTL.Seconds()), Expires: expires})
 	writeJSON(w, http.StatusOK, map[string]any{"user": user})
+}
+
+func (h *Handler) RegisterPatient(w http.ResponseWriter, r *http.Request) {
+	if !h.allowLogin(r.RemoteAddr) {
+		w.Header().Set("Retry-After", "12")
+		writeError(w, http.StatusTooManyRequests, "rate_limited", "Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.")
+		return
+	}
+	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil || mediaType != "application/json" {
+		writeError(w, http.StatusUnsupportedMediaType, "invalid_content_type", "Gunakan application/json.")
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 4096)
+	var input struct {
+		Email     string `json:"email"`
+		Password  string `json:"password"`
+		FullName  string `json:"full_name"`
+		BirthYear int    `json:"birth_year"`
+		Sex       string `json:"sex"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "Isi semua kolom pendaftaran dengan benar.")
+		return
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		writeError(w, http.StatusBadRequest, "invalid_input", "Isi semua kolom pendaftaran dengan benar.")
+		return
+	}
+	email := strings.ToLower(strings.TrimSpace(input.Email))
+	name := strings.TrimSpace(input.FullName)
+	address, emailErr := mail.ParseAddress(email)
+	if emailErr != nil || address.Address != email || len(email) > 254 || len(name) < 1 || len(name) > 200 {
+		writeError(w, http.StatusBadRequest, "invalid_input", "Email atau nama tidak valid.")
+		return
+	}
+	if input.Sex != "female" && input.Sex != "male" && input.Sex != "other" && input.Sex != "unknown" {
+		writeError(w, http.StatusBadRequest, "invalid_input", "Jenis kelamin harus female, male, other, atau unknown.")
+		return
+	}
+	if input.BirthYear < 1900 || input.BirthYear > time.Now().Year() {
+		writeError(w, http.StatusBadRequest, "invalid_input", "Tahun lahir tidak valid.")
+		return
+	}
+	hash, err := HashPassword(input.Password)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "Password harus 12 sampai 1024 karakter.")
+		return
+	}
+	// A database uniqueness constraint also protects the random patient reference.
+	refBytes := make([]byte, 4)
+	if _, err := rand.Read(refBytes); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "Tidak dapat membuat referensi pasien.")
+		return
+	}
+	patientRef := fmt.Sprintf("HYG-%04X-%04X",
+		uint16(refBytes[0])<<8|uint16(refBytes[1]),
+		uint16(refBytes[2])<<8|uint16(refBytes[3]))
+
+	random := make([]byte, 32)
+	if _, err := rand.Read(random); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "Tidak dapat membuat sesi.")
+		return
+	}
+	token := base64.RawURLEncoding.EncodeToString(random)
+	tokenHash := sha256.Sum256([]byte(token))
+	expires := time.Now().Add(sessionTTL)
+	user, err := h.store.RegisterPatient(r.Context(), email, hash, name, input.BirthYear, input.Sex, patientRef, tokenHash[:], expires)
+	if err != nil {
+		var dbErr *pgconn.PgError
+		if errors.As(err, &dbErr) && dbErr.Code == "23505" && dbErr.ConstraintName == "users_email_key" {
+			writeError(w, http.StatusConflict, "email_taken", "Email sudah terdaftar.")
+			return
+		}
+		writeError(w, http.StatusServiceUnavailable, "unavailable", "Layanan sedang tidak tersedia.")
+		return
+	}
+	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: token, Path: "/", HttpOnly: true, Secure: h.secure, SameSite: http.SameSiteLaxMode, MaxAge: int(sessionTTL.Seconds()), Expires: expires})
+	writeJSON(w, http.StatusCreated, map[string]any{"user": user})
 }
 
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {

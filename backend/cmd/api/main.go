@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -53,7 +54,20 @@ func run(logger *slog.Logger) error {
 	if hmac.Equal(auditKey, csrfKey) {
 		return errors.New("AUDIT_HMAC_KEY must be different from SESSION_SECRET")
 	}
-	auditWriter, err := audit.NewWriter(auditKey)
+	var fallbackKeys [][]byte
+	if prev := os.Getenv("AUDIT_HMAC_KEY_PREVIOUS"); prev != "" {
+		for _, value := range strings.Split(prev, ",") {
+			pk, err := hex.DecodeString(strings.TrimSpace(value))
+			if err != nil || len(pk) != 32 {
+				return errors.New("AUDIT_HMAC_KEY_PREVIOUS must contain comma-separated 64-character hexadecimal keys")
+			}
+			if hmac.Equal(pk, csrfKey) {
+				return errors.New("historical audit keys must be different from SESSION_SECRET")
+			}
+			fallbackKeys = append(fallbackKeys, pk)
+		}
+	}
+	auditWriter, err := audit.NewWriter(auditKey, fallbackKeys...)
 	if err != nil {
 		return err
 	}
@@ -84,6 +98,29 @@ func run(logger *slog.Logger) error {
 	}
 	defer pool.Close()
 	logger.Info("connected to PostgreSQL")
+
+	// Background session cleanup every hour.
+	go func() {
+		authStore := auth.Store{DB: pool}
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				cleanupCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+				n, err := authStore.DeleteExpired(cleanupCtx)
+				cancel()
+				if err != nil {
+					logger.Error("session cleanup failed", "error", err)
+				} else if n > 0 {
+					logger.Info("expired sessions cleaned", "count", n)
+				}
+			}
+		}
+	}()
+
 	authHandler, err := auth.NewHandler(auth.Store{DB: pool}, secure)
 	if err != nil {
 		return errors.New("could not initialize authentication")

@@ -1,0 +1,19 @@
+services:
+  api:
+    build: .
+    ports:
+      - "127.0.0.1:8080:8080"
+    env_file: .env
+    environment:
+      # If running via compose, ensure host.docker.internal is reachable
+      PORT: "8080"
+      DATABASE_URL: ${DATABASE_URL_DOCKER:?Set DATABASE_URL_DOCKER in backend/.env for the host PostgreSQL instance}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/api/v1/readyz"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    restart: unless-stopped
