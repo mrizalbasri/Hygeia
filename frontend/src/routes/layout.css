@@ -153,6 +153,12 @@ p {
 	color: var(--text);
 	font-weight: 600;
 }
+.consultation-showcase img {
+	width: 100%;
+	max-width: 440px;
+	height: auto;
+	border-radius: 18px;
+}
 .care-path {
 	display: flex;
 	position: relative;
@@ -216,6 +222,53 @@ p {
 	font-weight: 700;
 	letter-spacing: -1px;
 	line-height: 1.35;
+}
+.register-form-wrap {
+	max-width: 440px;
+	padding: 12px 0 28px;
+}
+.registration-demographics {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 16px;
+}
+.register-form-wrap select {
+	width: 100%;
+	min-height: 48px;
+	padding: 12px;
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	font: inherit;
+	font-size: 14px;
+	color: var(--text);
+	background: var(--surface);
+	margin-bottom: 24px;
+}
+.auth-switch {
+	font-size: 14px;
+	line-height: 1.8;
+	margin-top: 24px;
+}
+.auth-switch a {
+	color: var(--primary-hover);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+	padding-block: 12px;
+}
+.auth-hint {
+	color: var(--muted);
+	font-size: 12px;
+	line-height: 1.7;
+	margin: -14px 0 20px;
+}
+.register-form-wrap .login-submit {
+	justify-content: center;
+}
+@media (max-width: 400px) {
+	.registration-demographics {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0;
+	}
 }
 .intro {
 	margin-top: 14px;
