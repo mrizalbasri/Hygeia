@@ -154,7 +154,7 @@
 			data = new FormData(form);
 		const email = formText(data, 'email').toLowerCase();
 		const full_name = formText(data, 'full_name');
-		const password = formText(data, 'password');
+		const password = String(data.get('password') || '');
 		const role = newUserRole;
 
 		const body: Payload = { email, full_name, password, role };

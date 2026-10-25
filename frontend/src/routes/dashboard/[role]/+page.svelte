@@ -7,6 +7,8 @@
 	import LaboratoryWorkspace from '#lib/workflows/LaboratoryWorkspace.svelte';
 	import PharmacyWorkspace from '#lib/workflows/PharmacyWorkspace.svelte';
 	import AdminWorkspace from '#lib/workflows/AdminWorkspace.svelte';
+	import WorkspaceIcon from '#lib/WorkspaceIcon.svelte';
+	import '#lib/workspace.css';
 	import { menus } from '#lib/workflows/api.js';
 	import { page } from '$app/state';
 	import type { PageProps } from './$types';
@@ -38,6 +40,16 @@
 	let pending = $state(false);
 	let ready = $state(false);
 	let message = $state('');
+	let mobileMenuOpen = $state(false);
+	let menuToggle: HTMLButtonElement | undefined = $state();
+	let initials = $derived(
+		data.user.full_name
+			.split(' ')
+			.filter(Boolean)
+			.slice(0, 2)
+			.map((name) => name[0])
+			.join('')
+	);
 	onMount(() => {
 		ready = true;
 	});
@@ -60,18 +72,45 @@
 
 <svelte:head><title>{role.title} · Hygeia</title></svelte:head>
 
-<div class="workspace">
+<svelte:window
+	onkeydown={(event) => {
+		if (event.key === 'Escape' && mobileMenuOpen) {
+			mobileMenuOpen = false;
+			menuToggle?.focus();
+		}
+	}}
+/>
+
+<a class="workspace-skip-link" href="#workspace-main-content">Langsung ke isi dashboard</a>
+<div class="workspace dashboard-workspace" class:mobile-menu-open={mobileMenuOpen}>
 	<aside class="sidebar">
-		<a class="brand" href={resolve('/dashboard/[role]', { role: data.user.role })}
-			><img src="/logo-light.png" alt="" width="40" height="40" /><span>Hygeia</span></a
-		>
-		<p class="eyebrow muted workspace-label">RUANG {role.label.toUpperCase()}</p>
-		<nav aria-label="Menu utama">
+		<div class="sidebar-mobile-heading">
+			<a class="brand" href={resolve('/dashboard/[role]', { role: data.user.role })}
+				><img src="/logo-light.png" alt="" width="40" height="40" /><span>Hygeia</span></a
+			>
+			<button
+				class="workspace-menu-toggle"
+				bind:this={menuToggle}
+				aria-expanded={mobileMenuOpen}
+				aria-controls="workspace-navigation"
+				onclick={() => (mobileMenuOpen = !mobileMenuOpen)}
+				><WorkspaceIcon name={mobileMenuOpen ? 'close' : 'menu'} />{mobileMenuOpen
+					? 'Tutup menu'
+					: 'Menu'}</button
+			>
+		</div>
+		<p class="workspace-label">Ruang {role.label}</p>
+		<nav id="workspace-navigation" aria-label="Menu utama">
 			{#if hasWorkspace}
 				{#each menu as [id, label] (id)}<a
+						class:nav-divider={id === 'notifications' || id === 'audit'}
 						class:nav-active={activeView === id}
 						aria-current={activeView === id ? 'page' : undefined}
-						href={resolve(`/dashboard/[role]?view=${id}`, { role: data.user.role })}>{label}</a
+						onclick={() => (mobileMenuOpen = false)}
+						href={resolve(`/dashboard/[role]?view=${id}`, { role: data.user.role })}
+						><WorkspaceIcon name={id === 'queue' && isPharmacy ? 'prescriptions' : id} /><span
+							>{label}</span
+						>{#if activeView === id}<span class="nav-current-dot" aria-hidden="true"></span>{/if}</a
 					>{/each}
 			{:else}
 				<a
@@ -84,22 +123,46 @@
 						title="Segera tersedia">{item}<span aria-hidden="true">·</span></button
 					>{/each}{/if}
 		</nav>
-		<div class="sidebar-note">
-			<span class="notice-dot" aria-hidden="true"></span>Demo · data sintetis
+		<div class="sidebar-bottom">
+			<div class="sidebar-account">
+				<span class="account-avatar" aria-hidden="true">{initials}</span>
+				<div><strong>{data.user.full_name}</strong><span>{role.label}</span></div>
+			</div>
+			<div class="sidebar-note">
+				<span class="notice-dot" aria-hidden="true"></span>Demo · data sintetis
+			</div>
 		</div>
 	</aside>
 	<div class="workspace-main">
 		<header class="workspace-header">
-			<span class="muted">{data.user.organization?.name || 'Hygeia'}</span>
+			<div class="workspace-breadcrumb">
+				<span>{data.user.organization?.name || 'Ruang pribadi'}</span><span aria-hidden="true"
+					>/</span
+				><strong>{menu.find(([id]) => id === activeView)?.[1] || role.title}</strong>
+			</div>
 			<div class="account-actions">
-				<span class="role-chip">{role.label}</span><button
-					class="button secondary"
-					onclick={logout}
-					disabled={pending || !ready}>{pending ? 'Keluar…' : 'Keluar'}</button
+				<a
+					class="header-notifications"
+					aria-label="Buka notifikasi"
+					href={resolve('/dashboard/[role]?view=notifications', { role: data.user.role })}
+					><WorkspaceIcon name="notifications" /></a
+				>
+				<div class="header-account">
+					<span class="account-avatar" aria-hidden="true">{initials}</span><span
+						>{data.user.full_name}</span
+					>
+				</div>
+				<button class="button secondary logout-button" onclick={logout} disabled={pending || !ready}
+					><WorkspaceIcon name="logout" />{pending ? 'Keluar…' : 'Keluar'}</button
 				>
 			</div>
 		</header>
-		<main class="dashboard-content" class:patient-content={data.user.role === 'patient'}>
+		<main
+			id="workspace-main-content"
+			tabindex="-1"
+			class="dashboard-content"
+			class:patient-content={data.user.role === 'patient'}
+		>
 			{#if clinical}
 				{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
 				<ClinicalWorkspace user={data.user} />

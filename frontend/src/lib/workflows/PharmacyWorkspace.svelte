@@ -50,6 +50,10 @@
 			return true;
 		} catch (reason) {
 			error = errorText(reason);
+			if (reason instanceof ApiError && reason.status === 403) {
+				revision++;
+				closeCompletePrompt();
+			}
 			if (reason instanceof ApiError && reason.status === 409) {
 				revision++;
 				error += ' Status telah berubah. Periksa antrean terbaru sebelum mencoba kembali.';

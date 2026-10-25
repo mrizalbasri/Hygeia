@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import type { User } from '../auth.js';
 	import {
 		api,
@@ -15,6 +16,8 @@
 	} from './api.js';
 	import PagedList from './PagedList.svelte';
 	import Notifications from './Notifications.svelte';
+	import LabCorrections from './LabCorrections.svelte';
+	import LaboratoryOverview from './LaboratoryOverview.svelte';
 	import './workflow.css';
 
 	let { user }: { user: User } = $props();
@@ -67,6 +70,10 @@
 			return true;
 		} catch (reason) {
 			error = errorText(reason);
+			if (reason instanceof ApiError && reason.status === 403) {
+				revision++;
+				closeResultForm();
+			}
 			if (reason instanceof ApiError && reason.status === 409) {
 				revision++;
 				error += ' Status telah berubah. Periksa antrean terbaru sebelum mencoba kembali.';
@@ -128,10 +135,15 @@
 			revision++;
 			closeResultForm();
 		} catch (reason) {
-			modalError = errorText(reason);
-			if (reason instanceof ApiError && reason.status === 409) {
+			if (reason instanceof ApiError && reason.status === 403) {
+				error = errorText(reason);
 				revision++;
-				modalError += ' Permintaan ini telah selesai atau dibatalkan.';
+				closeResultForm();
+			} else if (reason instanceof ApiError && reason.status === 409) {
+				revision++;
+				modalError = errorText(reason) + ' Permintaan ini telah selesai atau dibatalkan.';
+			} else {
+				modalError = errorText(reason);
 			}
 		} finally {
 			busy = false;
@@ -139,11 +151,12 @@
 	}
 </script>
 
-<div class="wf-heading">
-	<p class="muted">{user.organization?.name || 'Laboratorium'} · {user.full_name}</p>
-	<h1>Ruang Laboratorium</h1>
-	<h2>{menu.find(([id]) => id === view)?.[1] || 'Permintaan Masuk'}</h2>
-</div>
+{#if view === 'overview'}<LaboratoryOverview {user} />{:else}<div class="wf-heading">
+		<p class="muted">{user.organization?.name || 'Laboratorium'} · {user.full_name}</p>
+		<h1>Ruang Laboratorium</h1>
+		<h2>{menu.find(([id]) => id === view)?.[1] || 'Permintaan Masuk'}</h2>
+	</div>
+{/if}
 
 {#if error}<p class="wf-error" role="alert">{error}</p>{/if}
 {#if success}<p class="wf-success" role="status">{success}</p>{/if}
@@ -175,6 +188,13 @@
 			masing-masing.
 		</p>
 		<div class="wf-actions">
+			<a
+				class="button primary"
+				href={resolve(
+					`/dashboard/[role]?view=corrections&result_id=${encodeURIComponent(receipt.id)}`,
+					{ role: 'lab' }
+				)}>Koreksi hasil ini</a
+			>
 			<button type="button" class="button secondary" onclick={() => (receipt = null)}
 				>Tutup tanda terima</button
 			>
@@ -237,6 +257,8 @@
 					</div>
 				{/snippet}
 			</PagedList>
+		{:else if view === 'corrections'}
+			<LabCorrections initialResultID={page.url.searchParams.get('result_id') || ''} />
 		{:else if view === 'notifications'}
 			<Notifications {run} {busy} {revision} />
 		{/if}

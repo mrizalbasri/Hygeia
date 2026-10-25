@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
+import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
 import { waitForServer } from './server-ready.js';
 
@@ -39,13 +40,25 @@ const server = createServer((request, response) => {
 	response.end(JSON.stringify({ user }));
 });
 
-await new Promise((resolve) => server.listen(18087, '127.0.0.1', resolve));
+await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+const portProbe = createServer();
+await new Promise((resolve) => portProbe.listen(0, '127.0.0.1', resolve));
+const port = portProbe.address().port;
+await new Promise((resolve) => portProbe.close(resolve));
 
 const vite = spawn(
 	process.execPath,
-	['node_modules/vite/bin/vite.js', 'dev', '--host', '127.0.0.1', '--port', '5187', '--strictPort'],
+	[
+		'node_modules/vite/bin/vite.js',
+		'dev',
+		'--host',
+		'127.0.0.1',
+		'--port',
+		String(port),
+		'--strictPort'
+	],
 	{
-		env: { ...process.env, API_BASE_URL: 'http://127.0.0.1:18087' },
+		env: { ...process.env, API_BASE_URL: `http://127.0.0.1:${server.address().port}` },
 		stdio: ['ignore', 'pipe', 'pipe'],
 		windowsHide: true
 	}
@@ -56,8 +69,9 @@ vite.stdout.on('data', (data) => (output += data));
 vite.stderr.on('data', (data) => (output += data));
 // eslint-disable-next-line no-control-regex
 const stripAnsi = (str) => str.replace(/\x1b\[[0-9;]*m/g, '');
-const base = 'http://127.0.0.1:5187';
+const base = `http://127.0.0.1:${port}`;
 let browser;
+await mkdir('.test-results', { recursive: true });
 
 try {
 	await waitForServer(base, {
@@ -90,6 +104,9 @@ try {
 			status: 'sent'
 		};
 		const labMutations = [];
+		let denyLabMutation = false;
+		const resultId = '11111111-2222-4333-8444-555555555555';
+		let correctionFailure = 403;
 
 		await page.route('**/api/v1/**', async (route) => {
 			const req = route.request();
@@ -116,12 +133,20 @@ try {
 				const data = req.postDataJSON();
 				labMutations.push({ path, data });
 				if (path === `/lab-requests/${labId}/status`) {
+					if (denyLabMutation) {
+						labItem = null;
+						return send({ error: { message: 'Penugasan sudah berakhir.' } }, 403);
+					}
 					labItem.status = data.status;
 					return send({ lab_request: { ...labItem } });
 				}
 			}
 
 			if (req.method() === 'POST' && path === `/lab-requests/${labId}/result`) {
+				if (denyLabMutation) {
+					labItem = null;
+					return send({ error: { message: 'Penugasan sudah berakhir.' } }, 403);
+				}
 				assert.equal(req.headers()['x-csrf-token'], 'csrf-fixture');
 				const data = req.postDataJSON();
 				labMutations.push({ path, data });
@@ -129,7 +154,7 @@ try {
 				return send(
 					{
 						result: {
-							id: 'receipt-001',
+							id: resultId,
 							lab_request_id: labId,
 							status: 'completed',
 							submitted_at: '2026-10-22T00:48:00Z'
@@ -138,13 +163,31 @@ try {
 					201
 				);
 			}
+			if (req.method() === 'POST' && path === `/lab-results/${resultId}/corrections`) {
+				assert.equal(req.headers()['x-csrf-token'], 'csrf-fixture');
+				const data = req.postDataJSON();
+				labMutations.push({ path, data });
+				if (correctionFailure)
+					return send(
+						{ error: { message: 'Koreksi belum diizinkan.', request_id: 'correction-fixture' } },
+						correctionFailure
+					);
+				return send({ correction: { id: 'correction-001', lab_result_id: resultId } }, 201);
+			}
 
 			return send({});
 		});
 
-		await page.goto(`${base}/dashboard/lab`);
+		await page.goto(`${base}/dashboard/lab?view=queue`);
 		await page.getByRole('heading', { name: 'Ruang Laboratorium', exact: true }).waitFor();
-		await page.getByText('Tes Glukosa Puasa', { exact: true }).waitFor();
+		try {
+			await page.getByText('Tes Glukosa Puasa', { exact: true }).waitFor();
+		} catch (error) {
+			throw new Error(
+				`Laboratory queue: ${await page.locator('body').innerText()}; browser errors: ${errors.join('; ')}; server: ${output.slice(-3000)}`,
+				{ cause: error }
+			);
+		}
 		await page.locator('.health-status').getByText('Terkirim', { exact: true }).waitFor();
 
 		// Transition: sent -> accepted
@@ -166,12 +209,82 @@ try {
 
 		// Receipt verification
 		await page.getByRole('heading', { name: 'Tanda Terima Hasil Pemeriksaan' }).waitFor();
-		await page.getByText('receipt-001', { exact: true }).waitFor();
+		await page.getByText(resultId, { exact: true }).waitFor();
 		assert.equal(labMutations.length, 3);
 		assert.equal(labMutations[0].data.status, 'accepted');
 		assert.equal(labMutations[1].data.status, 'in_progress');
 		assert.equal(labMutations[2].data.value, '95');
 		assert.equal(labMutations[2].data.unit, 'mg/dL');
+
+		await page.getByRole('link', { name: 'Koreksi hasil ini', exact: true }).click();
+		await page.getByRole('heading', { name: 'Tambahkan koreksi hasil', exact: true }).waitFor();
+		const correctionForm = page
+			.locator('form')
+			.filter({ has: page.locator('textarea[name="reason"]') });
+		assert.equal(await correctionForm.locator('input[name="result_id"]').inputValue(), resultId);
+		await correctionForm.locator('textarea[name="reason"]').fill('Koreksi alat sintetis');
+		await correctionForm.locator('input[name="value"]').fill('101');
+		await correctionForm.locator('input[name="unit"]').fill('mg/dL');
+		await correctionForm.locator('input[name="reference_range"]').fill('70–99');
+		await correctionForm.locator('select[name="flag"]').selectOption('high');
+		await correctionForm.locator('textarea[name="note"]').fill('Catatan koreksi sintetis');
+		for (const status of [403, 409, 503]) {
+			correctionFailure = status;
+			await correctionForm
+				.getByRole('button', { name: 'Kirim koreksi hasil', exact: true })
+				.click();
+			await page
+				.getByRole('alert')
+				.getByText(/correction-fixture/)
+				.waitFor();
+			assert.equal(await correctionForm.locator('input[name="value"]').inputValue(), '101');
+			await correctionForm
+				.locator('textarea[name="reason"]')
+				.fill(`Koreksi alat sintetis ${status}`);
+		}
+		await page.screenshot({ path: '.test-results/lab-correction-desktop.png', fullPage: true });
+		await page.setViewportSize({ width: 390, height: 844 });
+		assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+		await page.screenshot({ path: '.test-results/lab-correction-mobile.png', fullPage: true });
+		correctionFailure = 0;
+		await correctionForm.getByRole('button', { name: 'Kirim koreksi hasil', exact: true }).click();
+		await page.getByText('Koreksi hasil berhasil dikirim.', { exact: true }).waitFor();
+		assert.equal(await correctionForm.locator('input[name="value"]').inputValue(), '');
+		assert.deepEqual(labMutations.at(-1).data, {
+			reason: 'Koreksi alat sintetis 503',
+			value: '101',
+			unit: 'mg/dL',
+			reference_range: '70–99',
+			flag: 'high',
+			note: 'Catatan koreksi sintetis'
+		});
+		await page.setViewportSize({ width: 1440, height: 1000 });
+		for (const status of ['sent', 'in_progress']) {
+			labItem = {
+				id: labId,
+				patient_ref: 'HYG-STALE-LAB',
+				test_code: 'STALE',
+				test_name: 'Pemeriksaan lama',
+				status
+			};
+			denyLabMutation = true;
+			await page.goto(`${base}/dashboard/lab?view=queue`);
+			await page.getByRole('heading', { name: 'Pemeriksaan lama', exact: true }).waitFor();
+			if (status === 'sent') {
+				await page.getByRole('button', { name: 'Terima permintaan', exact: true }).click();
+			} else {
+				await page.getByRole('button', { name: 'Kirim hasil pemeriksaan', exact: true }).click();
+				await page.locator('input[name="value"]').fill('123');
+				await page.getByRole('button', { name: 'Serahkan hasil pemeriksaan', exact: true }).click();
+			}
+			await page
+				.getByText('Belum ada permintaan pemeriksaan pada antrean laboratorium Anda.', {
+					exact: true
+				})
+				.waitFor({ timeout: 5000 });
+			assert.equal(await page.locator('dialog[open]').count(), 0, '403 closes the result dialog');
+			assert.equal(await page.getByText('HYG-STALE-LAB', { exact: true }).count(), 0);
+		}
 
 		// View notifications tab
 		await page.getByRole('link', { name: 'Notifikasi', exact: true }).click();
@@ -206,6 +319,7 @@ try {
 			]
 		};
 		const rxMutations = [];
+		let denyRxMutation = false;
 
 		await page.route('**/api/v1/**', async (route) => {
 			const req = route.request();
@@ -228,6 +342,10 @@ try {
 			}
 
 			if (req.method() === 'PATCH' && path === `/prescriptions/${rxId}/status`) {
+				if (denyRxMutation) {
+					rxItem = null;
+					return send({ error: { message: 'Resep sudah diselesaikan petugas lain.' } }, 403);
+				}
 				assert.equal(req.headers()['x-csrf-token'], 'csrf-fixture');
 				const data = req.postDataJSON();
 				rxMutations.push({ path, data });
@@ -271,6 +389,28 @@ try {
 		assert.equal(rxMutations[1].data.status, 'preparing');
 		assert.equal(rxMutations[2].data.status, 'ready');
 		assert.equal(rxMutations[3].data.status, 'completed');
+		rxItem = {
+			id: rxId,
+			patient_ref: 'HYG-STALE-RX',
+			status: 'ready',
+			items: [
+				{
+					medication_name: 'Obat kedaluwarsa akses',
+					dosage: 'Dosis sintetis',
+					instructions: 'Aturan sintetis',
+					quantity: 1
+				}
+			]
+		};
+		denyRxMutation = true;
+		await page.goto(`${base}/dashboard/pharmacy`);
+		await page.getByRole('heading', { name: 'Obat kedaluwarsa akses', level: 2 }).waitFor();
+		await page.getByRole('button', { name: 'Selesaikan penyerahan obat', exact: true }).click();
+		await page.getByRole('button', { name: 'Ya, selesaikan penyerahan', exact: true }).click();
+		await page
+			.getByText('Belum ada resep aktif pada antrean apotek Anda.', { exact: true })
+			.waitFor({ timeout: 5000 });
+		assert.equal(await page.getByText('Dosis sintetis', { exact: false }).count(), 0);
 
 		// View notifications tab
 		await page.getByRole('link', { name: 'Notifikasi', exact: true }).click();
@@ -351,6 +491,11 @@ try {
 				orgs.push(newOrg);
 				return send({ organization: newOrg }, 201);
 			}
+			if (req.method() === 'POST' && path === '/admin/users') {
+				assert.equal(req.headers()['x-csrf-token'], 'csrf-fixture');
+				adminMutations.push({ path, data: req.postDataJSON() });
+				return send({ user: { id: 'created-user' } }, 201);
+			}
 
 			if (req.method() === 'PATCH' && path === '/admin/users/u-1') {
 				assert.equal(req.headers()['x-csrf-token'], 'csrf-fixture');
@@ -387,6 +532,21 @@ try {
 		// User list resolves organization IDs, and rename starts from full_name.
 		await page.getByRole('link', { name: 'Akun', exact: true }).click();
 		await page.getByRole('heading', { name: 'dr. Maya', exact: true }).waitFor();
+		await page.getByText('Buat akun pengguna baru', { exact: true }).click();
+		const createForm = page.locator('form').filter({ has: page.locator('input[name="password"]') });
+		await createForm.locator('input[name="email"]').fill('new@example.test');
+		await createForm.locator('input[name="full_name"]').fill('Pengguna Sintetis');
+		await createForm.locator('select[name="role"]').selectOption('patient');
+		const exactPassword = '  fixture-password-123  ';
+		await createForm.locator('input[name="password"]').fill(exactPassword);
+		await createForm.getByRole('button', { name: 'Daftarkan akun', exact: true }).click();
+		await page
+			.getByText('Akun new@example.test (Pasien) berhasil dibuat.', { exact: true })
+			.waitFor();
+		assert.equal(
+			adminMutations.find((item) => item.path === '/admin/users').data.password,
+			exactPassword
+		);
 		await page
 			.locator('article.wf-row')
 			.filter({ hasText: 'dr. Maya' })
@@ -443,7 +603,9 @@ try {
 		await context.close();
 	}
 
-	console.log('PASS Laboratory workspace queue lifecycle, result modal, and receipt banner');
+	console.log(
+		'PASS Laboratory queue, result receipt, correction form, CSRF, errors/retry and mobile layout'
+	);
 	console.log(
 		'PASS Pharmacy workspace queue lifecycle, medication details, and completion confirmation'
 	);

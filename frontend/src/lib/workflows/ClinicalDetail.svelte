@@ -73,7 +73,17 @@
 		<h2 id="clinical-detail-title">
 			{kind === 'lab_result' ? 'Hasil pemeriksaan' : 'Detail resep'}
 		</h2>
-		<button type="button" class="button secondary" onclick={() => dialog.close()}>Tutup</button>
+		<div class="wf-dialog-actions">
+			<button
+				type="button"
+				class="button secondary no-print"
+				disabled={loading || !record || !!error}
+				onclick={() => window.print()}>Cetak / PDF</button
+			>
+			<button type="button" class="button secondary no-print" onclick={() => dialog.close()}
+				>Tutup</button
+			>
+		</div>
 	</header>
 	{#if loading}<p role="status">Memuat detail…</p>{:else if error}<p class="wf-error" role="alert">
 			{error}
@@ -102,6 +112,15 @@
 					<dd>{dateText(record.submitted_at)}</dd>
 				</div>
 			</dl>
+			{#each record.corrections || [] as correction (correction.id)}
+				<section class="wf-medication">
+					<h3>Koreksi hasil · {dateText(correction.corrected_at)}</h3>
+					<p>{correction.value} {correction.unit} · {correction.flag}</p>
+					<p>Rentang rujukan: {correction.reference_range || 'Tidak dicantumkan'}</p>
+					{#if correction.reason}<p>Alasan: {correction.reason}</p>{/if}
+					{#if correction.note}<p>Catatan: {correction.note}</p>{/if}
+				</section>
+			{/each}
 			<p class="muted">Interpretasi hasil dilakukan oleh dokter yang menangani Anda.</p>{:else}<p>
 				{statusText[record.status || ''] || record.status} · {record.pharmacy_name ||
 					'Apotek belum dipilih'}

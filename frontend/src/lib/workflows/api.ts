@@ -8,6 +8,7 @@ export type Medication = {
 	quantity: number;
 };
 export type Entry = {
+	corrections?: (Entry & { reason: string; corrected_at: string })[];
 	id: string;
 	status?: string;
 	patient_ref?: string;
@@ -203,6 +204,7 @@ export const menus = {
 		['notifications', 'Notifikasi']
 	],
 	doctor: [
+		['overview', 'Ringkasan dokter'],
 		['episodes', 'Pasien & perawatan'],
 		['labs', 'Pemeriksaan lab'],
 		['prescriptions', 'Resep'],
@@ -212,7 +214,9 @@ export const menus = {
 		['notifications', 'Notifikasi']
 	],
 	lab: [
+		['overview', 'Ringkasan lab'],
 		['queue', 'Permintaan masuk'],
+		['corrections', 'Koreksi hasil'],
 		['notifications', 'Notifikasi']
 	],
 	pharmacy: [

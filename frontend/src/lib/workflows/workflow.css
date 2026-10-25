@@ -270,35 +270,12 @@
 	height: auto;
 	margin: 16px 0;
 }
-.workspace:has(.wf-content) .sidebar {
-	width: 250px;
-}
-.workspace:has(.wf-content) .sidebar nav {
-	gap: 2px;
-}
-.workspace:has(.wf-content) .workspace-label {
-	margin-top: 28px;
-}
 .carepass-page {
 	max-width: 760px;
 	margin: 40px auto;
 	padding: 24px;
 }
 @media (max-width: 700px) {
-	.workspace:has(.wf-content) .sidebar {
-		width: auto;
-	}
-	.workspace:has(.wf-content) .sidebar nav {
-		display: flex;
-		flex-direction: row;
-		overflow-x: auto;
-		padding-top: 16px;
-	}
-	.workspace:has(.wf-content) .sidebar nav a {
-		width: auto;
-		flex-shrink: 0;
-		white-space: nowrap;
-	}
 	.wf-row,
 	.wf-form-panel {
 		padding: 20px;
@@ -315,5 +292,47 @@
 	.wf-pagination span {
 		width: 100%;
 		order: 3;
+	}
+}
+
+.wf-dialog-actions {
+	display: flex;
+	gap: 8px;
+}
+
+@media print {
+	body * {
+		visibility: hidden;
+	}
+	.wf-dialog[open],
+	.wf-dialog[open] * {
+		visibility: visible;
+	}
+	.wf-dialog[open] {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 100%;
+		max-width: 100%;
+		border: none;
+		box-shadow: none;
+		padding: 0;
+		margin: 0;
+		background: white;
+		color: black;
+		max-height: none;
+		height: auto;
+		overflow: visible;
+	}
+	.wf-dialog::backdrop {
+		background: transparent;
+	}
+	.no-print {
+		display: none !important;
+	}
+	.wf-dialog header {
+		border-bottom: 2px solid #333;
+		padding-bottom: 12px;
+		margin-bottom: 20px;
 	}
 }
