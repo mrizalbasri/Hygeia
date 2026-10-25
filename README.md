@@ -11,7 +11,10 @@ Dataset demo hanya menggunakan data sintetis.
 - API care episode (undangan, persetujuan, penolakan, pengakhiran), policy akses,
   audit HMAC per pasien, riwayat akses, dan verifikasi integritas.
 - API laboratorium: pemilihan lab, permintaan tes, persetujuan pasien, antrean
-  staf lab, pengiriman hasil terstruktur, serta pembacaan hasil terlindungi.
+  staf lab, pengiriman hasil terstruktur, koreksi append-only, serta pembacaan hasil terlindungi.
+- API registrasi pasien dengan sesi atomik, pembersihan sesi kedaluwarsa setiap
+  jam, rotasi kunci audit, dan cetak detail hasil/resep ke PDF dari browser.
+- Docker backend dengan migrasi otomatis dan seed khusus development/test.
 - API resep dan apotek: resep dalam episode aktif, pasien memilih apotek dan
   menyetujui pengiriman, antrean apotek sampai selesai, serta audit setiap akses.
 - Timeline perjalanan pasien: kejadian episode, lab, resep, dan consent;

@@ -124,14 +124,18 @@ go test ./internal/care -run 'Laboratory|Prescription' -count=1 -v
 
 ## Batas deployment
 
-Deployment belum diuji pada server. Repository belum menyediakan Dockerfile,
-Compose Hygeia, atau pipeline CI backend. Draft arsitektur menjelaskan target
+Deployment belum diuji pada server. Dockerfile dan Compose backend tersedia;
+workflow CI backend/frontend tersedia di `.github/workflows/verify.yml`, tetapi
+belum dijalankan di GitHub pada sesi ini. Draft arsitektur menjelaskan target
 deployment, bukan konfigurasi yang sudah tersedia. Sebelum deployment perlu
 menetapkan host, HTTPS/proxy satu origin, penyimpanan secret, database TLS,
 backup dan pemulihan DB beserta kunci audit, monitoring, serta uji beban.
 Proxy SSE perlu menonaktifkan buffering. Limiter login dan batas koneksi SSE
 berlaku per proses; kebijakan trusted proxy/distribusi belum ditetapkan.
 
-Registrasi publik, reset password, verifikasi email, MFA, unggahan PDF,
-koreksi hasil, rotasi kunci audit, dan checkpoint audit eksternal belum tersedia.
-Kesiapan demo ini tidak memperluas scope produk ke fitur-fitur tersebut.
+API registrasi pasien, koreksi hasil append-only, rotasi kunci audit, serta
+cetak/PDF hasil dan resep tersedia. Formulir web registrasi pasien tersedia pada
+`/register`; petugas lab mengirim koreksi melalui menu Koreksi hasil atau tanda
+terima. Reset password, verifikasi email, MFA, unggahan PDF, dan
+checkpoint audit eksternal belum tersedia. Detail kelanjutan dan pengujian ada
+di [completion spec](superpowers/specs/2026-10-22-hygeia-completion-design.md).

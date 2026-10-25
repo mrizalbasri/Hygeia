@@ -36,13 +36,13 @@ pnpm check
 pnpm lint
 pnpm build
 $env:PLAYWRIGHT_CHANNEL='msedge'
-pnpm test -- --run
-node tests/dashboard-theme.e2e.mjs
-node tests/clinical-workflows.e2e.js
-node tests/provider-workflows.e2e.js
+pnpm test
+pnpm test:e2e
 ```
 
-Tiga tes E2E fixture menjalankan server sendiri dan menutupnya setelah selesai.
+Tes E2E fixture menjalankan server sendiri dan menutupnya setelah selesai.
+`pnpm test:e2e` menjalankan keempat suite fixture secara berurutan. `pnpm test`
+sudah mengaktifkan mode run; jangan menambahkan `-- --run` lagi.
 Tes mencakup landing/mobile, persetujuan/penolakan, CSRF, konflik 409, detail 403,
 503/retry, cursor bigint, API 401 dan SSE session-ended, lifecycle antrean
 lab/apotek, serta pengelolaan akun/organisasi dan tinjauan akses darurat admin.
@@ -63,8 +63,27 @@ lalu menjalankan Vite di :5185. Tes membuat organisasi/akun sintetis unik dan
 menyelesaikan alur dokter/pasien melalui browser. Tindakan lab/apotek dilakukan
 melalui API sampai frontend petugas selesai. Data sintetis sengaja dipertahankan
 untuk reproduksi audit; tidak mengubah akun lama. Jangan jalankan pada produksi.
+Kesiapan server pada tes live juga diperiksa melalui polling HTTP, sehingga
+tidak bergantung pada keluaran URL Vite di terminal.
 
 Modul shared berada di `src/lib/workflows`: `api.ts` untuk CSRF/error/cursor,
 `PagedList` untuk pagination, `DirectoryPicker` untuk direktori, `ClinicalDetail`
 untuk pembacaan berotorisasi, serta `Notifications` untuk inbox/SSE. Setiap mutasi
 memuat ulang daftar; server tetap menentukan izin dan status.
+
+Detail hasil lab menampilkan hasil awal dan riwayat koreksi dari API. Tombol
+Cetak / PDF pada detail hasil/resep membuka dialog cetak browser; pilih Simpan
+sebagai PDF untuk mengekspor. Tombol hanya aktif setelah data berhasil dimuat.
+Mode cetak menyembunyikan navigasi dan kontrol, serta menampilkan seluruh isi
+dialog tanpa batas tinggi.
+
+Registrasi pasien tersedia di `/register`, melalui tautan pada halaman masuk.
+Formulir meminta identitas, tahun lahir, jenis kelamin, dan konfirmasi password;
+setelah berhasil, sesi langsung mengarah ke dashboard pasien. Kesalahan API
+ditampilkan tanpa menghapus isian, dan pengiriman ganda diblokir selama proses.
+
+Petugas lab membuka menu **Koreksi hasil** atau tautan **Koreksi hasil ini** pada
+tanda terima. Masukkan ID hasil (bukan ID permintaan), alasan, serta seluruh
+nilai pengganti. Formulir tidak mengambil hasil lama melalui GET; hak baca lab
+tetap mengikuti kebijakan backend. Setelah berhasil, tampil ID koreksi dan
+isian klinis dibersihkan. Kesalahan mempertahankan isian untuk diperbaiki.
