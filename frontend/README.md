@@ -1,5 +1,19 @@
 # Hygeia Frontend
 
+[README proyek](../README.md) · [Dokumentasi](../docs/README.md) · [Kontribusi](../CONTRIBUTING.md)
+
+## Teknologi
+
+| Bagian            | Stack                               |
+| ----------------- | ----------------------------------- |
+| Bahasa            | TypeScript 6, Svelte, HTML, dan CSS |
+| Framework         | Svelte 5 dan SvelteKit 3            |
+| Styling dan build | Tailwind CSS 4 dan Vite 8           |
+| Pengujian         | Vitest dan Playwright               |
+| Lingkungan CI     | Node.js 24 dan pnpm 11.18.0         |
+
+## Cakupan aplikasi
+
 SvelteKit dengan landing Hygeia, login cookie sesi, dan dashboard sesuai peran.
 Backend Go di `127.0.0.1:8080`; browser memakai proxy `/api` satu origin.
 SSR meneruskan cookie melalui `API_BASE_URL` (lihat `src/env.ts`).
@@ -41,7 +55,7 @@ pnpm test:e2e
 ```
 
 Tes E2E fixture menjalankan server sendiri dan menutupnya setelah selesai.
-`pnpm test:e2e` menjalankan keempat suite fixture secara berurutan. `pnpm test`
+`pnpm test:e2e` menjalankan kelima suite fixture secara berurutan. `pnpm test`
 sudah mengaktifkan mode run; jangan menambahkan `-- --run` lagi.
 Tes mencakup landing/mobile, persetujuan/penolakan, CSRF, konflik 409, detail 403,
 503/retry, cursor bigint, API 401 dan SSE session-ended, lifecycle antrean
