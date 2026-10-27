@@ -1,20 +1,36 @@
 # Hygeia Backend
 
+[README proyek](../README.md) · [Dokumentasi](../docs/README.md) · [Kontribusi](../CONTRIBUTING.md)
+
 REST API Go (`net/http`) dengan PostgreSQL melalui connection pool `pgx`.
 Memerlukan Go 1.26 atau lebih baru.
 
+## Teknologi
+
+| Bagian                   | Stack                                     |
+| ------------------------ | ----------------------------------------- |
+| Bahasa dan HTTP          | Go 1.26 dan standard library `net/http`   |
+| Database                 | PostgreSQL, SQL, dan `pgx/v5`             |
+| Migrasi                  | `golang-migrate` dengan SQL tertanam      |
+| Autentikasi              | Argon2id, cookie sesi, dan `gorilla/csrf` |
+| Audit                    | Rantai HMAC-SHA256 per pasien             |
+| Distribusi dan pengujian | Docker Compose, Go testing, dan `go vet`  |
+
 ## Database lokal
 
-Hygeia memakai instance PostgreSQL Docker yang sudah ada, tanpa container baru:
+Konfigurasi workstation pengembangan memakai instance PostgreSQL Docker yang
+sudah ada, tanpa container baru. Checkout lain dapat memakai instance PostgreSQL
+sendiri dengan menyesuaikan `DATABASE_URL`; nama container dan port di bawah
+adalah contoh lingkungan lokal:
 
-| Konfigurasi | Nilai |
-|---|---|
-| Container | `postgres-local` |
-| Host | `127.0.0.1` |
-| Port host | `5434` (port internal container `5432`) |
-| Database | `hygeia` |
-| User | `hygeia_app` |
-| Password | Tersimpan di `backend/.env` lokal |
+| Konfigurasi | Nilai                                   |
+| ----------- | --------------------------------------- |
+| Container   | `postgres-local`                        |
+| Host        | `127.0.0.1`                             |
+| Port host   | `5434` (port internal container `5432`) |
+| Database    | `hygeia`                                |
+| User        | `hygeia_app`                            |
+| Password    | Tersimpan di `backend/.env` lokal       |
 
 Database dan role Hygeia terpisah dari database `tera`. Role `hygeia_app` memiliki
 database Hygeia, tanpa hak superuser, membuat database, atau membuat role.
@@ -37,15 +53,16 @@ Migrasi 5 menambah `prescriptions` dan `prescription_items` untuk resep dan
 penugasan apotek yang disetujui pasien. Jalankan migrasi sebelum memakai API baru.
 
 Migrasi 6 menambah ledger admin, 7 inbox notifikasi, 8 grant akses darurat,
-dan 9 CarePass berbatas waktu. Backend inti dan fitur tambahan kini tersedia:
+dan 9 CarePass berbatas waktu. Migrasi 10 menambah koreksi hasil lab yang
+append-only. Backend inti dan fitur tambahan kini tersedia:
 
-| Modul | Kontrak aktual |
-| --- | --- |
-| Admin akun/organisasi dan ledger | [Admin](../docs/09-BACKEND-ADMIN.md) |
-| Inbox dan read state | [Notifikasi](../docs/10-BACKEND-NOTIFICATIONS.md) |
-| Akses darurat 60 menit dan tinjauan | [Emergency](../docs/11-backend-emergency-api.md) |
-| CarePass/QR dan pencabutan | [CarePass](../docs/12-BACKEND-CAREPASS.md) |
-| SSE/replay notifikasi | [Realtime](../docs/13-BACKEND-REALTIME.md) |
+| Modul                               | Kontrak aktual                                    |
+| ----------------------------------- | ------------------------------------------------- |
+| Admin akun/organisasi dan ledger    | [Admin](../docs/09-BACKEND-ADMIN.md)              |
+| Inbox dan read state                | [Notifikasi](../docs/10-BACKEND-NOTIFICATIONS.md) |
+| Akses darurat 60 menit dan tinjauan | [Emergency](../docs/11-backend-emergency-api.md)  |
+| CarePass/QR dan pencabutan          | [CarePass](../docs/12-BACKEND-CAREPASS.md)        |
+| SSE/replay notifikasi               | [Realtime](../docs/13-BACKEND-REALTIME.md)        |
 
 CarePass memerlukan `PUBLIC_APP_URL` berupa origin aplikasi, default development
 `http://localhost:5173`. Production wajib origin HTTPS. QR mengarah ke route
@@ -65,22 +82,23 @@ Migrasi menggunakan `golang-migrate` dengan SQL tertanam di binary. Perintah `up
 aman diulang; `version` menampilkan versi dan status dirty. Jangan memaksa versi
 jika migrasi gagal; periksa SQL dan database terlebih dahulu. File `down.sql`
 tersedia untuk pengembangan, tetapi CLI ini tidak menyediakan rollback destruktif.
-API tidak menjalankan migrasi otomatis.
+API yang dijalankan langsung tidak menjalankan migrasi otomatis. Entrypoint
+container menjalankan migrasi sebelum API mulai.
 
 Seed hanya diizinkan saat `APP_ENV=development` atau `test`, memakai
 `DEMO_PASSWORD` dari `.env` (minimal 12 byte). Seed bisa diulang dan tidak
 mengubah password atau akun yang sudah ada. Mengganti `DEMO_PASSWORD` setelah
 seed tidak otomatis mengganti password akun yang sudah dibuat.
 
-| Peran | Email sintetis |
-|---|---|
-| Pasien | `aulia@demo.hygeia.test` |
-| Dokter episode | `maya@demo.hygeia.test` |
-| Dokter lintas organisasi | `budi@demo.hygeia.test` |
-| Dokter IGD | `rina@demo.hygeia.test` |
-| Laboratorium | `lab@demo.hygeia.test` |
-| Apotek | `apotek@demo.hygeia.test` |
-| Admin | `admin@demo.hygeia.test` |
+| Peran                    | Email sintetis            |
+| ------------------------ | ------------------------- |
+| Pasien                   | `aulia@demo.hygeia.test`  |
+| Dokter episode           | `maya@demo.hygeia.test`   |
+| Dokter lintas organisasi | `budi@demo.hygeia.test`   |
+| Dokter IGD               | `rina@demo.hygeia.test`   |
+| Laboratorium             | `lab@demo.hygeia.test`    |
+| Apotek                   | `apotek@demo.hygeia.test` |
+| Admin                    | `admin@demo.hygeia.test`  |
 
 ## Menjalankan
 
@@ -117,7 +135,11 @@ berbeda dari `SESSION_SECRET`. Buat masing-masing dengan pemanggilan terpisah
 
 Cadangkan kunci audit secara aman terpisah dari DB. Jangan mengganti kunci untuk
 database yang sudah memiliki audit, karena rantai lama akan gagal diverifikasi.
-Rotasi kunci belum tersedia; jangan memakai placeholder untuk menjalankan API.
+Untuk rotasi, pindahkan kunci aktif lama ke `AUDIT_HMAC_KEY_PREVIOUS` dan buat
+`AUDIT_HMAC_KEY` baru. Daftar kunci lama dipisahkan koma; simpan semua kunci yang
+masih diperlukan untuk memverifikasi riwayat. Penulisan baru memakai kunci aktif,
+verifikasi mencoba kunci aktif dan kunci lama. Konfigurasi kunci lama yang tidak
+valid menggagalkan startup. Jangan memakai placeholder untuk menjalankan API.
 
 `APP_ENV=production` mengaktifkan flag cookie `Secure`; mode tersebut membutuhkan
 HTTPS di reverse proxy. Development lokal menggunakan cookie tanpa `Secure`.
@@ -127,6 +149,26 @@ Gunakan satu origin dengan proxy `/api` ke backend; CORS tidak dibuka.
 konfigurasi TLS sesuai penyedia database. Jangan commit `.env` (sudah diabaikan
 oleh `.gitignore`). Tekan Ctrl+C untuk graceful shutdown; koneksi database ditutup
 setelah server menyelesaikan request aktif, dengan batas waktu 10 detik.
+
+## Backend melalui Docker
+
+Isi `DATABASE_URL_DOCKER` pada `backend/.env` dengan koneksi PostgreSQL host,
+misalnya host `host.docker.internal` dan port `5434`, memakai kredensial lokal
+yang sama. Compose memerlukan variabel ini dan tidak membuat container database.
+Dari folder `backend`:
+
+```powershell
+docker compose up --build -d --wait
+docker compose logs -f api
+docker compose down
+```
+
+Entrypoint menerapkan migrasi, menjalankan seed hanya pada development/test,
+lalu mengeksekusi API sebagai pengguna non-root. Port host `127.0.0.1:8080`
+meneruskan port container 8080. `.dockerignore` mengecualikan `.env` dan arsip
+`bin/` dari image. Variabel sesi/audit tetap dibaca melalui environment saat run.
+Compose memeriksa `/api/v1/readyz` di dalam container; `--wait` menunggu API
+sehat sebelum perintah selesai. Database PostgreSQL yang sudah ada harus aktif.
 
 ## Health dan readiness
 
@@ -145,12 +187,13 @@ Readiness memeriksa koneksi, belum memeriksa versi skema atau migrasi.
 
 ## API autentikasi
 
-| Metode | Endpoint | Hasil |
-|---|---|---|
-| GET | `/api/v1/auth/csrf` | Cookie CSRF + JSON `{ "csrf_token": "..." }` |
-| POST | `/api/v1/auth/login` | JSON `{ "email", "password" }`; cookie sesi + `{ "user": {...} }` |
-| POST | `/api/v1/auth/logout` | Cabut sesi di DB dan hapus cookie; HTTP 204 |
-| GET | `/api/v1/me` | Identitas/peran/organisasi dari DB; HTTP 401 tanpa sesi aktif |
+| Metode | Endpoint                | Hasil                                                             |
+| ------ | ----------------------- | ----------------------------------------------------------------- |
+| GET    | `/api/v1/auth/csrf`     | Cookie CSRF + JSON `{ "csrf_token": "..." }`                      |
+| POST   | `/api/v1/auth/login`    | JSON `{ "email", "password" }`; cookie sesi + `{ "user": {...} }` |
+| POST   | `/api/v1/auth/register` | Daftar pasien; HTTP 201, cookie sesi + `{ "user": {...} }`        |
+| POST   | `/api/v1/auth/logout`   | Cabut sesi di DB dan hapus cookie; HTTP 204                       |
+| GET    | `/api/v1/me`            | Identitas/peran/organisasi dari DB; HTTP 401 tanpa sesi aktif     |
 
 Semua POST/PATCH wajib membawa cookie CSRF dan header `X-CSRF-Token` dari endpoint
 CSRF. Login memerlukan `Content-Type: application/json`. Frontend sudah menyediakan
@@ -166,23 +209,29 @@ sesi, dan akun nonaktif langsung ditolak pada pembacaan identitas berikutnya.
 Login dibatasi per alamat koneksi TCP: burst 5, pulih satu percobaan setiap 12
 detik. Limiter berada di memori dan tidak mempercayai `X-Forwarded-For`. Di balik
 proxy, klien bisa berbagi bucket; kebijakan trusted proxy/limiter terdistribusi
-perlu ditentukan sebelum deployment. Pembersihan sesi kedaluwarsa belum
-dijadwalkan; otorisasi tetap memeriksa waktu kedaluwarsa pada setiap request.
+perlu ditentukan sebelum deployment. Pembersihan sesi kedaluwarsa berjalan setiap
+jam dengan timeout 30 detik dan berhenti saat shutdown; otorisasi tetap memeriksa
+waktu kedaluwarsa pada setiap request.
 
-Autentikasi belum mencakup registrasi publik, verifikasi email, reset password,
-MFA, atau audit login berantai hash. Akun dikelola melalui API admin. Login,
+Registrasi pasien menerima `email`, `password` (12–1024 byte), `full_name`,
+`birth_year` (1900 hingga tahun berjalan), dan `sex`
+(`female|male|other|unknown`). Akun, profil pasien, dan sesi dibuat dalam satu
+transaksi. Referensi `HYG-XXXX-XXXX` dibuat server. CSRF dan bucket pembatasan
+login juga berlaku untuk registrasi. Formulir web tersedia pada `/register`
+dan dapat dibuka dari halaman masuk. Verifikasi email, reset password,
+MFA, dan audit login berantai hash belum tersedia. Akun staf dikelola melalui API admin. Login,
 dashboard per peran, dan workflow pasien/dokter tersedia pada frontend.
 
 ## API care episode dan audit
 
-| Metode | Endpoint | Fungsi |
-|---|---|---|
-| POST | `/api/v1/episodes` | Dokter mengundang dengan `{"patient_ref":"HYG-DEMO-001"}` |
-| GET | `/api/v1/episodes` | Daftar milik aktor; filter status dan pagination |
-| GET | `/api/v1/episodes/{id}` | Detail metadata episode, hanya kedua peserta |
-| PATCH | `/api/v1/episodes/{id}` | `{"action":"accept"}`, `reject`, atau `end` |
-| GET | `/api/v1/patient/access-summary` | Riwayat akses episode dan laboratorium pasien dalam kalimat |
-| GET | `/api/v1/audit/verify` | Verifikasi rantai sendiri; admin wajib `?chain=<patient_id>` |
+| Metode | Endpoint                         | Fungsi                                                       |
+| ------ | -------------------------------- | ------------------------------------------------------------ |
+| POST   | `/api/v1/episodes`               | Dokter mengundang dengan `{"patient_ref":"HYG-DEMO-001"}`    |
+| GET    | `/api/v1/episodes`               | Daftar milik aktor; filter status dan pagination             |
+| GET    | `/api/v1/episodes/{id}`          | Detail metadata episode, hanya kedua peserta                 |
+| PATCH  | `/api/v1/episodes/{id}`          | `{"action":"accept"}`, `reject`, atau `end`                  |
+| GET    | `/api/v1/patient/access-summary` | Riwayat akses episode dan laboratorium pasien dalam kalimat  |
+| GET    | `/api/v1/audit/verify`           | Verifikasi rantai sendiri; admin wajib `?chain=<patient_id>` |
 
 POST/PATCH memakai proteksi CSRF yang sama dengan login. Pasien saja yang dapat
 accept/reject; pasien atau dokter pengundang dapat end setelah episode aktif.
@@ -209,16 +258,17 @@ Batas lingkup, kebijakan akses, dan format audit:
 
 ## API laboratorium
 
-| Metode | Endpoint | Fungsi |
-|---|---|---|
-| GET | `/api/v1/laboratories` | Direktori ID/nama laboratorium, hanya dokter |
-| POST | `/api/v1/lab-requests` | Buat tes dalam episode aktif milik dokter |
-| GET | `/api/v1/lab-requests` | Daftar sesuai aktor; filter status dan pagination |
-| GET | `/api/v1/lab-requests/{id}` | Detail permintaan tanpa nilai hasil |
-| POST | `/api/v1/lab-requests/{id}/approval` | Pasien approve/reject pengiriman |
-| PATCH | `/api/v1/lab-requests/{id}/status` | Lab: accepted, lalu in_progress |
-| POST | `/api/v1/lab-requests/{id}/result` | Lab mengirim satu hasil; status completed |
-| GET | `/api/v1/lab-results/{id}` | Hasil untuk pasien sendiri, dokter episode aktif, atau consent aktif |
+| Metode | Endpoint                               | Fungsi                                                               |
+| ------ | -------------------------------------- | -------------------------------------------------------------------- |
+| GET    | `/api/v1/laboratories`                 | Direktori ID/nama laboratorium, hanya dokter                         |
+| POST   | `/api/v1/lab-requests`                 | Buat tes dalam episode aktif milik dokter                            |
+| GET    | `/api/v1/lab-requests`                 | Daftar sesuai aktor; filter status dan pagination                    |
+| GET    | `/api/v1/lab-requests/{id}`            | Detail permintaan tanpa nilai hasil                                  |
+| POST   | `/api/v1/lab-requests/{id}/approval`   | Pasien approve/reject pengiriman                                     |
+| PATCH  | `/api/v1/lab-requests/{id}/status`     | Lab: accepted, lalu in_progress                                      |
+| POST   | `/api/v1/lab-requests/{id}/result`     | Lab mengirim satu hasil; status completed                            |
+| GET    | `/api/v1/lab-results/{id}`             | Hasil untuk pasien sendiri, dokter episode aktif, atau consent aktif |
+| POST   | `/api/v1/lab-results/{id}/corrections` | Lab tujuan menambah koreksi hasil yang sudah selesai                 |
 
 Alur: `pending_patient_approval → sent → accepted → in_progress → completed`.
 Penolakan pasien menghasilkan `cancelled`. Lab tujuan melihat antrean setelah
@@ -232,8 +282,16 @@ consent terpisah yang masih berlaku pada kliniknya saat ini.
 Semua mutasi mengunci episode sebelum permintaan. Persetujuan yang bersamaan
 dengan pengakhiran episode mengikuti urutan lock: jika persetujuan menang,
 penugasan lab tetap berlaku; jika pengakhiran menang, permintaan dibatalkan.
-Nilai hasil tidak disalin ke audit atau log. Dukungan PDF, koreksi hasil,
-dan penarikan persetujuan penyedia yang sudah diberikan belum tersedia.
+Nilai hasil tidak disalin ke audit atau log. Koreksi menerima `reason` (5–500
+karakter), `value`, `unit`, `reference_range`, `flag`, dan `note` dengan batas
+yang sama seperti hasil awal. Hasil awal tetap tersimpan; pembacaan mengembalikan
+array `corrections` kronologis. UPDATE/DELETE/TRUNCATE koreksi diblokir trigger.
+Audit `lab_result.correct` ditulis dalam transaksi yang sama. Pada akses darurat,
+catatan dan alasan koreksi disembunyikan. Pengiriman koreksi tersedia melalui
+API maupun menu Koreksi hasil pada ruang laboratorium; tanda terima menyediakan
+tautan yang mengisi ID hasil otomatis. Detail pasien/dokter menampilkan
+riwayat koreksi dan tombol Cetak / PDF melalui dialog cetak browser.
+Penarikan persetujuan penyedia yang sudah diberikan belum tersedia.
 Notifikasi perubahan status tersedia melalui inbox dan SSE.
 Kontrak payload dan contoh lengkap ada di panduan API frontend.
 
@@ -289,6 +347,24 @@ Tes khusus: `go test ./internal/care -run Timeline -v` dengan `TEST_DATABASE_URL
 
 ## Validasi dan build
 
+Dari root repository, jalankan seluruh tes backend termasuk integrasi database
+dan `go vet` dengan satu perintah:
+
+```powershell
+./scripts/Test-Backend.ps1 -UseLocalDatabase
+```
+
+Opsi ini membaca koneksi dari `backend/.env` hanya jika `APP_ENV` bernilai
+development/test. Tes memakai schema sementara dan tidak mengubah tabel demo.
+Untuk database tes terpisah, atur `TEST_DATABASE_URL` lalu jalankan script tanpa
+opsi. Script menolak berjalan tanpa koneksi tes agar integrasi tidak dilewati
+diam-diam, dan memulihkan environment sebelumnya setelah selesai.
+
+Workflow `.github/workflows/verify.yml` menyiapkan PostgreSQL sementara untuk
+tes integrasi Go, menjalankan `go vet`/build, serta membangun image backend.
+Job frontend menjalankan pemeriksaan Svelte, lint, build, unit test, dan E2E
+fixture dengan Chromium. Workflow baru berjalan di GitHub setelah file di-push.
+
 ```powershell
 go test ./cmd/... ./db/... ./internal/...
 go vet ./cmd/... ./db/... ./internal/...
@@ -331,6 +407,7 @@ $env:GOMODCACHE = Join-Path $PWD 'bin/.go-mod'
 
 Semua direktori tersebut berada di `bin/` yang diabaikan Git. Cache modul memakai
 nama tersembunyi `.go-mod` agar tidak ikut ditemukan oleh `go test ./...`.
+
 ## Struktur
 
 - `cmd/api/main.go`: konfigurasi, koneksi database, server HTTP, graceful shutdown.
@@ -347,7 +424,7 @@ nama tersembunyi `.go-mod` agar tidak ikut ditemukan oleh `go test ./...`.
 
 Frontend SvelteKit berada di `../frontend`, pada port default `5173`, dengan
 proxy `/api`, halaman `/login`, dashboard, helper SSR, dan workflow pasien/dokter.
-Antarmuka lab/apotek/admin masih memerlukan integrasi sesuai
+Antarmuka lab/apotek/admin sudah terintegrasi sesuai
 [panduan API](../docs/05-BACKEND-API.md) dan
 [rencana handoff](../docs/plans/2026-10-15-patient-doctor-and-provider-handoff.md).
 

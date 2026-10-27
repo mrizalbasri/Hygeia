@@ -45,7 +45,7 @@ export const roles: Record<
 	}
 };
 
-export async function authMutation(path: 'login' | 'logout', body: unknown = {}) {
+export async function authMutation(path: 'login' | 'logout' | 'register', body: unknown = {}) {
 	const csrf = await fetch('/api/v1/auth/csrf', { cache: 'no-store' });
 	if (!csrf.ok) throw new Error('Layanan belum dapat dihubungi. Coba lagi sebentar.');
 	const { csrf_token } = (await csrf.json()) as { csrf_token: string };

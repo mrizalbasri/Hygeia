@@ -55,9 +55,8 @@
 			<p class="story-copy">
 				Pasien, dokter, laboratorium, dan apotek. Satu perjalanan dengan akses data yang jelas.
 			</p>
-			<div class="brand-showcase" aria-hidden="true">
-				<img src="/logo-light.png" alt="" width="220" height="220" />
-				<p>Terhubung untuk<br /><strong>hari yang lebih sehat.</strong></p>
+			<div class="brand-showcase consultation-showcase" aria-hidden="true">
+				<img src="/care-consultation.webp" alt="" width="1536" height="1024" decoding="async" />
 			</div>
 			<div class="care-path" aria-label="Alur pasien, dokter, laboratorium, dan apotek">
 				{#each ['Pasien', 'Dokter', 'Lab', 'Apotek'] as step, index (step)}<div>
@@ -103,6 +102,9 @@
 					>{pending ? 'Sedang masuk…' : 'Masuk'}<span aria-hidden="true">→</span></button
 				>
 			</form>
+			<p class="auth-switch">
+				Belum punya akun pasien? <a href={resolve('/register')}>Daftar sebagai pasien</a>
+			</p>
 			<div class="demo-notice">
 				<span class="notice-dot" aria-hidden="true"></span>
 				<p>

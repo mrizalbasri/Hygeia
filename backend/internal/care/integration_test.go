@@ -93,7 +93,7 @@ func integrationFixture(t *testing.T) *fixture {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	for _, file := range []string{"000001_identity.up.sql", "000002_care_audit.up.sql", "000003_laboratory.up.sql", "000004_consents.up.sql", "000005_prescriptions.up.sql", "000006_admin.up.sql", "000007_notifications.up.sql", "000008_break_glass.up.sql", "000009_carepasses.up.sql"} {
+	for _, file := range []string{"000001_identity.up.sql", "000002_care_audit.up.sql", "000003_laboratory.up.sql", "000004_consents.up.sql", "000005_prescriptions.up.sql", "000006_admin.up.sql", "000007_notifications.up.sql", "000008_break_glass.up.sql", "000009_carepasses.up.sql", "000010_lab_corrections.up.sql"} {
 		sql, err := db.Migrations.ReadFile("migrations/" + file)
 		if err != nil {
 			t.Fatal(err)

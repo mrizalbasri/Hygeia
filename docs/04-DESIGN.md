@@ -16,6 +16,60 @@ Referensi terbaru adalah **Hygeia Healthcare Brand Showcase** yang diberikan pem
 
 ### Dashboard pasien
 
+Pembaruan 25 Oktober 2026 mengikuti referensi dashboard yang diberikan pemilik:
+kerangka aplikasi berbatas jelas, sidebar dengan ikon dan pilihan aktif biru,
+header akun ringkas, serta daftar workflow dalam satu panel dengan pemisah baris.
+Kerangka ini berlaku untuk kelima peran.
+Ringkasan pasien mengganti banner dan profil besar dengan strip empat indikator,
+tabel perawatan, panel pemeriksaan/resep, aktivitas terbaru, persetujuan tertunda,
+dan identitas/akses. Indikator dihitung dari maksimal enam entri per kategori,
+bukan total seluruh data. Kegagalan memuat ditampilkan sebagai tanda pisah, bukan nol.
+Tindakan pada ringkasan mengarah ke workflow yang sudah tersedia; tidak ada data
+klinis, statistik, kalender janji, atau fitur pencarian yang dibuat sebagai dekorasi.
+Catatan susunan panel sebelumnya di bawah adalah riwayat desain.
+
+Penyempurnaan UI/UX Pro Max: teks informasi dibesarkan menjadi 14 px pada desktop
+dan paragraf utama menjadi 16 px di ponsel; metadata minimal 12 px. Warna dashboard
+memakai token semantik untuk teks, permukaan, garis, aksi, dan status. Panel putih
+dipisahkan oleh latar netral. Menu ponsel memakai tombol Menu/Tutup menu dengan
+`aria-expanded` dan susunan dua kolom; tautan menutup menu setelah dipilih.
+Daftar perawatan ponsel menampilkan dokter, organisasi, status, serta tautan dalam
+susunan vertikal sehingga tidak perlu menggeser tabel. Desktop mempertahankan
+tabel. Ada skip link menuju main, target kontrol utama 44 px, feedback tekan,
+dan penghormatan prefers-reduced-motion. Tema aplikasi tetap terang sesuai brand.
+
+Verifikasi revisi ini: Svelte check tanpa error/warning, build, serta keempat suite
+E2E lulus. Pemeriksaan dashboard mencakup lebar 320/375/390/768/1024/1440 px,
+landscape 812×375, pembesaran teks 200%, reduced motion, tombol menu via keyboard,
+Escape/fokus kembali, daftar kosong/error/retry, dan navigasi persetujuan.
+Pasangan token teks/status yang diperiksa memiliki rasio kontras 5,88:1 atau lebih.
+
+### Ruang dokter dan laboratorium
+
+Halaman awal dokter kini menampilkan **Ringkasan dokter** dengan perawatan pasien,
+undangan tertunda, metadata hasil lab, dan resep terbaru. Tautan pekerjaan menuju
+workflow undangan, permintaan/hasil lab, serta penulisan resep. Angka dihitung
+dari enam entri terbaru setiap kategori, bukan jumlah keseluruhan. Nilai hasil
+klinis tetap hanya dibaca lewat detail yang menjalankan otorisasi backend.
+
+Halaman awal lab menampilkan **Ringkasan laboratorium**: maksimal 12 penugasan,
+dikelompokkan menjadi terkirim, diterima, dan sedang diperiksa. Ringkasan hanya
+meminta endpoint daftar penugasan lab dan memakai proyeksi kode pasien, kode/nama
+tes, serta status. Lab masuk ke antrean untuk menerima, memulai, dan mengirim
+hasil; koreksi memakai ID hasil dari tanda terima. Tidak ada navigasi undangan
+pasien, penulisan resep, atau pembacaan nilai hasil pada ringkasan lab.
+
+Kedua ringkasan memiliki kondisi memuat, kosong, error, dan retry. Perubahan
+ini tidak memperluas izin backend. URL peran lain tetap dialihkan server ke
+ruang sesuai akun. Workflow sebelumnya tersedia melalui menu masing-masing.
+
+Verifikasi: `role-overviews.e2e.mjs` memeriksa data dan menu masing-masing peran,
+endpoint yang diminta, tautan workflow, pengalihan URL lintas peran, kondisi
+kosong/error/retry, serta lebar 1440/1024/768/375/320 px. Suite provider tetap
+menguji antrean sampai penyerahan dan koreksi hasil. Smoke browser dengan akun
+demo dokter/lab pada API lokal juga lulus untuk halaman awal, daftar berotorisasi,
+dan pengalihan URL peran lain; smoke ini tidak membuat data klinis.
+
 Dashboard pasien kini memakai susunan panel dengan perawatan dan informasi klinis di kolom utama, serta profil ringkas dan konteks akses di kolom samping. Pada ponsel panel ditumpuk dan menu bagian dapat digeser mendatar. Halaman staf mempertahankan tampilan sebelumnya.
 
 Penyederhanaan terbaru memakai background pita yang dikirim pemilik project (`frontend/static/brand-ribbon.jpg`) hanya pada banner ringkas. Lapisan putih CSS menjaga keterbacaan teks, terutama di ponsel. Logo besar pada banner dan panel akses terpisah dihilangkan; informasi akses digabungkan ke profil. Panel data tetap putih dengan garis netral, radius 14 px, dan ikon tanpa ubin dekoratif. Panel pemeriksaan/resep mengikuti tinggi kontennya sendiri.

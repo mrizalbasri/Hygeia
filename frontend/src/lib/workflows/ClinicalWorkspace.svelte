@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import PatientDashboard from '../PatientDashboard.svelte';
+	import DoctorOverview from './DoctorOverview.svelte';
 	import type { User } from '../auth.js';
 	import { api, ApiError, errorText, menus, type Payload } from './api.js';
 	import Episodes from './Episodes.svelte';
@@ -65,21 +66,16 @@
 	}
 </script>
 
-{#if !doctor}<section class="wf-overview-note">
+{#if !doctor && view !== 'overview'}<section class="wf-overview-note patient-reference-note">
 		<h2>Kode pasien Anda</h2>
 		{#if user.patient_ref}<code>{user.patient_ref}</code>
 			<p>Berikan kode ini kepada dokter yang akan mengundang Anda dalam perawatan.</p>{:else}<p>
 				Kode pasien belum tersedia dari layanan identitas. Minta kode Anda kepada pengelola.
 			</p>{/if}
 	</section>{/if}
-{#if view === 'overview'}<PatientDashboard {user} />
-	<section class="wf-overview-note">
-		<h2>Kelola perawatan Anda</h2>
-		<p>
-			Gunakan menu Perawatan, Pemeriksaan, Resep & apotek, dan Izin dokter untuk mengambil
-			keputusan. Bagian Perjalanan dan Riwayat akses menampilkan catatan lengkap dengan pagination.
-		</p>
-	</section>{:else}<div class="wf-heading">
+{#if view === 'overview'}
+	{#if doctor}<DoctorOverview {user} />{:else}<PatientDashboard {user} />{/if}
+{:else}<div class="wf-heading">
 		<p class="muted">{user.full_name}</p>
 		<h1>{doctor ? 'Ruang Perawatan' : 'Perjalanan Saya'}</h1>
 		<h2>{menu.find(([id]) => id === view)?.[1]}</h2>

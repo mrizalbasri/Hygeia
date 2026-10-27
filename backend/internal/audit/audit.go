@@ -39,16 +39,26 @@ type Event struct {
 	CarePassExpiresAt   *time.Time `json:"-"`
 }
 
-type Writer struct{ key []byte }
+type Writer struct {
+	key          []byte
+	fallbackKeys [][]byte
+}
 
-func NewWriter(key []byte) (*Writer, error) {
+func NewWriter(key []byte, fallbackKeys ...[]byte) (*Writer, error) {
 	if len(key) != 32 {
 		return nil, errors.New("AUDIT_HMAC_KEY must contain 32 bytes")
 	}
-	return &Writer{key: bytes.Clone(key)}, nil
+	var fallbacks [][]byte
+	for _, fk := range fallbackKeys {
+		if len(fk) != 32 {
+			return nil, errors.New("historical AUDIT_HMAC_KEY must contain 32 bytes")
+		}
+		fallbacks = append(fallbacks, bytes.Clone(fk))
+	}
+	return &Writer{key: bytes.Clone(key), fallbackKeys: fallbacks}, nil
 }
 
-func (w *Writer) digest(event Event) ([]byte, error) {
+func (w *Writer) digestWithKey(event Event, key []byte) ([]byte, error) {
 	// Hash/prev_hash are excluded from the payload; prev_hash is the HMAC prefix.
 	payload := struct {
 		Version      int            `json:"version"`
@@ -67,10 +77,28 @@ func (w *Writer) digest(event Event) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	hash := hmac.New(sha256.New, w.key)
+	hash := hmac.New(sha256.New, key)
 	hash.Write(event.PrevHash)
 	hash.Write(canonical)
 	return hash.Sum(nil), nil
+}
+
+func (w *Writer) digest(event Event) ([]byte, error) {
+	return w.digestWithKey(event, w.key)
+}
+
+func (w *Writer) verifyDigest(event Event) bool {
+	h, err := w.digestWithKey(event, w.key)
+	if err == nil && hmac.Equal(event.Hash, h) {
+		return true
+	}
+	for _, fk := range w.fallbackKeys {
+		h, err := w.digestWithKey(event, fk)
+		if err == nil && hmac.Equal(event.Hash, h) {
+			return true
+		}
+	}
+	return false
 }
 
 func lockHead(ctx context.Context, tx pgx.Tx, chain string) (int64, []byte, error) {
@@ -203,11 +231,7 @@ func (w *Writer) Verify(ctx context.Context, tx pgx.Tx, chain string) (Verificat
 			return result, err
 		}
 		result.Events++
-		hash, err := w.digest(event)
-		if err != nil {
-			return result, err
-		}
-		if event.Seq != result.Events || !hmac.Equal(event.PrevHash, prev) || !hmac.Equal(hash, event.Hash) {
+		if event.Seq != result.Events || !hmac.Equal(event.PrevHash, prev) || !w.verifyDigest(event) {
 			mismatch(result.Events)
 		}
 		prev = event.Hash

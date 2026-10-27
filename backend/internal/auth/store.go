@@ -26,6 +26,7 @@ type Organization struct {
 type DB interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
 	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+	Begin(context.Context) (pgx.Tx, error)
 }
 
 type Store struct{ DB DB }
@@ -44,6 +45,59 @@ func (s Store) CreateSession(ctx context.Context, tokenHash []byte, userID strin
 func (s Store) DeleteSession(ctx context.Context, tokenHash []byte) error {
 	_, err := s.DB.Exec(ctx, `DELETE FROM sessions WHERE token_hash=$1`, tokenHash)
 	return err
+}
+
+// DeleteExpired removes all sessions past their expiry time.
+func (s Store) DeleteExpired(ctx context.Context) (int64, error) {
+	tag, err := s.DB.Exec(ctx, `DELETE FROM sessions WHERE expires_at < now()`)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
+}
+
+// RegisterPatient creates a user with role=patient and their corresponding patient row.
+func (s Store) RegisterPatient(ctx context.Context, email, passwordHash, fullName string, birthYear int, sex, patientRef string, tokenHash []byte, expires time.Time) (User, error) {
+	tx, err := s.DB.Begin(ctx)
+	if err != nil {
+		return User{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	var userID string
+	err = tx.QueryRow(ctx, `
+		INSERT INTO users(email, password_hash, full_name, role)
+		VALUES ($1, $2, $3, 'patient')
+		RETURNING id::text`,
+		email, passwordHash, fullName,
+	).Scan(&userID)
+	if err != nil {
+		return User{}, err
+	}
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO patients(user_id, patient_ref, sex, birth_year)
+		VALUES ($1, $2, $3, $4)`,
+		userID, patientRef, sex, birthYear,
+	)
+	if err != nil {
+		return User{}, err
+	}
+
+	if _, err := tx.Exec(ctx, `INSERT INTO sessions(token_hash, user_id, expires_at) VALUES ($1,$2,$3)`, tokenHash, userID, expires); err != nil {
+		return User{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return User{}, err
+	}
+
+	return User{
+		ID:         userID,
+		Email:      email,
+		FullName:   fullName,
+		Role:       "patient",
+		PatientRef: &patientRef,
+	}, nil
 }
 
 func (s Store) UserBySession(ctx context.Context, tokenHash []byte) (User, error) {

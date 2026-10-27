@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
+import { waitForServer } from './server-ready.js';
 
 const user = {
 	id: 'fixture-patient',
@@ -32,10 +33,14 @@ const stripAnsi = (str) => str.replace(/\x1b\[[0-9;]*m/g, '');
 const base = 'http://127.0.0.1:5186';
 let browser;
 try {
-	for (let attempt = 0; attempt < 100 && !stripAnsi(output).includes(`${base}/`); attempt++)
-		await new Promise((resolve) => setTimeout(resolve, 200));
-	assert.ok(stripAnsi(output).includes(`${base}/`), output);
-	browser = await chromium.launch({ channel: 'msedge', headless: true });
+	await waitForServer(base, {
+		output: () => stripAnsi(output),
+		isAlive: () => vite.exitCode === null
+	});
+	browser = await chromium.launch({
+		...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}),
+		headless: true
+	});
 	const context = await browser.newContext();
 	await context.addCookies([{ name: 'hygeia_session', value: 'fixture', url: base }]);
 	const page = await context.newPage();
@@ -91,7 +96,17 @@ try {
 							id,
 							test_name: 'Hasil sintetis',
 							value: 'Nilai rahasia fixture',
-							unit: 'demo'
+							unit: 'demo',
+							corrections: [
+								{
+									id: 'correction-1',
+									value: 'Nilai koreksi fixture',
+									unit: 'demo',
+									flag: 'normal',
+									reason: 'Koreksi sintetis',
+									corrected_at: '2026-10-24T00:00:00Z'
+								}
+							]
 						}
 					});
 		if (path === '/patient/timeline') {
@@ -159,10 +174,29 @@ try {
 	await view('labs');
 	await page.getByRole('button', { name: 'Buka hasil pemeriksaan', exact: true }).click();
 	await page.getByRole('dialog').getByText('Nilai rahasia fixture demo', { exact: true }).waitFor();
+	await page
+		.getByRole('dialog')
+		.getByText('Nilai koreksi fixture demo · normal', { exact: true })
+		.waitFor();
+	await page.emulateMedia({ media: 'print' });
+	assert.equal(await page.getByRole('button', { name: 'Cetak / PDF' }).isVisible(), false);
+	assert.equal(
+		await page
+			.getByRole('dialog')
+			.getByText('Nilai rahasia fixture demo', { exact: true })
+			.isVisible(),
+		true
+	);
+	assert.equal(
+		await page.getByRole('dialog').evaluate((el) => getComputedStyle(el).maxHeight),
+		'none'
+	);
+	await page.emulateMedia({ media: 'screen' });
 	await page.getByRole('button', { name: 'Tutup', exact: true }).click();
 	forbidden = true;
 	await page.getByRole('button', { name: 'Buka hasil pemeriksaan', exact: true }).click();
 	await page.getByRole('dialog').getByText('Akses ditolak', { exact: true }).waitFor();
+	assert.equal(await page.getByRole('button', { name: 'Cetak / PDF' }).isDisabled(), true);
 	assert.equal(await page.getByText(/Nilai rahasia fixture/).count(), 0);
 	await page.getByRole('button', { name: 'Tutup', exact: true }).click();
 	unavailable = true;
@@ -182,10 +216,10 @@ try {
 	console.log(
 		'PASS forbidden detail clears old payload, unavailable/retry, lossless cursor pagination'
 	);
-	await view('notifications');
+	await page.goto(`${base}/dashboard/patient?view=notifications`);
 	await page.waitForURL('**/login');
 	unauthenticated = true;
-	await view('episodes');
+	await page.goto(`${base}/dashboard/patient?view=episodes`);
 	await page.waitForURL('**/login');
 	assert.deepEqual(errors, []);
 	console.log('PASS SSE session-ended and API 401 redirect, no browser runtime errors');

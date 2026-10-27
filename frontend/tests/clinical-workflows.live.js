@@ -3,6 +3,7 @@ import { readFile, mkdir } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { chromium, request } from 'playwright';
+import { waitForServer } from './server-ready.js';
 
 // Explicit opt-in: creates synthetic accounts and clinical records on the local demo API.
 if (process.env.HYGEIA_LIVE_TEST !== '1')
@@ -85,17 +86,9 @@ async function clickSaved(page, name) {
 		);
 	}
 }
-// eslint-disable-next-line no-control-regex
-const stripAnsi = (str) => str.replace(/\x1b\[[0-9;]*m/g, '');
 const errors = [];
 try {
-	for (
-		let attempt = 0;
-		attempt < 100 && !stripAnsi(output).includes('http://127.0.0.1:5185/');
-		attempt++
-	)
-		await new Promise((resolve) => setTimeout(resolve, 200));
-	assert.ok(stripAnsi(output).includes('http://127.0.0.1:5185/'), output);
+	await waitForServer(base, { output: () => output, isAlive: () => vite.exitCode === null });
 	const admin = await login('admin@demo.hygeia.test', password);
 	const organizations = {};
 	for (const type of ['clinic', 'laboratory', 'pharmacy']) {
@@ -129,6 +122,7 @@ try {
 	browser = await chromium.launch({ channel: 'msedge', headless: true });
 	const doctor = await ui(accounts.doctor.client, 'doctor');
 	const patient = await ui(accounts.patient.client, 'patient');
+	await view(doctor, 'doctor', 'episodes');
 	await doctor.getByText('Undang pasien', { exact: true }).click();
 	await doctor.getByLabel('Kode pasien', { exact: true }).fill(patientRef);
 	await clickSaved(doctor, 'Kirim undangan');
