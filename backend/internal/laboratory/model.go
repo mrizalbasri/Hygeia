@@ -69,7 +69,7 @@ type Result struct {
 	TestName     string `json:"test_name"`
 	ResultInput
 	SubmittedAt time.Time    `json:"submitted_at"`
-	Corrections []Correction `json:"corrections,omitempty"`
+	Corrections []Correction `json:"corrections"`
 }
 
 type Correction struct {

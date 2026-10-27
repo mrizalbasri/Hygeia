@@ -4,3 +4,7 @@
 bin
 coverage.out
 .git
+*.zip
+*.tar
+*.tar.gz
+*.tgz

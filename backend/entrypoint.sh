@@ -4,7 +4,7 @@ set -e
 echo "==> Running migrations..."
 ./migrate up
 
-if [ "$APP_ENV" = "development" ] || [ "$APP_ENV" = "test" ]; then
+if [ "$APP_ENV" = "development" ]; then
   echo "==> Seeding demo data..."
   ./seed
 fi
