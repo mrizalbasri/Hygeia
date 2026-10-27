@@ -227,7 +227,11 @@
 		</section>
 
 		<!-- AUDIENCES / ROLES SECTION (Scroll Reveal) -->
-		<section class="landing-audiences scroll-reveal" id="untuk-siapa" aria-labelledby="audiences-title">
+		<section
+			class="landing-audiences scroll-reveal"
+			id="untuk-siapa"
+			aria-labelledby="audiences-title"
+		>
 			<div class="audiences-heading">
 				<h2 id="audiences-title">Empat peran.<br />Satu perjalanan perawatan.</h2>
 				<p>
@@ -337,7 +341,11 @@
 		</section>
 
 		<!-- PERMISSION & SECURITY SECTION (Scroll Reveal) -->
-		<section class="landing-permission scroll-reveal" id="izin-data" aria-labelledby="permission-title">
+		<section
+			class="landing-permission scroll-reveal"
+			id="izin-data"
+			aria-labelledby="permission-title"
+		>
 			<div class="permission-intro">
 				<HealthIcon name="shield" />
 				<h2 id="permission-title">Berbagi seperlunya.<br />Dengan tujuan yang jelas.</h2>

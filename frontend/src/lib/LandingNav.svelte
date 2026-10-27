@@ -6,7 +6,6 @@
 	let mobileOpen = $state(false);
 	let header: HTMLElement;
 	let lastTrigger: HTMLButtonElement | undefined;
-	let mobileTrigger: HTMLButtonElement | undefined;
 
 	const features = [
 		{
@@ -64,7 +63,6 @@
 				lastTrigger?.focus();
 			} else {
 				close();
-				mobileTrigger?.focus();
 			}
 		}
 	}}
@@ -139,7 +137,7 @@
 			<div class="panel-links">
 				{#if activeMenu === 'features'}
 					{#each features as feature (feature.title)}
-						<a href={feature.href} onclick={close}
+						<a href={resolve(`/${feature.href}`)} onclick={close}
 							><span class="nav-icon"><HealthIcon name={feature.icon} /></span><span
 								><strong>{feature.title}</strong><small>{feature.text}</small></span
 							></a

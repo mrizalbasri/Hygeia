@@ -53,7 +53,12 @@
 					/></mask
 				>
 			</defs>
-			<image href="/hero-phone-front.png" width="1122" height="1402" mask="url(#phone-image-mask)" />
+			<image
+				href="/hero-phone-front.png"
+				width="1122"
+				height="1402"
+				mask="url(#phone-image-mask)"
+			/>
 			<foreignObject
 				x="342"
 				y="199"
@@ -113,7 +118,12 @@
 		width: 80%;
 		height: 80%;
 		transform: translate(-50%, -50%);
-		background: radial-gradient(circle, rgba(0, 102, 255, 0.12) 0%, rgba(0, 214, 255, 0.04) 50%, transparent 70%);
+		background: radial-gradient(
+			circle,
+			rgba(0, 102, 255, 0.12) 0%,
+			rgba(0, 214, 255, 0.04) 50%,
+			transparent 70%
+		);
 		border-radius: 50%;
 		filter: blur(40px);
 		z-index: 0;

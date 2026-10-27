@@ -103,7 +103,9 @@ body:has(.landing) {
 .scroll-reveal {
 	opacity: 0;
 	transform: translateY(24px);
-	transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+	transition:
+		opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+		transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
 	will-change: opacity, transform;
 }
 .scroll-reveal.in-view {
@@ -183,7 +185,10 @@ body:has(.landing) {
 	background: var(--landing-action);
 	color: white;
 	box-shadow: 0 4px 14px -3px rgba(0, 82, 204, 0.35);
-	transition: transform 0.18s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+	transition:
+		transform 0.18s ease,
+		box-shadow 0.2s ease,
+		background-color 0.2s ease;
 }
 .hero-actions .button:hover {
 	background: var(--landing-action-hover);
@@ -249,7 +254,9 @@ body:has(.landing) {
 	font-weight: 600;
 	margin-top: 20px;
 	text-decoration: none;
-	transition: gap 0.2s ease, color 0.2s ease;
+	transition:
+		gap 0.2s ease,
+		color 0.2s ease;
 }
 .landing-text-link:hover {
 	gap: 12px;
@@ -263,16 +270,26 @@ body:has(.landing) {
 	padding: 24px 0;
 	opacity: 0;
 	transform: translateY(14px);
-	transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+	transition:
+		opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+		transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .landing-features.in-view .feature-list article {
 	opacity: 1;
 	transform: translateY(0);
 }
-.landing-features.in-view .feature-list article:nth-child(1) { transition-delay: 0.06s; }
-.landing-features.in-view .feature-list article:nth-child(2) { transition-delay: 0.14s; }
-.landing-features.in-view .feature-list article:nth-child(3) { transition-delay: 0.22s; }
-.landing-features.in-view .feature-list article:nth-child(4) { transition-delay: 0.30s; }
+.landing-features.in-view .feature-list article:nth-child(1) {
+	transition-delay: 0.06s;
+}
+.landing-features.in-view .feature-list article:nth-child(2) {
+	transition-delay: 0.14s;
+}
+.landing-features.in-view .feature-list article:nth-child(3) {
+	transition-delay: 0.22s;
+}
+.landing-features.in-view .feature-list article:nth-child(4) {
+	transition-delay: 0.3s;
+}
 .feature-list article:first-child {
 	padding-top: 0;
 }
@@ -389,7 +406,9 @@ body:has(.landing) {
 }
 .audience-options button span {
 	opacity: 0;
-	transition: opacity 0.2s ease, transform 0.2s ease;
+	transition:
+		opacity 0.2s ease,
+		transform 0.2s ease;
 }
 .audience-options button[aria-pressed='true'] span {
 	opacity: 1;
@@ -543,17 +562,29 @@ body:has(.landing) {
 	border-bottom: none;
 	opacity: 0;
 	transform: translateX(-12px);
-	transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+	transition:
+		opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+		transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .landing-flow.in-view .flow-steps li {
 	opacity: 1;
 	transform: translateX(0);
 }
-.landing-flow.in-view .flow-steps li:nth-child(1) { transition-delay: 0.06s; }
-.landing-flow.in-view .flow-steps li:nth-child(2) { transition-delay: 0.14s; }
-.landing-flow.in-view .flow-steps li:nth-child(3) { transition-delay: 0.22s; }
-.landing-flow.in-view .flow-steps li:nth-child(4) { transition-delay: 0.30s; }
-.landing-flow.in-view .flow-steps li:nth-child(5) { transition-delay: 0.38s; }
+.landing-flow.in-view .flow-steps li:nth-child(1) {
+	transition-delay: 0.06s;
+}
+.landing-flow.in-view .flow-steps li:nth-child(2) {
+	transition-delay: 0.14s;
+}
+.landing-flow.in-view .flow-steps li:nth-child(3) {
+	transition-delay: 0.22s;
+}
+.landing-flow.in-view .flow-steps li:nth-child(4) {
+	transition-delay: 0.3s;
+}
+.landing-flow.in-view .flow-steps li:nth-child(5) {
+	transition-delay: 0.38s;
+}
 .flow-steps li:last-child {
 	padding-bottom: 0;
 }
@@ -591,7 +622,11 @@ body:has(.landing) {
 	align-items: center;
 	justify-content: center;
 	box-shadow: 0 2px 8px rgba(0, 82, 204, 0.12);
-	transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+	transition:
+		transform 0.2s ease,
+		background-color 0.2s ease,
+		color 0.2s ease,
+		box-shadow 0.2s ease;
 }
 .flow-steps li:hover {
 	transform: translateX(4px);
@@ -663,16 +698,26 @@ body:has(.landing) {
 	border-bottom: 1px solid var(--landing-rule);
 	opacity: 0;
 	transform: translateY(12px);
-	transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+	transition:
+		opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+		transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .landing-permission.in-view .permission-definitions div {
 	opacity: 1;
 	transform: translateY(0);
 }
-.landing-permission.in-view .permission-definitions div:nth-child(1) { transition-delay: 0.06s; }
-.landing-permission.in-view .permission-definitions div:nth-child(2) { transition-delay: 0.14s; }
-.landing-permission.in-view .permission-definitions div:nth-child(3) { transition-delay: 0.22s; }
-.landing-permission.in-view .permission-definitions div:nth-child(4) { transition-delay: 0.30s; }
+.landing-permission.in-view .permission-definitions div:nth-child(1) {
+	transition-delay: 0.06s;
+}
+.landing-permission.in-view .permission-definitions div:nth-child(2) {
+	transition-delay: 0.14s;
+}
+.landing-permission.in-view .permission-definitions div:nth-child(3) {
+	transition-delay: 0.22s;
+}
+.landing-permission.in-view .permission-definitions div:nth-child(4) {
+	transition-delay: 0.3s;
+}
 .permission-definitions div:first-child {
 	padding-top: 0;
 }
@@ -838,7 +883,10 @@ body:has(.landing) {
 	background: var(--landing-action);
 	color: white;
 	box-shadow: 0 4px 14px -3px rgba(0, 82, 204, 0.35);
-	transition: transform 0.18s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+	transition:
+		transform 0.18s ease,
+		box-shadow 0.2s ease,
+		background-color 0.2s ease;
 }
 .about-action:hover {
 	background: var(--landing-action-hover);
