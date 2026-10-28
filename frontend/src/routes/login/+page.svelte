@@ -105,13 +105,6 @@
 			<p class="auth-switch">
 				Belum punya akun pasien? <a href={resolve('/register')}>Daftar sebagai pasien</a>
 			</p>
-			<div class="demo-notice">
-				<span class="notice-dot" aria-hidden="true"></span>
-				<p>
-					<strong>Lingkungan demo</strong><br />Gunakan akun demo yang diberikan pengelola. Seluruh
-					data bersifat sintetis.
-				</p>
-			</div>
 		</div>
 		<a class="form-footer button secondary" href={resolve('/')}>Kembali ke beranda</a>
 	</section>

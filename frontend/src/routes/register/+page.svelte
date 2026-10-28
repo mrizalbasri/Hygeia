@@ -177,12 +177,6 @@
 				>
 			</form>
 			<p class="auth-switch">Sudah punya akun? <a href={resolve('/login')}>Masuk</a></p>
-			<div class="demo-notice">
-				<p>
-					<strong>Lingkungan demo</strong><br />Gunakan identitas dan data sintetis untuk mencoba
-					aplikasi.
-				</p>
-			</div>
 		</div>
 		<a class="form-footer button secondary" href={resolve('/')}>Kembali ke beranda</a>
 	</section>

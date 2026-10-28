@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import HealthIcon from '#lib/HealthIcon.svelte';
 	let { onSelectRole }: { onSelectRole?: (index: number) => void } = $props();
@@ -6,6 +7,35 @@
 	let mobileOpen = $state(false);
 	let header: HTMLElement;
 	let lastTrigger: HTMLButtonElement | undefined;
+	let closeTimer: ReturnType<typeof setTimeout> | undefined;
+
+	function cancelClose() {
+		clearTimeout(closeTimer);
+		closeTimer = undefined;
+	}
+
+	function openOnHover(menu: 'features' | 'roles', event: PointerEvent) {
+		if (event.pointerType !== 'mouse' || !window.matchMedia('(hover: hover)').matches) return;
+		cancelClose();
+		lastTrigger = event.currentTarget as HTMLButtonElement;
+		activeMenu = menu;
+	}
+
+	function closeOnLeave(event: PointerEvent) {
+		if (event.pointerType !== 'mouse') return;
+		cancelClose();
+		closeTimer = setTimeout(close, 180);
+	}
+
+	onMount(() => {
+		header.addEventListener('pointerenter', cancelClose);
+		header.addEventListener('pointerleave', closeOnLeave);
+		return () => {
+			cancelClose();
+			header.removeEventListener('pointerenter', cancelClose);
+			header.removeEventListener('pointerleave', closeOnLeave);
+		};
+	});
 
 	const features = [
 		{
@@ -42,11 +72,13 @@
 	];
 
 	function close() {
+		cancelClose();
 		activeMenu = null;
 		mobileOpen = false;
 	}
 
 	function toggle(menu: 'features' | 'roles', event: MouseEvent) {
+		cancelClose();
 		lastTrigger = event.currentTarget as HTMLButtonElement;
 		activeMenu = activeMenu === menu ? null : menu;
 	}
@@ -82,6 +114,7 @@
 		<button
 			aria-expanded={activeMenu === 'features'}
 			aria-controls="nav-features"
+			onpointerenter={(event) => openOnHover('features', event)}
 			onclick={(event) => toggle('features', event)}
 		>
 			Fitur <svg
@@ -96,6 +129,7 @@
 		<button
 			aria-expanded={activeMenu === 'roles'}
 			aria-controls="nav-roles"
+			onpointerenter={(event) => openOnHover('roles', event)}
 			onclick={(event) => toggle('roles', event)}
 		>
 			Untuk siapa <svg

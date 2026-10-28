@@ -128,9 +128,6 @@
 				<span class="account-avatar" aria-hidden="true">{initials}</span>
 				<div><strong>{data.user.full_name}</strong><span>{role.label}</span></div>
 			</div>
-			<div class="sidebar-note">
-				<span class="notice-dot" aria-hidden="true"></span>Demo · data sintetis
-			</div>
 		</div>
 	</aside>
 	<div class="workspace-main">
