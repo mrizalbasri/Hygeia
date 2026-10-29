@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { authMutation, roles } from '#lib/auth.js';
@@ -10,9 +10,16 @@
 	import WorkspaceIcon from '#lib/WorkspaceIcon.svelte';
 	import '#lib/workspace.css';
 	import { menus } from '#lib/workflows/api.js';
+	import { provideNotifications } from '#lib/workflows/notification-state.svelte.js';
 	import { page } from '$app/state';
 	import type { PageProps } from './$types';
 	let { data }: PageProps = $props();
+	const notifications = provideNotifications();
+	$effect(() => {
+		const userID = data.user.id;
+		void userID;
+		return untrack(() => notifications.connect());
+	});
 	let role = $derived(roles[data.user.role]);
 	let clinical = $derived(data.user.role === 'patient' || data.user.role === 'doctor');
 	let isLab = $derived(data.user.role === 'lab');
@@ -143,9 +150,16 @@
 			<div class="account-actions">
 				<a
 					class="header-notifications"
-					aria-label="Buka notifikasi"
+					aria-label={notifications.unread === null
+						? 'Buka notifikasi; jumlah belum dibaca belum tersedia'
+						: `Buka notifikasi; ${notifications.unread} belum dibaca`}
 					href={resolve('/dashboard/[role]?view=notifications', { role: data.user.role })}
-					><WorkspaceIcon name="notifications" /></a
+					><WorkspaceIcon name="notifications" />
+					{#if notifications.unread !== null && notifications.unread > 0}
+						<span class="notification-badge" aria-hidden="true"
+							>{notifications.unread > 99 ? '99+' : notifications.unread}</span
+						>
+					{/if}</a
 				>
 				<div class="header-account">
 					<span class="account-avatar" aria-hidden="true">{initials}</span><span
@@ -163,56 +177,66 @@
 			class="dashboard-content"
 			class:patient-content={data.user.role === 'patient'}
 		>
-			{#if clinical}
-				{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
-				<ClinicalWorkspace user={data.user} />
-			{:else if isLab}
-				{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
-				<LaboratoryWorkspace user={data.user} />
-			{:else if isPharmacy}
-				{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
-				<PharmacyWorkspace user={data.user} />
-			{:else if isAdmin}
-				{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
-				<AdminWorkspace user={data.user} />
-			{:else}
-				<p class="eyebrow muted">SELAMAT DATANG, {data.user.full_name.toUpperCase()}</p>
-				<h1>{role.title}</h1>
-				<p class="muted dashboard-intro">{role.description}</p>
-				{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
-				<section class="welcome-panel" aria-labelledby="welcome-title">
-					<div class="panel-marker" aria-hidden="true">+</div>
-					<div>
-						<p class="eyebrow muted">RUANG ANDA SUDAH SIAP</p>
-						<h2 id="welcome-title">Mulai dari satu perjalanan.</h2>
-						<p class="muted">
-							Fitur {role.items[0].toLowerCase()} akan tersedia pada tahap berikutnya. Aktivitas perawatan
-							akan muncul di ruang ini.
-						</p>
-						<span class="upcoming-chip">Segera tersedia</span>
-					</div>
-				</section>
-				<section class="identity-panel" aria-labelledby="identity-title">
-					<div>
-						<p class="eyebrow muted">AKUN AKTIF</p>
-						<h2 id="identity-title">{data.user.full_name}</h2>
-					</div>
-					<dl>
-						<div>
-							<dt>Email</dt>
-							<dd>{data.user.email}</dd>
-						</div>
-						<div>
-							<dt>Peran</dt>
-							<dd>{role.label}</dd>
-						</div>
-						<div>
-							<dt>Organisasi</dt>
-							<dd>{data.user.organization?.name || '—'}</dd>
-						</div>
-					</dl>
-				</section>
+			{#if notifications.failed}
+				<div class="notification-connection" role="status">
+					<p>{notifications.connection}</p>
+					<button type="button" class="button secondary" onclick={() => notifications.connect()}
+						>Coba lagi notifikasi</button
+					>
+				</div>
 			{/if}
+			{#key data.user.id}
+				{#if clinical}
+					{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
+					<ClinicalWorkspace user={data.user} />
+				{:else if isLab}
+					{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
+					<LaboratoryWorkspace user={data.user} />
+				{:else if isPharmacy}
+					{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
+					<PharmacyWorkspace user={data.user} />
+				{:else if isAdmin}
+					{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
+					<AdminWorkspace user={data.user} />
+				{:else}
+					<p class="eyebrow muted">SELAMAT DATANG, {data.user.full_name.toUpperCase()}</p>
+					<h1>{role.title}</h1>
+					<p class="muted dashboard-intro">{role.description}</p>
+					{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
+					<section class="welcome-panel" aria-labelledby="welcome-title">
+						<div class="panel-marker" aria-hidden="true">+</div>
+						<div>
+							<p class="eyebrow muted">RUANG ANDA SUDAH SIAP</p>
+							<h2 id="welcome-title">Mulai dari satu perjalanan.</h2>
+							<p class="muted">
+								Fitur {role.items[0].toLowerCase()} akan tersedia pada tahap berikutnya. Aktivitas perawatan
+								akan muncul di ruang ini.
+							</p>
+							<span class="upcoming-chip">Segera tersedia</span>
+						</div>
+					</section>
+					<section class="identity-panel" aria-labelledby="identity-title">
+						<div>
+							<p class="eyebrow muted">AKUN AKTIF</p>
+							<h2 id="identity-title">{data.user.full_name}</h2>
+						</div>
+						<dl>
+							<div>
+								<dt>Email</dt>
+								<dd>{data.user.email}</dd>
+							</div>
+							<div>
+								<dt>Peran</dt>
+								<dd>{role.label}</dd>
+							</div>
+							<div>
+								<dt>Organisasi</dt>
+								<dd>{data.user.organization?.name || '—'}</dd>
+							</div>
+						</dl>
+					</section>
+				{/if}
+			{/key}
 			<p class="dashboard-footer">Hygeia · Perawatan terhubung, akses terkendali.</p>
 		</main>
 	</div>

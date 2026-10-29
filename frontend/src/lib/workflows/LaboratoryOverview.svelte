@@ -1,10 +1,12 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import type { User } from '../auth.js';
 	import WorkspaceIcon from '../WorkspaceIcon.svelte';
 	import { statusText } from './api.js';
 	import { emptyOverview, readOverview } from './overview.js';
+	import { useNotifications } from './notification-state.svelte.js';
+	const notifications = useNotifications();
 	let { user }: { user: User } = $props();
 	let queue = $state(emptyOverview());
 	let refreshing = $state(false);
@@ -30,8 +32,13 @@
 		queue = next;
 		refreshing = false;
 	}
-	onMount(() => {
-		void refresh();
+	$effect(() => {
+		const revision = notifications.revision;
+		void revision;
+		untrack(() => {
+			refreshing = false;
+			void refresh();
+		});
 		return () => controller?.abort();
 	});
 </script>
