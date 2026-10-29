@@ -60,6 +60,35 @@ Login salah memakai `401 invalid_credentials`. ID episode yang tidak ada dan
 ID yang tidak boleh diakses sama-sama mengembalikan `403 forbidden`, tanpa isi
 episode. UUID yang formatnya tidak valid mengembalikan `400`.
 
+## Ringkasan pekerjaan pasien
+
+`GET /patient/work-summary` hanya menerima sesi pasien aktif. Tidak menerima
+query parameter, ID pasien, atau pagination. Peran lain mendapat `403`; sesi
+tidak valid mendapat `401`.
+
+```json
+{
+  "summary": {
+    "active_episodes": 31,
+    "labs_in_progress": 22,
+    "prescriptions_ready": 8,
+    "pending": {
+      "episodes": 25,
+      "lab_requests": 21,
+      "prescriptions": 3,
+      "consents": 7
+    }
+  }
+}
+```
+
+Jumlah mencakup seluruh data milik pasien, bukan halaman terbaru. Lab dalam
+proses mencakup `sent`, `accepted`, dan `in_progress`. Persetujuan menghitung
+undangan `pending`, lab/resep `pending_patient_approval`, dan consent `pending`.
+Izin aktif, dicabut, ditolak, atau kedaluwarsa tidak menambah pekerjaan tertunda.
+Semua counter memakai snapshot satu statement; nilai hasil klinis tidak dibaca.
+Frontend harus membedakan kegagalan endpoint dari ringkasan bernilai nol.
+
 ## Episode
 
 | Metode | Endpoint | Akses |
