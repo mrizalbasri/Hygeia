@@ -30,6 +30,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/episodes/{id}", h.get)
 	mux.HandleFunc("PATCH /api/v1/episodes/{id}", h.transition)
 	mux.HandleFunc("GET /api/v1/patient/access-summary", h.summary)
+	mux.HandleFunc("GET /api/v1/patient/work-summary", h.workSummary)
 	mux.HandleFunc("GET /api/v1/patient/timeline", h.timeline)
 	mux.HandleFunc("GET /api/v1/audit/verify", h.verify)
 }
