@@ -205,6 +205,18 @@ try {
 		await page.locator('input[name="unit"]').fill('mg/dL');
 		await page.locator('input[name="reference_range"]').fill('70–99');
 		await page.locator('textarea[name="note"]').fill('Hasil dalam batas normal');
+		assert.equal(await page.locator('select[name="flag"]').inputValue(), '');
+		assert.equal(
+			await page.getByRole('button', { name: 'Tinjau hasil pemeriksaan', exact: true }).isEnabled(),
+			false
+		);
+		await page.locator('select[name="flag"]').selectOption('normal');
+		await page.getByRole('button', { name: 'Tinjau hasil pemeriksaan', exact: true }).click();
+		await page.getByRole('heading', { name: 'Tinjau sebelum mengirim' }).waitFor();
+		assert.equal(labMutations.length, 2, 'review must not submit a result');
+		await page.getByRole('button', { name: 'Kembali mengedit' }).click();
+		assert.equal(await page.locator('input[name="value"]').inputValue(), '95');
+		await page.getByRole('button', { name: 'Tinjau hasil pemeriksaan', exact: true }).click();
 		await page.getByRole('button', { name: 'Serahkan hasil pemeriksaan', exact: true }).click();
 
 		// Receipt verification
@@ -226,17 +238,23 @@ try {
 		await correctionForm.locator('input[name="value"]').fill('101');
 		await correctionForm.locator('input[name="unit"]').fill('mg/dL');
 		await correctionForm.locator('input[name="reference_range"]').fill('70–99');
+		assert.equal(await correctionForm.locator('select[name="flag"]').inputValue(), '');
 		await correctionForm.locator('select[name="flag"]').selectOption('high');
 		await correctionForm.locator('textarea[name="note"]').fill('Catatan koreksi sintetis');
 		for (const status of [403, 409, 503]) {
 			correctionFailure = status;
+			const beforeReview = labMutations.length;
 			await correctionForm
-				.getByRole('button', { name: 'Kirim koreksi hasil', exact: true })
+				.getByRole('button', { name: 'Tinjau koreksi hasil', exact: true })
 				.click();
+			await page.getByRole('heading', { name: 'Tinjau sebelum mengirim' }).waitFor();
+			assert.equal(labMutations.length, beforeReview, 'review must not submit a correction');
+			await page.getByRole('button', { name: 'Kirim koreksi hasil', exact: true }).click();
 			await page
 				.getByRole('alert')
 				.getByText(/correction-fixture/)
 				.waitFor();
+			await page.getByRole('button', { name: 'Kembali mengedit' }).click();
 			assert.equal(await correctionForm.locator('input[name="value"]').inputValue(), '101');
 			await correctionForm
 				.locator('textarea[name="reason"]')
@@ -247,7 +265,8 @@ try {
 		assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
 		await page.screenshot({ path: '.test-results/lab-correction-mobile.png', fullPage: true });
 		correctionFailure = 0;
-		await correctionForm.getByRole('button', { name: 'Kirim koreksi hasil', exact: true }).click();
+		await correctionForm.getByRole('button', { name: 'Tinjau koreksi hasil', exact: true }).click();
+		await page.getByRole('button', { name: 'Kirim koreksi hasil', exact: true }).click();
 		await page.getByText('Koreksi hasil berhasil dikirim.', { exact: true }).waitFor();
 		assert.equal(await correctionForm.locator('input[name="value"]').inputValue(), '');
 		assert.deepEqual(labMutations.at(-1).data, {
@@ -275,6 +294,8 @@ try {
 			} else {
 				await page.getByRole('button', { name: 'Kirim hasil pemeriksaan', exact: true }).click();
 				await page.locator('input[name="value"]').fill('123');
+				await page.locator('select[name="flag"]').selectOption('unknown');
+				await page.getByRole('button', { name: 'Tinjau hasil pemeriksaan', exact: true }).click();
 				await page.getByRole('button', { name: 'Serahkan hasil pemeriksaan', exact: true }).click();
 			}
 			await page

@@ -1,11 +1,14 @@
 <script lang="ts">
-	import { api, errorText, formText, uuidPattern, type Entry } from './api.js';
+	import { api, errorText, formText, uuidPattern, type Entry, type LabResultInput } from './api.js';
+	import LabResultReview from './LabResultReview.svelte';
 	let { initialResultID = '' }: { initialResultID?: string } = $props();
 	let pending = $state(false),
 		error = $state(''),
 		confirmation = $state<{ id: string; resultID: string } | null>(null);
+	let review = $state<{ resultID: string; reason: string; result: LabResultInput } | null>(null);
+	let formElement: HTMLFormElement;
 
-	async function submit(event: SubmitEvent) {
+	function prepare(event: SubmitEvent) {
 		event.preventDefault();
 		if (pending) return;
 		const form = event.currentTarget as HTMLFormElement;
@@ -13,12 +16,34 @@
 		const resultID = formText(data, 'result_id');
 		const reason = formText(data, 'reason');
 		const value = formText(data, 'value');
+		const flag = formText(data, 'flag');
 		error = '';
 		confirmation = null;
-		if (reason.length < 5 || !value) {
-			error = 'Isi alasan koreksi minimal 5 karakter dan nilai hasil pengganti.';
+		if (
+			reason.length < 5 ||
+			!value ||
+			!['normal', 'high', 'low', 'abnormal', 'unknown'].includes(flag)
+		) {
+			error = 'Isi alasan koreksi minimal 5 karakter, nilai pengganti, dan pilihan penanda.';
 			return;
 		}
+		review = {
+			resultID,
+			reason,
+			result: {
+				value,
+				unit: formText(data, 'unit'),
+				reference_range: formText(data, 'reference_range'),
+				flag: flag as LabResultInput['flag'],
+				note: formText(data, 'note')
+			}
+		};
+	}
+
+	async function submit() {
+		if (pending || !review) return;
+		const { resultID, reason, result } = review;
+		error = '';
 		pending = true;
 		try {
 			const response = await api<{ correction: Entry }>(
@@ -26,15 +51,12 @@
 				'POST',
 				{
 					reason,
-					value,
-					unit: formText(data, 'unit'),
-					reference_range: formText(data, 'reference_range'),
-					flag: formText(data, 'flag'),
-					note: formText(data, 'note')
+					...result
 				}
 			);
 			confirmation = { id: response.correction.id, resultID };
-			form.reset();
+			formElement.reset();
+			review = null;
 		} catch (cause) {
 			error = errorText(cause);
 		} finally {
@@ -61,7 +83,21 @@
 		</div>
 	{/if}
 	{#if error}<p class="wf-error" role="alert">{error}</p>{/if}
-	<form onsubmit={submit} aria-busy={pending}>
+	{#if review}
+		<LabResultReview
+			result={review.result}
+			reference={`ID hasil: ${review.resultID}`}
+			reason={review.reason}
+			{pending}
+			confirmLabel="Kirim koreksi hasil"
+			onconfirm={() => void submit()}
+			onedit={() => {
+				review = null;
+				error = '';
+			}}
+		/>
+	{/if}
+	<form bind:this={formElement} onsubmit={prepare} aria-busy={pending} hidden={!!review}>
 		<label
 			>ID hasil pemeriksaan<input
 				name="result_id"
@@ -103,10 +139,11 @@
 		>
 		<label
 			>Penanda laboratorium<select name="flag" required disabled={pending}
-				><option value="normal">Normal</option><option value="high">Tinggi</option><option
-					value="low">Rendah</option
-				><option value="abnormal">Abnormal</option><option value="unknown">Tidak diketahui</option
-				></select
+				><option value="" disabled selected>Pilih penanda hasil</option><option value="normal"
+					>Normal</option
+				><option value="high">Tinggi</option><option value="low">Rendah</option><option
+					value="abnormal">Abnormal</option
+				><option value="unknown">Tidak diketahui</option></select
 			></label
 		>
 		<label
@@ -117,8 +154,6 @@
 			Koreksi yang dikirim tidak dapat disunting atau dihapus. Pasien dan dokter yang memiliki izin
 			dapat melihat riwayatnya.
 		</p>
-		<button class="button primary" type="submit" disabled={pending}
-			>{pending ? 'Mengirim koreksi…' : 'Kirim koreksi hasil'}</button
-		>
+		<button class="button primary" type="submit" disabled={pending}>Tinjau koreksi hasil</button>
 	</form>
 </section>
