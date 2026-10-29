@@ -1,5 +1,32 @@
 # Setup Docker dan Vercel — 29 Oktober 2026
 
+## Publikasi melalui GitHub Actions
+
+Jalur publikasi yang dipilih adalah GitHub Actions, bukan push dari komputer
+lokal. Workflow `Verify` menjalankan tes backend/PostgreSQL, vet, build Docker,
+serta check/lint/build/unit/E2E frontend. Job `publish-backend` baru berjalan
+setelah kedua job pengujian berhasil.
+
+- Push pada semua branch menjalankan pemeriksaan.
+- Push ke `main` yang lolos pemeriksaan otomatis membangun dan mengunggah image.
+- Pull request dan push branch pengembangan tidak mengunggah image.
+- Untuk publikasi branch pengembangan secara eksplisit: Actions → Verify →
+  Run workflow → pilih branch → aktifkan `publish_image`.
+- Image selalu mendapat tag `mrizal23/hygeia-api:sha-<commit lengkap>`.
+  Hanya rilis `main` yang juga memperbarui `latest`.
+- Digest hasil upload dicantumkan pada ringkasan job. Gunakan tag commit atau
+  digest pada konfigurasi Azure untuk memilih versi yang pasti.
+
+Tambahkan repository secret **DOCKERHUB_TOKEN** melalui
+[GitHub Actions secrets](https://github.com/mrizalbasri/Hygeia/settings/secrets/actions).
+Token harus milik akun `mrizal23` dengan izin push ke repository `hygeia-api`.
+Username sudah ditetapkan pada workflow. Jangan menaruh token pada source,
+file env frontend, log, atau chat. Token ditambahkan sendiri oleh pengguna;
+workflow memeriksa keberadaannya sebelum mencoba login.
+
+Azure tetap dikonfigurasi sendiri oleh pengguna. Upload image tidak otomatis
+mengubah container Azure; tahap deploy Azure belum diotomatisasi.
+
 ## Pembaruan build dan environment
 
 Docker Desktop berhasil dinyalakan pada percobaan berikutnya. Image
