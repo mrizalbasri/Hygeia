@@ -105,6 +105,7 @@ try {
 		};
 		const labMutations = [];
 		let denyLabMutation = false;
+		let conflictLabMutation = true;
 		let invalidResultCSRF = true;
 		const resultId = '11111111-2222-4333-8444-555555555555';
 		let correctionFailure = 403;
@@ -139,6 +140,10 @@ try {
 						return send({ error: { message: 'Penugasan sudah berakhir.' } }, 403);
 					}
 					labItem.status = data.status;
+					if (conflictLabMutation) {
+						conflictLabMutation = false;
+						return send({ error: { message: 'Permintaan diterima petugas lain.' } }, 409);
+					}
 					return send({ lab_request: { ...labItem } });
 				}
 			}
@@ -196,9 +201,17 @@ try {
 		}
 		await page.locator('.health-status').getByText('Terkirim', { exact: true }).waitFor();
 
-		// Transition: sent -> accepted
+		// A concurrent acceptance returns 409: refresh must expose the new status/action.
 		await page.getByRole('button', { name: 'Terima permintaan', exact: true }).click();
+		await page
+			.getByRole('alert')
+			.getByText(/Status telah berubah/)
+			.waitFor();
 		await page.locator('.health-status').getByText('Diterima', { exact: true }).waitFor();
+		assert.equal(
+			await page.getByRole('button', { name: 'Terima permintaan', exact: true }).count(),
+			0
+		);
 
 		// Transition: accepted -> in_progress
 		await page.getByRole('button', { name: 'Mulai pemeriksaan', exact: true }).click();
@@ -354,6 +367,7 @@ try {
 		};
 		const rxMutations = [];
 		let denyRxMutation = false;
+		let conflictRxMutation = true;
 
 		await page.route('**/api/v1/**', async (route) => {
 			const req = route.request();
@@ -388,6 +402,10 @@ try {
 				} else {
 					rxItem.status = data.status;
 				}
+				if (conflictRxMutation) {
+					conflictRxMutation = false;
+					return send({ error: { message: 'Resep diterima petugas lain.' } }, 409);
+				}
 				return send({ prescription: { ...rxItem } });
 			}
 
@@ -399,9 +417,14 @@ try {
 		await page.getByRole('heading', { name: 'Amoxicillin 500mg', level: 2 }).waitFor();
 		await page.locator('.health-status').getByText('Terkirim', { exact: true }).waitFor();
 
-		// Transition: sent -> accepted
+		// A concurrent acceptance must refresh the prescription queue after HTTP 409.
 		await page.getByRole('button', { name: 'Terima resep', exact: true }).click();
+		await page
+			.getByRole('alert')
+			.getByText(/Status telah berubah/)
+			.waitFor();
 		await page.locator('.health-status').getByText('Diterima', { exact: true }).waitFor();
+		assert.equal(await page.getByRole('button', { name: 'Terima resep', exact: true }).count(), 0);
 
 		// Transition: accepted -> preparing
 		await page.getByRole('button', { name: 'Mulai penyiapan obat', exact: true }).click();
