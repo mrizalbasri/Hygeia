@@ -426,7 +426,7 @@
 	<!-- FOOTER -->
 	<footer class="landing-footer">
 		<a class="brand" href={resolve('/')}>
-			<img src="/logo-light.png" width="32" height="32" alt="" /><span>Hygeia</span>
+			<img src="/logo-light.webp" width="32" height="32" alt="" /><span>Hygeia</span>
 		</a>
 		<p>Perawatan terhubung. Kendali di tangan Anda.</p>
 		<nav aria-label="Informasi tambahan">

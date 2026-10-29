@@ -30,7 +30,7 @@
 >
 <main class="carepass-page">
 	<a class="brand" href={resolve('/')}
-		><img src="/logo-light.png" alt="" width="40" height="40" />Hygeia</a
+		><img src="/logo-light.webp" alt="" width="40" height="40" />Hygeia</a
 	>
 	<h1>CarePass pasien</h1>
 	{#if loading}<p role="status">Memeriksa sesi Anda…</p>{:else if error}<p

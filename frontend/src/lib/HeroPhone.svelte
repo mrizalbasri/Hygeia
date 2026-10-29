@@ -70,7 +70,7 @@
 			>
 				<div class="phone-screen">
 					<div class="phone-ui-brand">
-						<img src="/logo-light.png" alt="" width="34" height="34" /><strong>Hygeia</strong><span
+						<img src="/logo-light.webp" alt="" width="34" height="34" /><strong>Hygeia</strong><span
 							>Pratinjau</span
 						>
 					</div>
