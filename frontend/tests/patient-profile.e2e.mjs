@@ -118,6 +118,7 @@ try {
 		0
 	);
 	const accountTrigger = page.getByRole('button', { name: /^Menu akun / });
+	await page.locator('.account-trigger:not([disabled])').waitFor();
 	await accountTrigger.focus();
 	await accountTrigger.press('Enter');
 	const accountMenu = page.getByRole('navigation', { name: 'Menu akun' });
@@ -215,7 +216,11 @@ try {
 		await accountTrigger.click();
 		await accountMenu.getByRole('link', { name: 'Profil saya', exact: true }).waitFor();
 		const bounds = await accountMenu.boundingBox();
-		assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width, `account menu fits ${width}`);
+		await page.screenshot({ path: `.test-results/account-menu-${width}.png` });
+		assert.ok(
+			bounds.x >= 0 && bounds.x + bounds.width <= width,
+			`account menu fits ${width}: ${JSON.stringify(bounds)}`
+		);
 		await page.keyboard.press('Escape');
 		assert.ok(
 			await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
