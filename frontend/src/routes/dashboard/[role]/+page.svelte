@@ -8,12 +8,18 @@
 	import PharmacyWorkspace from '#lib/workflows/PharmacyWorkspace.svelte';
 	import AdminWorkspace from '#lib/workflows/AdminWorkspace.svelte';
 	import WorkspaceIcon from '#lib/WorkspaceIcon.svelte';
+	import AccountDropdown from '#lib/AccountDropdown.svelte';
 	import '#lib/workspace.css';
 	import { menus } from '#lib/workflows/api.js';
 	import { provideNotifications } from '#lib/workflows/notification-state.svelte.js';
 	import { page } from '$app/state';
 	import type { PageProps } from './$types';
 	let { data }: PageProps = $props();
+	let savedName = $state<{ userID: string; name: string } | null>(null);
+	let displayName = $derived(
+		savedName?.userID === data.user.id ? savedName.name : data.user.full_name
+	);
+	let workspaceUser = $derived({ ...data.user, full_name: displayName });
 	const notifications = provideNotifications();
 	$effect(() => {
 		const userID = data.user.id;
@@ -50,7 +56,7 @@
 	let mobileMenuOpen = $state(false);
 	let menuToggle: HTMLButtonElement | undefined = $state();
 	let initials = $derived(
-		data.user.full_name
+		displayName
 			.split(' ')
 			.filter(Boolean)
 			.slice(0, 2)
@@ -109,7 +115,7 @@
 		<p class="workspace-label">Ruang {role.label}</p>
 		<nav id="workspace-navigation" aria-label="Menu utama">
 			{#if hasWorkspace}
-				{#each menu as [id, label] (id)}<a
+				{#each menu.filter(([id]) => id !== 'profile') as [id, label] (id)}<a
 						class:nav-divider={id === 'notifications' || id === 'audit'}
 						class:nav-active={activeView === id}
 						aria-current={activeView === id ? 'page' : undefined}
@@ -133,7 +139,7 @@
 		<div class="sidebar-bottom">
 			<div class="sidebar-account">
 				<span class="account-avatar" aria-hidden="true">{initials}</span>
-				<div><strong>{data.user.full_name}</strong><span>{role.label}</span></div>
+				<div><strong>{displayName}</strong><span>{role.label}</span></div>
 			</div>
 		</div>
 	</aside>
@@ -158,14 +164,18 @@
 						>
 					{/if}</a
 				>
-				<div class="header-account">
-					<span class="account-avatar" aria-hidden="true">{initials}</span><span
-						>{data.user.full_name}</span
-					>
-				</div>
-				<button class="button secondary logout-button" onclick={logout} disabled={pending || !ready}
-					><WorkspaceIcon name="logout" />{pending ? 'Keluar…' : 'Keluar'}</button
-				>
+				{#key data.user.id}
+					<AccountDropdown
+						name={displayName}
+						role={role.label}
+						{initials}
+						showProfile={data.user.role === 'patient'}
+						profileActive={activeView === 'profile'}
+						{pending}
+						{ready}
+						onlogout={logout}
+					/>
+				{/key}
 			</div>
 		</header>
 		<main
@@ -185,7 +195,10 @@
 			{#key data.user.id}
 				{#if clinical}
 					{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
-					<ClinicalWorkspace user={data.user} />
+					<ClinicalWorkspace
+						user={workspaceUser}
+						onProfileSaved={(name) => (savedName = { userID: data.user.id, name })}
+					/>
 				{:else if isLab}
 					{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
 					<LaboratoryWorkspace user={data.user} />
@@ -215,7 +228,7 @@
 					<section class="identity-panel" aria-labelledby="identity-title">
 						<div>
 							<p class="eyebrow muted">AKUN AKTIF</p>
-							<h2 id="identity-title">{data.user.full_name}</h2>
+							<h2 id="identity-title">{displayName}</h2>
 						</div>
 						<dl>
 							<div>

@@ -152,6 +152,9 @@ setelah server menyelesaikan request aktif, dengan batas waktu 10 detik.
 
 ## Backend melalui Docker
 
+Profil pasien mandiri memerlukan migrasi 11. Endpoint, validasi, dan perilaku data
+lama dijelaskan dalam [kontrak profil pasien](../docs/15-PATIENT-PROFILE.md).
+
 Isi `DATABASE_URL_DOCKER` pada `backend/.env` dengan koneksi PostgreSQL host,
 misalnya host `host.docker.internal` dan port `5434`, memakai kredensial lokal
 yang sama. Compose memerlukan variabel ini dan tidak membuat container database.

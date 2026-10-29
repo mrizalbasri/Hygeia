@@ -105,6 +105,7 @@ try {
 		};
 		const labMutations = [];
 		let denyLabMutation = false;
+		let invalidResultCSRF = true;
 		const resultId = '11111111-2222-4333-8444-555555555555';
 		let correctionFailure = 403;
 
@@ -143,6 +144,11 @@ try {
 			}
 
 			if (req.method() === 'POST' && path === `/lab-requests/${labId}/result`) {
+				if (invalidResultCSRF)
+					return send(
+						{ error: { code: 'csrf_invalid', message: 'Token hasil perlu diperbarui.' } },
+						403
+					);
 				if (denyLabMutation) {
 					labItem = null;
 					return send({ error: { message: 'Penugasan sudah berakhir.' } }, 403);
@@ -216,6 +222,13 @@ try {
 		assert.equal(labMutations.length, 2, 'review must not submit a result');
 		await page.getByRole('button', { name: 'Kembali mengedit' }).click();
 		assert.equal(await page.locator('input[name="value"]').inputValue(), '95');
+		await page.getByRole('button', { name: 'Tinjau hasil pemeriksaan', exact: true }).click();
+		await page.getByRole('button', { name: 'Serahkan hasil pemeriksaan', exact: true }).click();
+		await page.getByRole('alert').getByText('Token hasil perlu diperbarui.').waitFor();
+		await page.getByRole('button', { name: 'Kembali mengedit' }).click();
+		assert.equal(await page.locator('input[name="value"]').inputValue(), '95');
+		assert.equal(await page.locator('select[name="flag"]').inputValue(), 'normal');
+		invalidResultCSRF = false;
 		await page.getByRole('button', { name: 'Tinjau hasil pemeriksaan', exact: true }).click();
 		await page.getByRole('button', { name: 'Serahkan hasil pemeriksaan', exact: true }).click();
 

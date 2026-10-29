@@ -27,6 +27,7 @@ Semua path endpoint API menggunakan prefix `/api/v1`.
 | [Akses darurat](11-backend-emergency-api.md)    | Grant darurat dan tinjauan admin.                  |
 | [CarePass](12-BACKEND-CAREPASS.md)              | Token, QR, penebusan, dan pencabutan.              |
 | [Realtime](13-BACKEND-REALTIME.md)              | SSE dan replay notifikasi.                         |
+| [Profil pasien](15-PATIENT-PROFILE.md)          | Data diri dan kontak yang dikelola pasien sendiri. |
 
 ## Development dan pengujian
 

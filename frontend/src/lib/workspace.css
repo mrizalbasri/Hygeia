@@ -182,6 +182,7 @@ body:has(.dashboard-workspace) {
 .dashboard-workspace .account-actions {
 	gap: 14px;
 	flex-shrink: 0;
+	margin-left: auto;
 }
 .header-account {
 	display: flex;
