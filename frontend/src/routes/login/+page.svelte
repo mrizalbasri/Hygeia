@@ -1,96 +1,111 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { login } from '../../lib/api';
-
+	import { resolve } from '$app/paths';
+	import { authMutation, type User } from '#lib/auth.js';
 	let email = $state('');
 	let password = $state('');
-	let error = $state('');
-	let loading = $state(false);
+	let pending = $state(false);
+	let ready = $state(false);
+	let message = $state('');
+	onMount(() => {
+		ready = true;
+	});
 
-	async function submit() {
-		error = '';
-		loading = true;
+	async function login(event: SubmitEvent) {
+		event.preventDefault();
+		if (pending) return;
+		pending = true;
+		message = '';
 		try {
-			await login(email.trim(), password);
-			await goto('/');
-		} catch (cause) {
-			error = cause instanceof Error ? cause.message : 'Login gagal.';
+			const response = await authMutation('login', { email, password });
+			const body = (await response.json()) as { user?: User; error?: { message: string } };
+			if (!response.ok || !body.user) {
+				message = body.error?.message || 'Tidak dapat masuk. Coba lagi.';
+				return;
+			}
+			password = '';
+			await goto(resolve('/dashboard/[role]', { role: body.user.role }), {
+				replace: true,
+				refreshAll: true
+			});
+		} catch {
+			message = 'Layanan belum dapat dihubungi. Coba lagi sebentar.';
 		} finally {
-			loading = false;
+			pending = false;
 		}
 	}
 </script>
 
-<svelte:head>
-	<title>Login · Hygeia</title>
-</svelte:head>
+<svelte:head
+	><title>Masuk · Hygeia</title><meta
+		name="description"
+		content="Masuk ke Hygeia untuk perjalanan perawatan yang terhubung dan terkendali."
+	/></svelte:head
+>
 
 <main class="login-shell">
-	<section class="login-card" aria-labelledby="login-title">
-		<div class="brand-mark" aria-hidden="true">H+</div>
-		<p class="eyebrow">Hygeia</p>
-		<h1 id="login-title">Masuk ke ruang kerja Anda</h1>
-		<p class="muted">Kelola permintaan laboratorium dan resep dengan akses yang tercatat.</p>
-
-		<form onsubmit={(event) => { event.preventDefault(); submit(); }}>
-			<label>
-				Email
-				<input type="email" bind:value={email} autocomplete="email" required />
-			</label>
-			<label>
-				Password
-				<input type="password" bind:value={password} autocomplete="current-password" required />
-			</label>
-			{#if error}<p class="error" role="alert">{error}</p>{/if}
-			<button class="primary" type="submit" disabled={loading}>
-				{loading ? 'Memeriksa...' : 'Masuk'}
-			</button>
-
-			<div class="quick-accounts">
-				<span class="quick-label">Isi Cepat Akun Demo:</span>
-				<div class="quick-buttons">
-					<button
-						type="button"
-						class="chip-btn"
-						onclick={() => {
-							email = 'lab@demo.hygeia.test';
-						}}
-					>
-						🔬 Staf Lab
-					</button>
-					<button
-						type="button"
-						class="chip-btn"
-						onclick={() => {
-							email = 'apotek@demo.hygeia.test';
-						}}
-					>
-						💊 Staf Apotek
-					</button>
-				</div>
+	<section class="login-story" aria-label="Tentang Hygeia">
+		<a class="brand" href={resolve('/login')}
+			><img src="/logo-light.png" alt="" width="44" height="44" /><span>Hygeia</span></a
+		>
+		<div class="story-body">
+			<p class="eyebrow">TERHUBUNG. ATAS IZIN ANDA.</p>
+			<h1>Perawatan terhubung.<br /> Kendali tetap<br /> <span>di tangan Anda.</span></h1>
+			<p class="story-copy">
+				Pasien, dokter, laboratorium, dan apotek. Satu perjalanan dengan akses data yang jelas.
+			</p>
+			<div class="brand-showcase consultation-showcase" aria-hidden="true">
+				<img src="/care-consultation.webp" alt="" width="1536" height="1024" decoding="async" />
 			</div>
-		</form>
+			<div class="care-path" aria-label="Alur pasien, dokter, laboratorium, dan apotek">
+				{#each ['Pasien', 'Dokter', 'Lab', 'Apotek'] as step, index (step)}<div>
+						<span class="path-node">0{index + 1}</span><span>{step}</span>
+					</div>{/each}
+			</div>
+		</div>
+		<p class="story-footer">Diizinkan pasien. Dibatasi seperlunya. Tercatat setiap aksesnya.</p>
+	</section>
+	<section class="login-form-side" aria-labelledby="login-title">
+		<div class="login-form-wrap">
+			<p class="eyebrow muted">SELAMAT DATANG DI HYGEIA</p>
+			<h2 id="login-title">Masuk ke ruang Anda</h2>
+			<p class="muted intro">Lanjutkan perjalanan perawatan dengan akun Anda.</p>
+			<form method="POST" onsubmit={login} aria-busy={pending}>
+				<label for="email">Email</label>
+				<input
+					id="email"
+					name="email"
+					type="email"
+					autocomplete="username"
+					placeholder="nama@email.com"
+					bind:value={email}
+					maxlength="254"
+					required
+					disabled={pending}
+				/>
+				<label for="password">Password</label>
+				<input
+					id="password"
+					name="password"
+					type="password"
+					autocomplete="current-password"
+					bind:value={password}
+					maxlength="1024"
+					required
+					disabled={pending}
+				/>
+				<div class="form-message" aria-live="polite">
+					{#if message}<p role="alert">{message}</p>{/if}
+				</div>
+				<button class="button primary login-submit" type="submit" disabled={pending || !ready}
+					>{pending ? 'Sedang masuk…' : 'Masuk'}<span aria-hidden="true">→</span></button
+				>
+			</form>
+			<p class="auth-switch">
+				Belum punya akun pasien? <a href={resolve('/register')}>Daftar sebagai pasien</a>
+			</p>
+		</div>
+		<a class="form-footer button secondary" href={resolve('/')}>Kembali ke beranda</a>
 	</section>
 </main>
-
-<style>
-	:global(body) { margin: 0; }
-	.login-shell { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: #0b101c; color: #f7f9fe; }
-	.login-card { width: min(100%, 420px); padding: 40px; border: 1px solid #2b3345; border-radius: 24px; background: #111827; box-shadow: 0 8px 24px rgb(0 0 0 / 18%); }
-	.brand-mark { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; background: linear-gradient(90deg, #146afe, #00abef, #1aebfd); color: white; font-weight: 700; }
-	.eyebrow { margin: 20px 0 8px; color: #6fa3ff; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-	h1 { margin: 0; font-size: 28px; line-height: 1.25; }
-	.muted { color: #9aa6bd; line-height: 1.5; }
-	form { display: grid; gap: 16px; margin-top: 28px; }
-	label { display: grid; gap: 8px; color: #f7f9fe; font-size: 14px; font-weight: 600; }
-	input { min-height: 44px; box-sizing: border-box; padding: 0 12px; border: 1px solid #2b3345; border-radius: 12px; background: #161d2e; color: #f7f9fe; font: inherit; }
-	input:focus { outline: 2px solid #1aebfd; outline-offset: 2px; }
-	.primary { min-height: 44px; border: 0; border-radius: 12px; background: #146afe; color: white; font-weight: 700; cursor: pointer; }
-	.primary:disabled { opacity: .6; cursor: wait; }
-	.error { margin: 0; color: #f87171; font-size: 14px; }
-	.quick-accounts { margin-top: 10px; padding-top: 16px; border-top: 1px solid #2b3345; display: flex; flex-direction: column; gap: 8px; }
-	.quick-label { font-size: 12px; color: #9aa6bd; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
-	.quick-buttons { display: flex; gap: 8px; }
-	.chip-btn { flex: 1; min-height: 36px; padding: 0 10px; border: 1px solid #2b3345; border-radius: 10px; background: #161d2e; color: #f7f9fe; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
-	.chip-btn:hover { border-color: #1aebfd; background: #1f293d; }
-</style>

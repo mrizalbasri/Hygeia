@@ -68,7 +68,30 @@ type Result struct {
 	TestCode     string `json:"test_code"`
 	TestName     string `json:"test_name"`
 	ResultInput
-	SubmittedAt time.Time `json:"submitted_at"`
+	SubmittedAt time.Time    `json:"submitted_at"`
+	Corrections []Correction `json:"corrections"`
+}
+
+type Correction struct {
+	ID             string    `json:"id"`
+	LabResultID    string    `json:"lab_result_id"`
+	CorrectedBy    string    `json:"corrected_by"`
+	Reason         string    `json:"reason"`
+	Value          string    `json:"value"`
+	Unit           string    `json:"unit"`
+	ReferenceRange string    `json:"reference_range"`
+	Flag           string    `json:"flag"`
+	Note           string    `json:"note"`
+	CorrectedAt    time.Time `json:"corrected_at"`
+}
+
+type CorrectionInput struct {
+	Reason         string `json:"reason"`
+	Value          string `json:"value"`
+	Unit           string `json:"unit"`
+	ReferenceRange string `json:"reference_range"`
+	Flag           string `json:"flag"`
+	Note           string `json:"note"`
 }
 
 type Receipt struct {

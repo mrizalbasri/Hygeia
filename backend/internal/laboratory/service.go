@@ -386,6 +386,7 @@ func (s *Service) GetResult(ctx context.Context, token []byte, id string) (Resul
 		}
 		event := audit.Event{ChainID: r.patientID, Action: "lab_result.view", ResourceType: "lab_result", ResourceID: id, Outcome: "allow", Basis: accessBasis(actor)}
 		allowed := policy.CanViewLabResult(actor, r.access())
+		var expiresAt *time.Time
 		if !allowed && r.Status == "completed" {
 			grant, err := policy.FindLabResultConsent(ctx, tx, actor, r.episode.PatientUserID, id, s.now())
 			if err != nil {
@@ -396,7 +397,40 @@ func (s *Service) GetResult(ctx context.Context, token []byte, id string) (Resul
 				event.Basis = "consent"
 				event.ConsentID = grant.ID
 				event.ConsentExpiresAt = &grant.ExpiresAt
+				expiresAt = &grant.ExpiresAt
 			}
+		}
+		if !allowed && r.Status == "completed" {
+			grant, err := policy.FindCarePassGrant(ctx, tx, actor, r.episode.PatientUserID, "lab_result", id, s.now)
+			if err != nil {
+				return err
+			}
+			if grant.ID != "" {
+				allowed = true
+				event.Basis = "carepass"
+				event.CarePassID = grant.ID
+				event.CarePassExpiresAt = &grant.ExpiresAt
+				expiresAt = &grant.ExpiresAt
+			}
+		}
+		if !allowed && r.Status == "completed" {
+			grant, err := policy.FindEmergencyGrant(ctx, tx, actor, r.episode.PatientUserID, s.now)
+			if err != nil {
+				return err
+			}
+			if grant.ID != "" {
+				allowed = true
+				event.Basis = "break_glass"
+				event.BreakGlassID = grant.ID
+				event.BreakGlassExpiresAt = &grant.ExpiresAt
+				expiresAt = &grant.ExpiresAt
+			}
+		}
+		if allowed && expiresAt != nil {
+			if err := audit.LockChain(ctx, tx, r.patientID); err != nil {
+				return err
+			}
+			allowed = s.now().Before(*expiresAt)
 		}
 		if !allowed {
 			event.Outcome = "deny"
@@ -411,7 +445,76 @@ func (s *Service) GetResult(ctx context.Context, token []byte, id string) (Resul
 		}
 		result.TestCode = r.TestCode
 		result.TestName = r.TestName
+		result.Corrections = make([]Correction, 0)
+		// Emergency scope excludes free-text clinical notes; explicit patient
+		// consent and CarePass continue to expose their authorized resource.
+		if event.Basis == "break_glass" {
+			result.Note = ""
+		}
+		corrRows, err := tx.Query(ctx, `
+			SELECT id::text, lab_result_id::text, corrected_by::text, reason, value, unit, reference_range, flag, note, corrected_at
+			FROM lab_result_corrections WHERE lab_result_id=$1 ORDER BY corrected_at ASC, id ASC`, id)
+		if err != nil {
+			return err
+		}
+		defer corrRows.Close()
+		for corrRows.Next() {
+			var c Correction
+			if err := corrRows.Scan(&c.ID, &c.LabResultID, &c.CorrectedBy, &c.Reason, &c.Value, &c.Unit, &c.ReferenceRange, &c.Flag, &c.Note, &c.CorrectedAt); err != nil {
+				return err
+			}
+			if event.Basis == "break_glass" {
+				c.Note = ""
+				c.Reason = ""
+			}
+			result.Corrections = append(result.Corrections, c)
+		}
+		if err := corrRows.Err(); err != nil {
+			return err
+		}
 		return s.Audit.Append(ctx, tx, actor, event)
 	})
 	return result, err
+}
+
+func (s *Service) CorrectResult(ctx context.Context, token []byte, resultID string, input CorrectionInput) (Correction, error) {
+	var corr Correction
+	err := s.transact(ctx, token, func(ctx context.Context, tx pgx.Tx, actor auth.User) error {
+		var requestID string
+		err := tx.QueryRow(ctx, `SELECT lab_request_id::text FROM lab_results WHERE id=$1`, resultID).Scan(&requestID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrForbidden
+		}
+		if err != nil {
+			return err
+		}
+		r, err := loadRequest(ctx, tx, requestID, true)
+		if err != nil {
+			return err
+		}
+		if !policy.IsAssignedLab(actor, r.access()) {
+			return s.reject(ctx, tx, actor, r, "lab_result.correct", ErrForbidden)
+		}
+		if r.Status != "completed" {
+			return s.reject(ctx, tx, actor, r, "lab_result.correct", ErrConflict)
+		}
+		err = tx.QueryRow(ctx, `
+			INSERT INTO lab_result_corrections(lab_result_id, corrected_by, reason, value, unit, reference_range, flag, note)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			RETURNING id::text, lab_result_id::text, corrected_by::text, reason, value, unit, reference_range, flag, note, corrected_at`,
+			resultID, actor.ID, input.Reason, input.Value, input.Unit, input.ReferenceRange, input.Flag, input.Note,
+		).Scan(&corr.ID, &corr.LabResultID, &corr.CorrectedBy, &corr.Reason, &corr.Value, &corr.Unit, &corr.ReferenceRange, &corr.Flag, &corr.Note, &corr.CorrectedAt)
+		if err != nil {
+			return err
+		}
+		return s.Audit.Append(ctx, tx, actor, audit.Event{
+			ChainID:      r.patientID,
+			Action:       "lab_result.correct",
+			ResourceType: "lab_result",
+			ResourceID:   resultID,
+			Outcome:      "allow",
+			Basis:        accessBasis(actor),
+		})
+	})
+	return corr, err
 }

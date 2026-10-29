@@ -1,5 +1,116 @@
 # Hygeia — Design System
 
+## Pembaruan tema · 14 Oktober 2026
+
+Referensi terbaru adalah **Hygeia Healthcare Brand Showcase** yang diberikan pemilik project. Ketentuan tema berikut menggantikan warna, penggunaan logo, dan tema login pada versi 0.1 di bawah. Pola consent, audit, dan status tetap berlaku.
+
+- **Identitas:** terang, bersih, lembut; navy untuk teks, biru untuk aksi, cyan sebagai aksen pita brand. Gradien dipakai pada area pengenalan brand dan panel sambutan, bukan di belakang teks tombol.
+- **Palet brand:** blue `#0066FF`, cyan `#00D6FF`, light blue `#E8F3FF`, soft white `#F8FBFF`, navy `#0A1F44`, slate `#334155`, gray `#94A3B8`, light gray `#E5E7EB`. Gray adalah dekorasi; teks pendukung memakai slate untuk kontras.
+- **Token aplikasi:** `--bg`, `--surface`, `--text`, `--primary`, `--primary-hover`, `--muted`, `--border`, dan `--ribbon` di `frontend/src/routes/layout.css`. Warna aksi hover `#0052CC`; garis pemisah kebiruan `#D7E5F5`.
+- **Tipografi:** Plus Jakarta Sans, mempertahankan bentuk bulat yang selaras dengan logo. Judul utama tebal; isi dan label tetap tenang dan terbaca.
+- **Logo:** gunakan varian latar terang `frontend/static/logo-light.png`, dengan rasio asli dan `object-fit: contain`. Batang H berwarna biru es agar terbaca di permukaan putih; pita biru–cyan dan plus dipertahankan. Aset PNG memakai transparansi dan juga menjadi favicon. Aset asli `frontend/static/logo.webp` tetap disimpan sebagai referensi. Jangan gunakan referensi lama `/logo.png`.
+- **Login:** dua panel terang pada desktop, pengenalan brand di kiri dan form di kanan. Pita melengkung mengikuti motif koneksi pada referensi. Di ponsel panel ditumpuk dan ilustrasi besar disembunyikan agar form mudah dicapai.
+- **Dashboard:** sidebar putih, pilihan aktif biru muda, panel sambutan lembut, dan identitas akun pada permukaan putih. Semua peran memakai token yang sama.
+- **Bentuk dan interaksi:** tombol bulat mengikuti referensi, input radius 12 px, panel besar 24–28 px. Target sentuh minimum 44 px, fokus keyboard 3 px, tanpa animasi dekoratif berulang. Hierarki berasal dari ruang dan warna; bayangan tidak diperlukan.
+- **Cakupan:** tema pada halaman yang sudah tersedia. Tidak menambahkan klaim AI, statistik kesehatan, fitur, atau data pasien dari mockup brand.
+
+### Dashboard pasien
+
+Pembaruan 25 Oktober 2026 mengikuti referensi dashboard yang diberikan pemilik:
+kerangka aplikasi berbatas jelas, sidebar dengan ikon dan pilihan aktif biru,
+header akun ringkas, serta daftar workflow dalam satu panel dengan pemisah baris.
+Kerangka ini berlaku untuk kelima peran.
+Ringkasan pasien mengganti banner dan profil besar dengan strip empat indikator,
+tabel perawatan, panel pemeriksaan/resep, aktivitas terbaru, persetujuan tertunda,
+dan identitas/akses. Indikator dihitung dari maksimal enam entri per kategori,
+bukan total seluruh data. Kegagalan memuat ditampilkan sebagai tanda pisah, bukan nol.
+Tindakan pada ringkasan mengarah ke workflow yang sudah tersedia; tidak ada data
+klinis, statistik, kalender janji, atau fitur pencarian yang dibuat sebagai dekorasi.
+Catatan susunan panel sebelumnya di bawah adalah riwayat desain.
+
+Penyempurnaan UI/UX Pro Max: teks informasi dibesarkan menjadi 14 px pada desktop
+dan paragraf utama menjadi 16 px di ponsel; metadata minimal 12 px. Warna dashboard
+memakai token semantik untuk teks, permukaan, garis, aksi, dan status. Panel putih
+dipisahkan oleh latar netral. Menu ponsel memakai tombol Menu/Tutup menu dengan
+`aria-expanded` dan susunan dua kolom; tautan menutup menu setelah dipilih.
+Daftar perawatan ponsel menampilkan dokter, organisasi, status, serta tautan dalam
+susunan vertikal sehingga tidak perlu menggeser tabel. Desktop mempertahankan
+tabel. Ada skip link menuju main, target kontrol utama 44 px, feedback tekan,
+dan penghormatan prefers-reduced-motion. Tema aplikasi tetap terang sesuai brand.
+
+Verifikasi revisi ini: Svelte check tanpa error/warning, build, serta keempat suite
+E2E lulus. Pemeriksaan dashboard mencakup lebar 320/375/390/768/1024/1440 px,
+landscape 812×375, pembesaran teks 200%, reduced motion, tombol menu via keyboard,
+Escape/fokus kembali, daftar kosong/error/retry, dan navigasi persetujuan.
+Pasangan token teks/status yang diperiksa memiliki rasio kontras 5,88:1 atau lebih.
+
+### Ruang dokter dan laboratorium
+
+Halaman awal dokter kini menampilkan **Ringkasan dokter** dengan perawatan pasien,
+undangan tertunda, metadata hasil lab, dan resep terbaru. Tautan pekerjaan menuju
+workflow undangan, permintaan/hasil lab, serta penulisan resep. Angka dihitung
+dari enam entri terbaru setiap kategori, bukan jumlah keseluruhan. Nilai hasil
+klinis tetap hanya dibaca lewat detail yang menjalankan otorisasi backend.
+
+Halaman awal lab menampilkan **Ringkasan laboratorium**: maksimal 12 penugasan,
+dikelompokkan menjadi terkirim, diterima, dan sedang diperiksa. Ringkasan hanya
+meminta endpoint daftar penugasan lab dan memakai proyeksi kode pasien, kode/nama
+tes, serta status. Lab masuk ke antrean untuk menerima, memulai, dan mengirim
+hasil; koreksi memakai ID hasil dari tanda terima. Tidak ada navigasi undangan
+pasien, penulisan resep, atau pembacaan nilai hasil pada ringkasan lab.
+
+Kedua ringkasan memiliki kondisi memuat, kosong, error, dan retry. Perubahan
+ini tidak memperluas izin backend. URL peran lain tetap dialihkan server ke
+ruang sesuai akun. Workflow sebelumnya tersedia melalui menu masing-masing.
+
+Verifikasi: `role-overviews.e2e.mjs` memeriksa data dan menu masing-masing peran,
+endpoint yang diminta, tautan workflow, pengalihan URL lintas peran, kondisi
+kosong/error/retry, serta lebar 1440/1024/768/375/320 px. Suite provider tetap
+menguji antrean sampai penyerahan dan koreksi hasil. Smoke browser dengan akun
+demo dokter/lab pada API lokal juga lulus untuk halaman awal, daftar berotorisasi,
+dan pengalihan URL peran lain; smoke ini tidak membuat data klinis.
+
+Dashboard pasien kini memakai susunan panel dengan perawatan dan informasi klinis di kolom utama, serta profil ringkas dan konteks akses di kolom samping. Pada ponsel panel ditumpuk dan menu bagian dapat digeser mendatar. Halaman staf mempertahankan tampilan sebelumnya.
+
+Penyederhanaan terbaru memakai background pita yang dikirim pemilik project (`frontend/static/brand-ribbon.jpg`) hanya pada banner ringkas. Lapisan putih CSS menjaga keterbacaan teks, terutama di ponsel. Logo besar pada banner dan panel akses terpisah dihilangkan; informasi akses digabungkan ke profil. Panel data tetap putih dengan garis netral, radius 14 px, dan ikon tanpa ubin dekoratif. Panel pemeriksaan/resep mengikuti tinggi kontennya sendiri.
+
+Komponen `frontend/src/lib/PatientDashboard.svelte` membaca maksimal 6 episode, 6 permintaan lab, 6 resep, dan 8 kejadian timeline dari API sesi pasien. Batas ditampilkan pada panel; angka tersebut bukan total data. Filter timeline berlaku hanya pada kejadian yang sudah dimuat. Status resource ditampilkan dari respons terkini, sedangkan timeline ditandai sebagai riwayat kejadian.
+
+Data dimuat sesudah halaman aktif, dengan indikator memuat per panel. Kegagalan satu endpoint tidak menghalangi panel lain. Tombol Perbarui data dan Coba lagi memuat ulang semua panel, dan sesi yang berakhir menghasilkan pesan masuk kembali. Detail obat memakai disclosure native yang dapat dioperasikan dengan keyboard.
+
+Tahap ini hanya menambahkan pembacaan dan presentasi data. Persetujuan undangan/lab/resep, pemilihan apotek, detail nilai hasil lab, dan pagination lanjutan belum disediakan melalui dashboard. Tidak ada grafik vital, skor kesehatan, foto pasien buatan, atau saran obat otomatis.
+
+Verifikasi UI: `node tests/dashboard-theme.e2e.mjs` dari `frontend`. Test memakai API fixture lokal terpisah dengan identitas dan data sintetis, memeriksa detail obat, filter, tautan bagian, kondisi kosong/gagal, pemulihan, serta lebar 1440/1024/768/390/320 px. Test ini tidak memverifikasi backend atau otorisasi klinis.
+
+### Catatan versi 0.1
+
+### Landing page
+
+Route `/` kini menampilkan landing page publik dan tidak lagi mengalihkan ke login. Hero mengikuti showcase: judul navy–biru lebih ringkas di kiri, aset ponsel dari pemilik project di kanan, serta CTA bulat menuju `/login`. Navigasi mengarah ke bagian Fitur, Cara kerja, dan Tentang yang tersedia di halaman.
+
+Hero memakai `frontend/static/hero-phone-front.png`, salinan aset **Minimal Blue Smartphone Mockup.png** yang dipilih pemilik project. `HeroPhone.svelte` menempatkan ilustrasi UI HTML/CSS pada layar depan dengan skala proporsional. SVG clip mengikuti sudut layar; mask menyisakan area kamera asli dan padding atas menjaga teks di bawahnya. Ponsel berasal dari aset gambar, bukan bingkai device yang digambar ulang. Crop memakai SVG viewBox tanpa mengubah file sumber; mask melunakkan sisi gambar agar menyatu dengan latar. Aset perspektif sebelumnya (`hero-phone.jpg`) tetap disimpan sebagai referensi. Background pita lama tidak lagi dipakai di hero, tetapi tetap dipakai di banner dashboard.
+
+Ilustrasi layar tidak interaktif dan diberi label tidak memuat data pasien. Panel preview bertab sebelumnya diganti oleh visual ponsel. Tidak ada klaim AI, skor kesehatan, statistik, atau testimoni yang tidak didukung implementasi. Bagian Tentang menyebut status prototipe dan data sintetis. Halaman login menyediakan tautan kembali ke beranda.
+
+Test `tests/dashboard-theme.e2e.mjs` juga memeriksa HTTP 200 untuk landing publik dan aset ponsel, tautan bagian, CTA login, target sentuh, serta layout pada tujuh ukuran layar.
+
+Landing dilengkapi konten peran pasien/dokter/lab/apotek yang dapat dipilih, perjalanan lengkap lima tahap sampai apotek, penjelasan cakupan serta durasi izin data, dan lima FAQ yang spesifik terhadap Hygeia. FAQ membedakan timeline perawatan dari riwayat akses, menjelaskan asal resep, dan menyatakan batas antarmuka demo. Form persetujuan dan pilihan apotek tidak diklaim sudah tersedia pada web. Hero dan aset ponsel dipertahankan.
+
+Pilihan peran memakai tombol dengan `aria-pressed` dan pengumuman konten melalui `aria-live`. FAQ memakai disclosure native `details/summary`. Test memeriksa keempat peran serta buka/tutup kelima FAQ dengan keyboard, tautan footer tambahan, dan layout responsif; aset baru tidak diperlukan.
+
+### Revisi Hallmark dan antislop
+
+Brand showcase tetap menjadi sumber arah visual: biru–cyan, navy, Plus Jakarta Sans, dan pita koneksi. Revisi dibatasi pada landing page, dengan audiens pasien dan penyedia layanan, tujuan masuk ke ruang perawatan, dan nada tenang serta informatif.
+
+- Preview diratakan tanpa rotasi, bayangan, header brand kedua, atau label mengambang. Tab tetap interaktif; ilustrasi tetap dilabeli bukan data pasien.
+- Kontainer preview hanya satu lapisan. Teks hero menjelaskan alur dokter–lab dan resep–apotek, menggantikan slogan berulang.
+- Label kecil pada setiap bagian dihapus. Bagian cara kerja menjadi daftar urutan vertikal di samping penjelasan persetujuan, bukan tiga kolom kartu.
+- Warna landing memakai token bernama. Gradien hanya meredam background pita yang diberikan pemilik, agar teks terbaca. Tidak ada gradien teks, efek glow, atau animasi berulang.
+- Target sentuh minimum 44 px, kontrol satu baris, track grid `minmax(0, 1fr)`, dan clipping horizontal hanya pada landing. Pengujian landing diperluas ke 1440/1024/768/414/390/375/320 px.
+- Tidak diperlukan aset raster baru. Ikon UI memakai komponen SVG yang sama. Jika foto atau ilustrasi tambahan diperlukan pada revisi berikutnya, pemilik project akan membuat aset dari brief yang disepakati.
+
+Self-review Hallmark (skala 1–5): philosophy 4, hierarchy 4, execution 4, specificity 4, restraint 4, variety 3. Variasi struktur masih dibatasi kebutuhan mempertahankan komposisi showcase. Build dan lint file yang disentuh lolos; browser memverifikasi tab, tautan bagian, CTA login, layout, serta target sentuh. Test dashboard memakai fixture sintetis dan tidak membuktikan integrasi backend produksi.
+
 | | |
 |---|---|
 | Versi | 0.1 |

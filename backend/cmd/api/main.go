@@ -12,18 +12,23 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/mrizalbasri/Hygeia/backend/internal/admin"
 	"github.com/mrizalbasri/Hygeia/backend/internal/audit"
 	"github.com/mrizalbasri/Hygeia/backend/internal/auth"
+	"github.com/mrizalbasri/Hygeia/backend/internal/breakglass"
 	"github.com/mrizalbasri/Hygeia/backend/internal/care"
+	"github.com/mrizalbasri/Hygeia/backend/internal/carepass"
 	"github.com/mrizalbasri/Hygeia/backend/internal/config"
 	"github.com/mrizalbasri/Hygeia/backend/internal/consent"
 	"github.com/mrizalbasri/Hygeia/backend/internal/database"
 	"github.com/mrizalbasri/Hygeia/backend/internal/httpapi"
 	"github.com/mrizalbasri/Hygeia/backend/internal/laboratory"
+	"github.com/mrizalbasri/Hygeia/backend/internal/notification"
+	"github.com/mrizalbasri/Hygeia/backend/internal/patientprofile"
 	"github.com/mrizalbasri/Hygeia/backend/internal/prescription"
 )
 
@@ -50,7 +55,20 @@ func run(logger *slog.Logger) error {
 	if hmac.Equal(auditKey, csrfKey) {
 		return errors.New("AUDIT_HMAC_KEY must be different from SESSION_SECRET")
 	}
-	auditWriter, err := audit.NewWriter(auditKey)
+	var fallbackKeys [][]byte
+	if prev := os.Getenv("AUDIT_HMAC_KEY_PREVIOUS"); prev != "" {
+		for _, value := range strings.Split(prev, ",") {
+			pk, err := hex.DecodeString(strings.TrimSpace(value))
+			if err != nil || len(pk) != 32 {
+				return errors.New("AUDIT_HMAC_KEY_PREVIOUS must contain comma-separated 64-character hexadecimal keys")
+			}
+			if hmac.Equal(pk, csrfKey) {
+				return errors.New("historical audit keys must be different from SESSION_SECRET")
+			}
+			fallbackKeys = append(fallbackKeys, pk)
+		}
+	}
+	auditWriter, err := audit.NewWriter(auditKey, fallbackKeys...)
 	if err != nil {
 		return err
 	}
@@ -59,6 +77,10 @@ func run(logger *slog.Logger) error {
 		return errors.New("APP_ENV must be development, test, or production")
 	}
 	secure := appEnv == "production"
+	shareBase, err := carepass.ShareBase(os.Getenv("PUBLIC_APP_URL"), secure)
+	if err != nil {
+		return err
+	}
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -77,6 +99,29 @@ func run(logger *slog.Logger) error {
 	}
 	defer pool.Close()
 	logger.Info("connected to PostgreSQL")
+
+	// Background session cleanup every hour.
+	go func() {
+		authStore := auth.Store{DB: pool}
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				cleanupCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+				n, err := authStore.DeleteExpired(cleanupCtx)
+				cancel()
+				if err != nil {
+					logger.Error("session cleanup failed", "error", err)
+				} else if n > 0 {
+					logger.Info("expired sessions cleaned", "count", n)
+				}
+			}
+		}
+	}()
+
 	authHandler, err := auth.NewHandler(auth.Store{DB: pool}, secure)
 	if err != nil {
 		return errors.New("could not initialize authentication")
@@ -86,10 +131,14 @@ func run(logger *slog.Logger) error {
 	consentHandler := &consent.Handler{Service: &consent.Service{DB: pool, Audit: auditWriter}, Logger: logger}
 	prescriptionHandler := &prescription.Handler{Service: &prescription.Service{DB: pool, Audit: auditWriter}, Logger: logger}
 	adminHandler := &admin.Handler{Service: &admin.Service{DB: pool}}
+	notificationHandler := &notification.Handler{Service: &notification.Service{DB: pool}, Shutdown: ctx}
+	breakGlassHandler := &breakglass.Handler{Service: &breakglass.Service{DB: pool, Audit: auditWriter}}
+	carePassHandler := &carepass.Handler{Service: &carepass.Service{DB: pool, Audit: auditWriter, ShareBaseURL: shareBase}}
+	profileHandler := &patientprofile.Handler{Service: &patientprofile.Service{DB: pool, Audit: auditWriter}}
 
 	server := &http.Server{
 		Addr:              net.JoinHostPort("", port),
-		Handler:           httpapi.NewAuthenticatedHandler(logger, pool.Ping, authHandler, csrfKey, secure, careHandler.Register, labHandler.Register, consentHandler.Register, prescriptionHandler.Register, adminHandler.Register),
+		Handler:           httpapi.NewAuthenticatedHandler(logger, pool.Ping, authHandler, csrfKey, secure, careHandler.Register, labHandler.Register, consentHandler.Register, prescriptionHandler.Register, adminHandler.Register, notificationHandler.Register, breakGlassHandler.Register, carePassHandler.Register, profileHandler.Register),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,
