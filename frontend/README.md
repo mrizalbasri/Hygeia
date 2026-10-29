@@ -55,7 +55,7 @@ pnpm test:e2e
 ```
 
 Tes E2E fixture menjalankan server sendiri dan menutupnya setelah selesai.
-`pnpm test:e2e` menjalankan kelima suite fixture secara berurutan. `pnpm test`
+`pnpm test:e2e` menjalankan keenam suite fixture secara berurutan. `pnpm test`
 sudah mengaktifkan mode run; jangan menambahkan `-- --run` lagi.
 Tes mencakup landing/mobile, persetujuan/penolakan, CSRF, konflik 409, detail 403,
 503/retry, cursor bigint, API 401 dan SSE session-ended, lifecycle antrean
@@ -95,6 +95,21 @@ Registrasi pasien tersedia di `/register`, melalui tautan pada halaman masuk.
 Formulir meminta identitas, tahun lahir, jenis kelamin, dan konfirmasi password;
 setelah berhasil, sesi langsung mengarah ke dashboard pasien. Kesalahan API
 ditampilkan tanpa menghapus isian, dan pengiriman ganda diblokir selama proses.
+
+Pasien dapat mengubah data diri melalui menu **Profil saya**. Email dan nomor
+pasien hanya baca; tanggal lahir lengkap serta kontak bersifat opsional.
+Data lama yang hanya berisi tahun lahir tidak diubah menjadi tanggal buatan.
+Lihat [kontrak profil pasien](../docs/15-PATIENT-PROFILE.md).
+
+Tes profil dengan API/PostgreSQL nyata (database sementara saja, bukan produksi):
+
+```powershell
+$env:HYGEIA_LIVE_TEST='1'
+node tests/patient-profile.live.mjs
+```
+
+Jalankan migrasi 11 dan API di `127.0.0.1:8080` terlebih dahulu. Tes membuat akun
+pasien sintetis baru, menyimpan profil, memuat ulang, dan memeriksa logout.
 
 Petugas lab membuka menu **Koreksi hasil** atau tautan **Koreksi hasil ini** pada
 tanda terima. Masukkan ID hasil (bukan ID permintaan), alasan, serta seluruh

@@ -13,6 +13,11 @@
 	import { page } from '$app/state';
 	import type { PageProps } from './$types';
 	let { data }: PageProps = $props();
+	let savedName = $state<{ userID: string; name: string } | null>(null);
+	let displayName = $derived(
+		savedName?.userID === data.user.id ? savedName.name : data.user.full_name
+	);
+	let workspaceUser = $derived({ ...data.user, full_name: displayName });
 	let role = $derived(roles[data.user.role]);
 	let clinical = $derived(data.user.role === 'patient' || data.user.role === 'doctor');
 	let isLab = $derived(data.user.role === 'lab');
@@ -43,7 +48,7 @@
 	let mobileMenuOpen = $state(false);
 	let menuToggle: HTMLButtonElement | undefined = $state();
 	let initials = $derived(
-		data.user.full_name
+		displayName
 			.split(' ')
 			.filter(Boolean)
 			.slice(0, 2)
@@ -126,7 +131,7 @@
 		<div class="sidebar-bottom">
 			<div class="sidebar-account">
 				<span class="account-avatar" aria-hidden="true">{initials}</span>
-				<div><strong>{data.user.full_name}</strong><span>{role.label}</span></div>
+				<div><strong>{displayName}</strong><span>{role.label}</span></div>
 			</div>
 			<div class="sidebar-note">
 				<span class="notice-dot" aria-hidden="true"></span>Demo · data sintetis
@@ -148,8 +153,7 @@
 					><WorkspaceIcon name="notifications" /></a
 				>
 				<div class="header-account">
-					<span class="account-avatar" aria-hidden="true">{initials}</span><span
-						>{data.user.full_name}</span
+					<span class="account-avatar" aria-hidden="true">{initials}</span><span>{displayName}</span
 					>
 				</div>
 				<button class="button secondary logout-button" onclick={logout} disabled={pending || !ready}
@@ -165,7 +169,10 @@
 		>
 			{#if clinical}
 				{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
-				<ClinicalWorkspace user={data.user} />
+				<ClinicalWorkspace
+					user={workspaceUser}
+					onProfileSaved={(name) => (savedName = { userID: data.user.id, name })}
+				/>
 			{:else if isLab}
 				{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
 				<LaboratoryWorkspace user={data.user} />

@@ -14,8 +14,9 @@
 	import History from './History.svelte';
 	import Notifications from './Notifications.svelte';
 	import ClinicalDetail from './ClinicalDetail.svelte';
+	import PatientProfile from './PatientProfile.svelte';
 	import './workflow.css';
-	let { user }: { user: User } = $props();
+	let { user, onProfileSaved }: { user: User; onProfileSaved: (name: string) => void } = $props();
 	let doctor = $derived(user.role === 'doctor');
 	let menu = $derived(doctor ? menus.doctor : menus.patient);
 	let view = $derived(
@@ -66,7 +67,9 @@
 	}
 </script>
 
-{#if !doctor && view !== 'overview'}<section class="wf-overview-note patient-reference-note">
+{#if !doctor && view !== 'overview' && view !== 'profile'}<section
+		class="wf-overview-note patient-reference-note"
+	>
 		<h2>Kode pasien Anda</h2>
 		{#if user.patient_ref}<code>{user.patient_ref}</code>
 			<p>Berikan kode ini kepada dokter yang akan mengundang Anda dalam perawatan.</p>{:else}<p>
@@ -75,7 +78,7 @@
 	</section>{/if}
 {#if view === 'overview'}
 	{#if doctor}<DoctorOverview {user} />{:else}<PatientDashboard {user} />{/if}
-{:else}<div class="wf-heading">
+{:else if view !== 'profile'}<div class="wf-heading">
 		<p class="muted">{user.full_name}</p>
 		<h1>{doctor ? 'Ruang Perawatan' : 'Perjalanan Saya'}</h1>
 		<h2>{menu.find(([id]) => id === view)?.[1]}</h2>
@@ -97,7 +100,8 @@
 				audit={view === 'audit'}
 				{revision}
 			/>
-		{:else if view === 'notifications'}<Notifications {run} {busy} {revision} />{/if}
+		{:else if view === 'notifications'}<Notifications {run} {busy} {revision} />
+		{:else if view === 'profile' && !doctor}<PatientProfile onSaved={onProfileSaved} />{/if}
 	</fieldset>{/key}
 {#if detail}{#key `${detail.kind}-${detail.id}`}<ClinicalDetail
 			kind={detail.kind}

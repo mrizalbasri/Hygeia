@@ -266,7 +266,8 @@ func Summaries(ctx context.Context, tx pgx.Tx, chain string, limit, offset int) 
 	defer rows.Close()
 	result := make([]Summary, 0)
 	descriptions := map[string]string{
-		"carepass.create": "membuat CarePass", "carepass.redeem": "menebus CarePass", "carepass.revoke": "mencabut CarePass",
+		"patient.profile_update": "memperbarui profil pasien",
+		"carepass.create":        "membuat CarePass", "carepass.redeem": "menebus CarePass", "carepass.revoke": "mencabut CarePass",
 		"break_glass.start": "memulai akses darurat", "break_glass.resources": "melihat daftar resource darurat", "break_glass.review": "meninjau akses darurat",
 		"episode.invite": "mengirim undangan perawatan", "episode.accept": "menerima undangan perawatan",
 		"episode.reject": "menolak undangan perawatan", "episode.end": "mengakhiri episode perawatan",
