@@ -78,6 +78,10 @@ try {
 		const send = (json, status = 200) => route.fulfill({ status, json });
 		if (path.endsWith('/auth/csrf')) return send({ csrf_token: 'profile-csrf' });
 		if (path.endsWith('/me')) return send({ user });
+		if (path.endsWith('/notifications/unread-count')) return send({ unread_count: 0 });
+		if (path.endsWith('/notifications')) return send({ notifications: [] });
+		if (path.endsWith('/notifications/stream'))
+			return route.fulfill({ contentType: 'text/event-stream', body: ': fixture\n\n' });
 		if (path.endsWith('/me/profile')) {
 			if (req.method() === 'GET') {
 				if (getStatus !== 200)
