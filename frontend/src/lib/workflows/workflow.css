@@ -225,6 +225,9 @@
 	opacity: 0.45;
 }
 .wf-dialog {
+	position: fixed;
+	inset: 0;
+	margin: auto;
 	width: min(680px, calc(100% - 32px));
 	max-height: calc(100dvh - 48px);
 	border: 1px solid var(--border);
@@ -233,16 +236,33 @@
 	color: var(--text);
 	background: var(--surface);
 	overflow-y: auto;
+	overscroll-behavior: contain;
+	box-shadow: 0 24px 80px rgb(10 31 68 / 24%);
 }
 .wf-dialog::backdrop {
-	background: rgba(10, 31, 68, 0.45);
+	background: rgba(10, 24, 44, 0.48);
+	backdrop-filter: blur(4px);
 }
 .wf-dialog header {
+	position: sticky;
+	top: -28px;
+	z-index: 1;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 16px;
-	margin-bottom: 24px;
+	flex-wrap: wrap;
+	margin: -28px -28px 24px;
+	padding: 24px 28px;
+	background: var(--surface);
+	border-bottom: 1px solid var(--border);
+}
+html:has(.wf-dialog[open]),
+body:has(.wf-dialog[open]) {
+	overflow: hidden;
+}
+.dashboard-workspace:has(.wf-dialog[open]) .dashboard-content {
+	overflow: hidden;
 }
 .wf-facts {
 	display: grid;
@@ -286,6 +306,11 @@
 	.wf-dialog {
 		padding: 20px;
 	}
+	.wf-dialog header {
+		top: -20px;
+		margin: -20px -20px 20px;
+		padding: 20px;
+	}
 	.wf-pagination {
 		justify-content: flex-start;
 	}
@@ -301,6 +326,11 @@
 }
 
 @media print {
+	html:has(.wf-dialog[open]),
+	body:has(.wf-dialog[open]),
+	.dashboard-workspace:has(.wf-dialog[open]) .dashboard-content {
+		overflow: visible;
+	}
 	body * {
 		visibility: hidden;
 	}
@@ -331,6 +361,9 @@
 		display: none !important;
 	}
 	.wf-dialog header {
+		position: static;
+		margin: 0 0 20px;
+		padding: 0 0 12px;
 		border-bottom: 2px solid #333;
 		padding-bottom: 12px;
 		margin-bottom: 20px;

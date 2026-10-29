@@ -68,7 +68,7 @@ const prescriptionSelect = `SELECT r.id::text,r.episode_id::text,p.patient_ref,r
     COALESCE((SELECT jsonb_agg(jsonb_build_object('medication_name',i.medication_name,'dosage',i.dosage,
         'instructions',i.instructions,'quantity',i.quantity) ORDER BY i.position)
         FROM prescription_items i WHERE i.prescription_id=r.id),'[]'::jsonb),
-    r.status,r.created_at,r.updated_at,r.approved_at,r.completed_at,r.cancelled_at,r.cancellation_reason,
+    r.status,r.created_at,r.updated_at,r.approved_at,r.completed_at,r.cancelled_at,r.cancellation_reason,r.cancellation_note,
     p.id::text,e.doctor_id::text,p.user_id::text,e.organization_id::text,e.status
     FROM prescriptions r JOIN care_episodes e ON e.id=r.episode_id JOIN patients p ON p.id=e.patient_id
     LEFT JOIN organizations o ON o.id=r.pharmacy_org_id `
@@ -76,7 +76,7 @@ const prescriptionSelect = `SELECT r.id::text,r.episode_id::text,p.patient_ref,r
 func scanPrescription(row interface{ Scan(...any) error }) (Prescription, error) {
 	var p Prescription
 	err := row.Scan(&p.ID, &p.EpisodeID, &p.PatientRef, &p.PharmacyOrgID, &p.PharmacyName, &p.Items,
-		&p.Status, &p.CreatedAt, &p.UpdatedAt, &p.ApprovedAt, &p.CompletedAt, &p.CancelledAt, &p.CancellationReason,
+		&p.Status, &p.CreatedAt, &p.UpdatedAt, &p.ApprovedAt, &p.CompletedAt, &p.CancelledAt, &p.CancellationReason, &p.CancellationNote,
 		&p.patientID, &p.episode.DoctorID, &p.episode.PatientUserID, &p.episode.OrganizationID, &p.episode.Status)
 	return p, err
 }

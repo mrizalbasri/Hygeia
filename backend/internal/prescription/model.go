@@ -38,6 +38,7 @@ type Prescription struct {
 	CompletedAt        *time.Time `json:"completed_at"`
 	CancelledAt        *time.Time `json:"cancelled_at"`
 	CancellationReason *string    `json:"cancellation_reason"`
+	CancellationNote   *string    `json:"cancellation_note"`
 	patientID          string
 	episode            policy.Episode
 }

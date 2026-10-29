@@ -1,4 +1,5 @@
 allowBuilds:
-  esbuild: true
-engineStrict: true
-storeDir: .pnpm-store
+  browser-tabs-lock: false
+  core-js: false
+# These postinstall scripts only print informational/sponsorship banners.
+# Neither package needs a build step for its browser runtime.

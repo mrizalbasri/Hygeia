@@ -86,14 +86,28 @@ func integrationFixture(t *testing.T) *fixture {
 	if err != nil {
 		t.Fatal("parse test database")
 	}
-	config.ConnConfig.RuntimeParams["search_path"] = schema
+	// Set session state explicitly: remote proxies may ignore startup search_path.
+	// Verify isolation before any migration or fixture writes can reach public.
+	config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		if _, err := conn.Exec(ctx, "SELECT set_config('search_path', $1, false)", quoted); err != nil {
+			return err
+		}
+		var current string
+		if err := conn.QueryRow(ctx, "SELECT current_schema()").Scan(&current); err != nil {
+			return err
+		}
+		if current != schema {
+			return errors.New("test connection did not select the isolated schema")
+		}
+		return nil
+	}
 	config.MaxConns = 8
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	for _, file := range []string{"000001_identity.up.sql", "000002_care_audit.up.sql", "000003_laboratory.up.sql", "000004_consents.up.sql", "000005_prescriptions.up.sql", "000006_admin.up.sql", "000007_notifications.up.sql", "000008_break_glass.up.sql", "000009_carepasses.up.sql", "000010_lab_corrections.up.sql"} {
+	for _, file := range []string{"000001_identity.up.sql", "000002_care_audit.up.sql", "000003_laboratory.up.sql", "000004_consents.up.sql", "000005_prescriptions.up.sql", "000006_admin.up.sql", "000007_notifications.up.sql", "000008_break_glass.up.sql", "000009_carepasses.up.sql", "000010_lab_corrections.up.sql", "000011_workflow_cancellation.up.sql", "000012_clerk_identity.up.sql"} {
 		sql, err := db.Migrations.ReadFile("migrations/" + file)
 		if err != nil {
 			t.Fatal(err)

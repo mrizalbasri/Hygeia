@@ -2,6 +2,38 @@
 
 [README proyek](../README.md) · [Dokumentasi](../docs/README.md) · [Kontribusi](../CONTRIBUTING.md)
 
+## Clerk dan keamanan akun
+
+Konfigurasi lokal sekarang memakai aplikasi Clerk development Hygeia:
+`AUTH_PROVIDER=clerk` dan `PUBLIC_CLERK_PUBLISHABLE_KEY` di `frontend/.env`.
+Backend memiliki secret key sendiri; jangan salin secret ke frontend.
+`src/env.ts` mendeklarasikan env memakai API SvelteKit 3.
+
+Halaman `/login` dan `/register` memakai komponen resmi ClerkJS. Pemulihan
+password dan verifikasi email mengikuti flow Clerk. `/account/security`
+menampilkan UserProfile untuk email/password, MFA/recovery codes, serta sesi
+aktif. Admin/staf harus mengaktifkan MFA, lalu masuk dengan faktor kedua sebelum
+dashboard dapat dibuka. Tombol **Keamanan akun** tersedia pada dashboard Clerk.
+
+Identitas Clerk tidak menentukan role klinis. Backend memberikan akun pasien
+untuk pengguna baru dan mempertahankan role/organisasi/consent di database
+Hygeia. Email yang sudah ada memerlukan penautan eksplisit oleh pengelola.
+Administrator pertama perlu diprovisikan dengan perintah operator pada
+[panduan backend](../backend/README.md#autentikasi-clerk). Akun yang sudah masuk
+sebagai pasien harus masih kosong sebelum dapat dialihkan. Tidak ada akun manusia yang otomatis diberi
+peran admin oleh integrasi ini.
+
+Mode lokal tetap tersedia hanya untuk development/test sintetis:
+tetapkan `AUTH_PROVIDER=local` pada frontend **dan** backend. Fixture E2E
+memilih mode ini secara eksplisit. Tes live klinis lama menggunakan password
+demo lokal dan tidak boleh dijalankan ke API mode Clerk.
+
+Untuk memeriksa tampilan Clerk development tanpa mengirim email atau membuat
+akun pengguna, jalankan `HYGEIA_CLERK_LIVE=1 node tests/clerk-ui.live.js` dengan
+API lokal aktif. Skrip memakai port 5188, yang perlu masuk authorized parties.
+Tes ini hanya membuktikan UI login/registrasi dimuat; bukan bukti login/reset/MFA
+akun nyata atau instance produksi sudah lolos.
+
 ## Teknologi
 
 | Bagian            | Stack                               |
@@ -41,7 +73,9 @@ pnpm dev
 
 Buka port yang dilaporkan Vite. Akun demo tersedia dari seed backend; password
 berasal dari `backend/.env`. Jangan commit file `.env` atau data pasien.
-Production membutuhkan adapter deployment dan reverse proxy HTTPS satu origin.
+Jalur `/api/v1` diteruskan oleh route server SvelteKit ke `API_BASE_URL`, baik
+pada development maupun Vercel. Adapter Vercel dipilih ketika `VERCEL` tersedia;
+build lokal memakai adapter-auto. Lihat [panduan deployment](../docs/DOCKER-VERCEL-SETUP-2026-10-29.md).
 
 ## Pengujian
 
@@ -55,7 +89,9 @@ pnpm test:e2e
 ```
 
 Tes E2E fixture menjalankan server sendiri dan menutupnya setelah selesai.
-`pnpm test:e2e` menjalankan kelima suite fixture secara berurutan. `pnpm test`
+`pnpm test:e2e` menjalankan enam suite fixture secara berurutan, termasuk
+pagination organisasi setelah hasil ke-100, pemilihan sesuai tipe, reset peran,
+dan pemulihan kegagalan pemuatan. `pnpm test`
 sudah mengaktifkan mode run; jangan menambahkan `-- --run` lagi.
 Tes mencakup landing/mobile, persetujuan/penolakan, CSRF, konflik 409, detail 403,
 503/retry, cursor bigint, API 401 dan SSE session-ended, lifecycle antrean
@@ -80,12 +116,33 @@ untuk reproduksi audit; tidak mengubah akun lama. Jangan jalankan pada produksi.
 Kesiapan server pada tes live juga diperiksa melalui polling HTTP, sehingga
 tidak bergantung pada keluaran URL Vite di terminal.
 
+Setelah menjalankan `go run ./cmd/seed-workflow` dari backend, periksa demo lima
+peran dengan data tersimpan pada API lokal:
+
+```powershell
+$env:HYGEIA_LIVE_TEST='1'
+pnpm test:demo
+```
+
+Tes ini membuka kelima akun `pilot.*@demo.hygeia.test` pada desktop 1440 px dan
+mobile 390 px, memeriksa data API, timeline, integritas audit, dan tombol salin
+kode pasien. Tes memakai port 5186, membuat sesi dan audit baca, tetapi tidak
+mereset atau memajukan perawatan. Screenshot ada di `.test-results/pilot-stage1/`.
+Password akun harus masih sama dengan `DEMO_PASSWORD` lokal. Jalankan server
+demo, check/build, unit, dan suite browser bergiliran agar generated files
+SvelteKit tidak ditulis oleh beberapa proses sekaligus.
+
 Modul shared berada di `src/lib/workflows`: `api.ts` untuk CSRF/error/cursor,
 `PagedList` untuk pagination, `DirectoryPicker` untuk direktori, `ClinicalDetail`
-untuk pembacaan berotorisasi, serta `Notifications` untuk inbox/SSE. Setiap mutasi
-memuat ulang daftar; server tetap menentukan izin dan status.
+untuk pembacaan berotorisasi, serta `Notifications` untuk inbox. `realtime.ts`
+membagi satu koneksi SSE per tab ke daftar, ringkasan, dan detail terbuka.
+Event/reconnect memicu pembacaan ulang API berotorisasi; fallback 30 detik dan
+kembali ke tab juga memperbarui data. Backend memeriksa event setiap 2 detik.
+Pembaruan daftar mempertahankan draft form untuk baris yang masih tersedia.
+Setiap mutasi memuat ulang daftar; server tetap menentukan izin dan status.
 
-Detail hasil lab menampilkan hasil awal dan riwayat koreksi dari API. Tombol
+Detail hasil lab menampilkan koreksi terbaru sebagai nilai utama dan memisahkan
+hasil awal/seluruh koreksi pada Riwayat hasil dan koreksi. Tombol
 Cetak / PDF pada detail hasil/resep membuka dialog cetak browser; pilih Simpan
 sebagai PDF untuk mengekspor. Tombol hanya aktif setelah data berhasil dimuat.
 Mode cetak menyembunyikan navigasi dan kontrol, serta menampilkan seluruh isi
@@ -96,8 +153,20 @@ Formulir meminta identitas, tahun lahir, jenis kelamin, dan konfirmasi password;
 setelah berhasil, sesi langsung mengarah ke dashboard pasien. Kesalahan API
 ditampilkan tanpa menghapus isian, dan pengiriman ganda diblokir selama proses.
 
-Petugas lab membuka menu **Koreksi hasil** atau tautan **Koreksi hasil ini** pada
-tanda terima. Masukkan ID hasil (bukan ID permintaan), alasan, serta seluruh
+Petugas lab membuka menu **Tanda terima hasil** untuk menemukan kembali hasil
+yang sudah diserahkan, lalu **Koreksi hasil ini** mengisi ID otomatis. Daftar ini
+hanya metadata dan tetap tersedia setelah reload. Menu **Koreksi hasil** juga
+menerima ID hasil (bukan ID permintaan), alasan, serta seluruh
 nilai pengganti. Formulir tidak mengambil hasil lama melalui GET; hak baca lab
 tetap mengikuti kebijakan backend. Setelah berhasil, tampil ID koreksi dan
 isian klinis dibersihkan. Kesalahan mempertahankan isian untuk diperbaiki.
+
+Pasien/dokter dapat membuka **Batalkan layanan**, sedangkan lab/apotek memakai
+**Tidak dapat melayani**, lalu mengisi alasan dan mengonfirmasi. Dokter dapat
+mengajukan pemeriksaan pengganti atau resep baru dengan detail sebelumnya.
+Pasien menyetujui kembali lab dan memilih kembali apotek pada permintaan baru.
+Tidak ada penugasan penyedia baru yang langsung aktif tanpa persetujuan.
+
+`node tests/workflow-recovery.e2e.js` memeriksa pembatalan, penggantian,
+pemulihan tanda terima, koreksi realtime, draft yang tetap utuh,
+reconnect/retry/fallback, dan pembersihan stream. Suite ini masuk `pnpm test:e2e`.

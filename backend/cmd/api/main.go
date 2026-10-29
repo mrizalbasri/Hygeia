@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
@@ -41,6 +42,10 @@ func main() {
 
 func run(logger *slog.Logger) error {
 	if err := config.LoadEnv(); err != nil {
+		return err
+	}
+	trustedProxies, err := auth.ParseTrustedProxyCIDRs(os.Getenv("TRUSTED_PROXY_CIDRS"))
+	if err != nil {
 		return err
 	}
 	csrfKey, err := hex.DecodeString(os.Getenv("SESSION_SECRET"))
@@ -76,6 +81,30 @@ func run(logger *slog.Logger) error {
 		return errors.New("APP_ENV must be development, test, or production")
 	}
 	secure := appEnv == "production"
+	provider := os.Getenv("AUTH_PROVIDER")
+	if provider == "" && !secure {
+		provider = "local"
+	}
+	if provider != "local" && provider != "clerk" {
+		return errors.New("AUTH_PROVIDER must be local or clerk")
+	}
+	if secure && provider != "clerk" {
+		return errors.New("production requires AUTH_PROVIDER=clerk")
+	}
+	if secure {
+		pk := os.Getenv("CLERK_PUBLISHABLE_KEY")
+		if pk == "" {
+			pk = os.Getenv("VITE_CLERK_PUBLISHABLE_KEY")
+		}
+		if !strings.HasPrefix(pk, "pk_live_") || !strings.HasPrefix(os.Getenv("CLERK_SECRET_KEY"), "sk_live_") {
+			return errors.New("production requires Clerk live instance keys")
+		}
+		for _, origin := range strings.Split(os.Getenv("CLERK_AUTHORIZED_PARTIES"), ",") {
+			if !strings.HasPrefix(strings.TrimSpace(origin), "https://") {
+				return errors.New("production Clerk authorized parties must use HTTPS")
+			}
+		}
+	}
 	shareBase, err := carepass.ShareBase(os.Getenv("PUBLIC_APP_URL"), secure)
 	if err != nil {
 		return err
@@ -121,22 +150,43 @@ func run(logger *slog.Logger) error {
 		}
 	}()
 
-	authHandler, err := auth.NewHandler(auth.Store{DB: pool}, secure)
+	authHandler, err := auth.NewHandler(auth.Store{DB: pool}, secure, trustedProxies...)
 	if err != nil {
 		return errors.New("could not initialize authentication")
+	}
+	frontendURL, _ := url.Parse(shareBase) // ShareBase validated the origin above.
+	authHandler.CSRFTrustedOrigins = []string{frontendURL.Host}
+	var clerkGate *auth.ClerkGate
+	if provider == "clerk" {
+		publishable := os.Getenv("CLERK_PUBLISHABLE_KEY")
+		if publishable == "" {
+			publishable = os.Getenv("VITE_CLERK_PUBLISHABLE_KEY")
+		}
+		clerkGate, err = auth.NewClerkGate(auth.Store{DB: pool}, publishable, os.Getenv("CLERK_SECRET_KEY"), strings.Split(os.Getenv("CLERK_AUTHORIZED_PARTIES"), ","), csrfKey)
+		if err != nil {
+			return err
+		}
+		authHandler.UseClerk(clerkGate)
 	}
 	careHandler := &care.Handler{Service: &care.Service{DB: pool, Audit: auditWriter}, Logger: logger}
 	labHandler := &laboratory.Handler{Service: &laboratory.Service{DB: pool, Audit: auditWriter}, Logger: logger}
 	consentHandler := &consent.Handler{Service: &consent.Service{DB: pool, Audit: auditWriter}, Logger: logger}
 	prescriptionHandler := &prescription.Handler{Service: &prescription.Service{DB: pool, Audit: auditWriter}, Logger: logger}
 	adminHandler := &admin.Handler{Service: &admin.Service{DB: pool}}
+	if clerkGate != nil {
+		adminHandler.Service.ClerkUsers = clerkGate.LookupUser
+	}
 	notificationHandler := &notification.Handler{Service: &notification.Service{DB: pool}, Shutdown: ctx}
 	breakGlassHandler := &breakglass.Handler{Service: &breakglass.Service{DB: pool, Audit: auditWriter}}
 	carePassHandler := &carepass.Handler{Service: &carepass.Service{DB: pool, Audit: auditWriter, ShareBaseURL: shareBase}}
+	var api http.Handler = httpapi.NewAuthenticatedHandler(logger, pool.Ping, authHandler, csrfKey, secure, careHandler.Register, labHandler.Register, consentHandler.Register, prescriptionHandler.Register, adminHandler.Register, notificationHandler.Register, breakGlassHandler.Register, carePassHandler.Register)
+	if clerkGate != nil {
+		api = clerkGate.Wrap(api)
+	}
 
 	server := &http.Server{
 		Addr:              net.JoinHostPort("", port),
-		Handler:           httpapi.NewAuthenticatedHandler(logger, pool.Ping, authHandler, csrfKey, secure, careHandler.Register, labHandler.Register, consentHandler.Register, prescriptionHandler.Register, adminHandler.Register, notificationHandler.Register, breakGlassHandler.Register, carePassHandler.Register),
+		Handler:           api,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,

@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
+	import { subscribeRealtime } from './realtime.js';
 	import PagedList from './PagedList.svelte';
-	import { api, dateText, parseJSON, type Run, type Entry } from './api.js';
+	import { api, dateText, type Run } from './api.js';
 	let { run, busy, revision }: { run: Run; busy: boolean; revision: number } = $props();
 	let updates = $state(0),
 		unread = $state<number | null>(null),
@@ -21,43 +20,12 @@
 		void current;
 		void count();
 	});
-	onMount(() => {
-		let source: EventSource | null = null,
-			disposed = false;
-		void api<{ notifications: Entry[] }>('/notifications?limit=1')
-			.then((data) => {
-				if (disposed) return;
-				const last = data.notifications[0]?.id || '0';
-				source = new EventSource(
-					`/api/v1/notifications/stream?after_id=${encodeURIComponent(String(last))}`
-				);
-				source.onopen = () => (connection = 'Pembaruan langsung aktif');
-				source.onerror = () =>
-					(connection =
-						'Koneksi terputus; mencoba menyambungkan kembali. Anda juga dapat memuat ulang daftar.');
-				source.addEventListener('notification', (event) => {
-					try {
-						parseJSON((event as MessageEvent).data);
-						updates++;
-					} catch {
-						connection = 'Pembaruan tidak dapat dibaca. Muat ulang daftar.';
-					}
-				});
-				source.addEventListener(
-					'unavailable',
-					() => (connection = 'Layanan pembaruan terganggu; mencoba menyambungkan kembali.')
-				);
-				source.addEventListener('session-ended', () => {
-					source?.close();
-					void goto(resolve('/login'), { replace: true, refreshAll: true });
-				});
-			})
-			.catch(() => (connection = 'Pembaruan langsung belum tersedia. Gunakan muat ulang daftar.'));
-		return () => {
-			disposed = true;
-			source?.close();
-		};
-	});
+	onMount(() =>
+		subscribeRealtime(
+			() => updates++,
+			(status) => (connection = status)
+		)
+	);
 </script>
 
 <p>

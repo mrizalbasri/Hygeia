@@ -29,6 +29,30 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/prescriptions/{id}", h.get)
 	mux.HandleFunc("POST /api/v1/prescriptions/{id}/approval", h.approval)
 	mux.HandleFunc("PATCH /api/v1/prescriptions/{id}/status", h.status)
+	mux.HandleFunc("POST /api/v1/prescriptions/{id}/cancel", h.cancel)
+}
+
+func (h *Handler) cancel(w http.ResponseWriter, r *http.Request) {
+	id, ok := resourceID(w, r)
+	if !ok {
+		return
+	}
+	var input struct {
+		Reason string `json:"reason"`
+	}
+	if !decode(w, r, &input) {
+		return
+	}
+	input.Reason = strings.TrimSpace(input.Reason)
+	if !validText(input.Reason, 5, 500) {
+		invalid(w)
+		return
+	}
+	if err := h.Service.Cancel(r.Context(), auth.SessionHash(r), id, input.Reason); err != nil {
+		h.respondError(w, r, err)
+		return
+	}
+	jsonResponse(w, 200, map[string]string{"status": "cancelled"})
 }
 
 func jsonResponse(w http.ResponseWriter, status int, body any) {

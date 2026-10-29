@@ -730,6 +730,36 @@ body:has(.dashboard-workspace) {
 		padding-bottom: max(24px, env(safe-area-inset-bottom));
 	}
 }
+@media screen and (min-width: 761px) {
+	.workspace.dashboard-workspace {
+		height: calc(100dvh - 40px);
+		min-height: 0;
+		overflow: hidden;
+	}
+	.dashboard-workspace .sidebar {
+		position: static;
+		height: 100%;
+		flex-shrink: 0;
+	}
+	.dashboard-workspace .workspace-main {
+		min-height: 0;
+		overflow: hidden;
+	}
+	.dashboard-workspace .workspace-header {
+		flex-shrink: 0;
+	}
+	.dashboard-workspace .dashboard-content {
+		min-height: 0;
+		overflow-y: auto;
+		scrollbar-gutter: stable;
+		overscroll-behavior-y: contain;
+	}
+}
+@media screen and (min-width: 761px) and (max-width: 1100px) {
+	.workspace.dashboard-workspace {
+		height: calc(100dvh - 24px);
+	}
+}
 @media print {
 	.workspace.dashboard-workspace {
 		margin: 0;

@@ -53,6 +53,7 @@ type milestone struct{ kind, resourceType, description string }
 // Explicit allowlist: new audit actions never become patient milestones by
 // accident. These records were committed atomically with their business action.
 var milestones = map[string]milestone{
+	"lab_result.correct":      {"laboratory", "lab_result", "mengirim koreksi hasil laboratorium Anda"},
 	"episode.invite":          {"episode", "care_episode", "mengundang Anda ke episode perawatan"},
 	"episode.accept":          {"episode", "care_episode", "menerima undangan perawatan"},
 	"episode.reject":          {"episode", "care_episode", "menolak undangan perawatan"},

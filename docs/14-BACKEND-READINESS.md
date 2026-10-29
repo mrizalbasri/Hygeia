@@ -136,6 +136,8 @@ berlaku per proses; kebijakan trusted proxy/distribusi belum ditetapkan.
 API registrasi pasien, koreksi hasil append-only, rotasi kunci audit, serta
 cetak/PDF hasil dan resep tersedia. Formulir web registrasi pasien tersedia pada
 `/register`; petugas lab mengirim koreksi melalui menu Koreksi hasil atau tanda
-terima. Reset password, verifikasi email, MFA, unggahan PDF, dan
-checkpoint audit eksternal belum tersedia. Detail kelanjutan dan pengujian ada
+terima. Reset password, verifikasi email, dan MFA kini ditangani integrasi
+[Clerk development](CLERK-INTEGRATION-2026-10-29.md); alur akun manusia dan instance
+produksi tetap memerlukan pengujian. Unggahan PDF dan checkpoint audit eksternal
+belum tersedia. Detail kelanjutan dan pengujian ada
 di [completion spec](superpowers/specs/2026-10-22-hygeia-completion-design.md).

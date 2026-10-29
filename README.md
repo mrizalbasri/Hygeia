@@ -70,7 +70,7 @@ pagination, serta cetak detail hasil dan resep ke PDF melalui dialog cetak brows
 | Tampilan              | HTML, CSS, Tailwind CSS 4                    | Layout responsif dan tema antarmuka.                                    |
 | Backend               | Go 1.26, `net/http`                          | REST API, otorisasi, workflow klinis, dan SSE.                          |
 | Database              | SQL, PostgreSQL, `pgx/v5`, `golang-migrate`  | Penyimpanan relasional, transaksi, connection pool, dan migrasi.        |
-| Autentikasi dan audit | Argon2id, cookie sesi, CSRF, HMAC-SHA256     | Hash password, proteksi mutasi, dan verifikasi rantai audit per pasien. |
+| Autentikasi dan audit | Clerk, Argon2id lokal, CSRF, HMAC-SHA256     | Identitas Clerk, mode demo lokal, proteksi mutasi, dan verifikasi audit. |
 | Pengujian             | Go testing, Vitest, Playwright               | Pengujian backend, komponen, dan alur browser.                          |
 | Tooling               | Vite 8, pnpm, Docker Compose, GitHub Actions | Development, build, container backend, dan CI.                          |
 
@@ -177,6 +177,12 @@ berada di `/login`, registrasi pasien di `/register`. Browser memakai proxy
 
 ### Akun demo
 
+Akun berikut hanya untuk `AUTH_PROVIDER=local` pada frontend dan backend
+development/test. Konfigurasi lokal proyek kini memakai Clerk development;
+akun demo beserta datanya tetap disimpan, tetapi password lokal tidak diterima
+pada mode Clerk. Lihat [panduan Clerk](docs/CLERK-INTEGRATION-2026-10-29.md) untuk
+login dan penautan akun. Clerk tidak meminta SMTP mandiri pada integrasi ini.
+
 | Peran        | Email                     |
 | ------------ | ------------------------- |
 | Pasien       | `aulia@demo.hygeia.test`  |
@@ -246,8 +252,9 @@ Hygeia/
 
 Gunakan data sintetis untuk development dan demonstrasi. Deployment produksi
 memerlukan adapter frontend yang sesuai, HTTPS, proxy satu origin, dan konfigurasi
-database serta operasional yang ditinjau. Verifikasi email, reset password, MFA,
-dan checkpoint audit eksternal belum tersedia. Rantai HMAC tidak melindungi dari
+database serta operasional yang ditinjau. Verifikasi email, reset password, dan
+MFA tersedia melalui integrasi Clerk development; validasi akun manusia dan
+instance produksi masih diperlukan. Checkpoint audit eksternal belum tersedia. Rantai HMAC tidak melindungi dari
 pihak yang menguasai database sekaligus semua kunci audit.
 
 File `.env`, kredensial, cache, dan hasil build tidak disertakan dalam Git.

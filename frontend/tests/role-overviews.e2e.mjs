@@ -44,7 +44,11 @@ const vite = spawn(
 		'--strictPort'
 	],
 	{
-		env: { ...process.env, API_BASE_URL: `http://127.0.0.1:${fixture.address().port}` },
+		env: {
+			...process.env,
+			AUTH_PROVIDER: 'local',
+			API_BASE_URL: `http://127.0.0.1:${fixture.address().port}`
+		},
 		stdio: ['ignore', 'pipe', 'pipe'],
 		windowsHide: true
 	}
@@ -72,6 +76,9 @@ try {
 			const request = route.request();
 			const path = new URL(request.url()).pathname.replace('/api/v1', '');
 			assert.equal(request.method(), 'GET', 'overview only reads existing resources');
+			if (path === '/notifications') return route.fulfill({ json: { notifications: [] } });
+			if (path === '/notifications/stream')
+				return route.fulfill({ contentType: 'text/event-stream', body: ': connected\n\n' });
 			calls.push(path);
 			if (path === '/me') return route.fulfill({ json: { user: users[role] } });
 			if (mode === 'error')

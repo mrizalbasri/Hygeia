@@ -15,7 +15,7 @@
 		const value = formText(data, 'value');
 		error = '';
 		confirmation = null;
-		if (reason.length < 5 || !value) {
+		if (Array.from(reason).length < 5 || Array.from(reason).length > 500 || !value) {
 			error = 'Isi alasan koreksi minimal 5 karakter dan nilai hasil pengganti.';
 			return;
 		}
@@ -46,8 +46,8 @@
 <section class="wf-form-panel" aria-labelledby="correction-title">
 	<h2 id="correction-title">Tambahkan koreksi hasil</h2>
 	<p class="muted">
-		Gunakan ID hasil dari tanda terima laboratorium Anda. Koreksi menambahkan versi pengganti
-		beserta alasannya; hasil awal dan riwayat koreksi tetap tersimpan.
+		Gunakan ID hasil dari daftar Tanda terima hasil laboratorium Anda. Koreksi menambahkan versi
+		pengganti beserta alasannya; hasil awal dan riwayat koreksi tetap tersimpan.
 	</p>
 	<p class="muted">
 		Hasil yang telah dikirim tidak dapat dibaca kembali oleh laboratorium. Periksa ID dan isi
@@ -77,13 +77,8 @@
 		>
 		<p id="result-id-hint">Salin ID tanda terima hasil, bukan ID permintaan pemeriksaan.</p>
 		<label
-			>Alasan koreksi<textarea
-				name="reason"
-				required
-				minlength="5"
-				maxlength="500"
-				rows="3"
-				disabled={pending}></textarea></label
+			>Alasan koreksi<textarea name="reason" required maxlength="1000" rows="3" disabled={pending}
+			></textarea></label
 		>
 		<label
 			>Nilai hasil pengganti<input

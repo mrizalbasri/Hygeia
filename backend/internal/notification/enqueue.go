@@ -8,7 +8,8 @@ import (
 )
 
 var messages = map[string]string{
-	"carepass.redeem": "CarePass Anda telah ditebus dokter.", "carepass.revoke": "CarePass telah dicabut pasien.",
+	"lab_result.correct": "Hasil laboratorium telah dikoreksi. Tinjau hasil terbaru sebelum melanjutkan perawatan.",
+	"carepass.redeem":    "CarePass Anda telah ditebus dokter.", "carepass.revoke": "CarePass telah dicabut pasien.",
 	"break_glass.start": "Akses darurat terhadap data Anda dimulai selama 60 menit.", "break_glass.review": "Akses darurat telah ditinjau administrator.",
 	"episode.invite": "Ada undangan perawatan baru.", "episode.accept": "Undangan perawatan diterima.", "episode.reject": "Undangan perawatan ditolak.", "episode.end": "Episode perawatan diakhiri.",
 	"lab_request.create": "Permintaan laboratorium menunggu persetujuan pasien.", "lab_request.approve": "Pengiriman permintaan laboratorium disetujui.", "lab_request.reject": "Pengiriman permintaan laboratorium ditolak.", "lab_request.cancel": "Permintaan laboratorium dibatalkan.", "lab_request.accepted": "Laboratorium menerima permintaan.", "lab_request.in_progress": "Pemeriksaan laboratorium sedang diproses.", "lab_result.submit": "Hasil laboratorium tersedia.",
@@ -39,16 +40,16 @@ func Enqueue(ctx context.Context, tx pgx.Tx, chain string, seq int64, actorID, a
 		recipients += ` UNION SELECT doctor_user_id FROM break_glass_sessions WHERE id=$2`
 	case strings.HasPrefix(action, "episode."):
 		recipients += ` UNION SELECT doctor_id FROM care_episodes WHERE id=$2`
-	case strings.HasPrefix(action, "lab_request.") || action == "lab_result.submit":
+	case strings.HasPrefix(action, "lab_request.") || action == "lab_result.submit" || action == "lab_result.correct":
 		requestCondition := `r.id=$2`
-		if action == "lab_result.submit" {
+		if action == "lab_result.submit" || action == "lab_result.correct" {
 			requestCondition = `r.id=(SELECT lab_request_id FROM lab_results WHERE id=$2)`
 		}
 		recipients += ` UNION SELECT e.doctor_id FROM lab_requests r JOIN care_episodes e ON e.id=r.episode_id JOIN organization_memberships d ON d.user_id=e.doctor_id AND d.organization_id=e.organization_id AND d.staff_role='doctor' WHERE e.status='active' AND ` + requestCondition
-		recipients += ` UNION SELECT m.user_id FROM lab_requests r JOIN organization_memberships m ON m.organization_id=r.lab_org_id AND m.staff_role='lab' WHERE ` + requestCondition + ` AND r.status IN ('sent','accepted','in_progress')`
+		recipients += ` UNION SELECT m.user_id FROM lab_requests r JOIN organization_memberships m ON m.organization_id=r.lab_org_id AND m.staff_role='lab' WHERE ` + requestCondition + ` AND (r.status IN ('sent','accepted','in_progress') OR (r.status='cancelled' AND r.approved_at IS NOT NULL AND $4='lab_request.cancel'))`
 	case strings.HasPrefix(action, "prescription."):
 		recipients += ` UNION SELECT e.doctor_id FROM prescriptions r JOIN care_episodes e ON e.id=r.episode_id JOIN organization_memberships d ON d.user_id=e.doctor_id AND d.organization_id=e.organization_id AND d.staff_role='doctor' WHERE r.id=$2 AND e.status='active'
-   UNION SELECT m.user_id FROM prescriptions r JOIN organization_memberships m ON m.organization_id=r.pharmacy_org_id AND m.staff_role='pharmacy' WHERE r.id=$2 AND r.status IN ('sent','accepted','preparing','ready')`
+   UNION SELECT m.user_id FROM prescriptions r JOIN organization_memberships m ON m.organization_id=r.pharmacy_org_id AND m.staff_role='pharmacy' WHERE r.id=$2 AND (r.status IN ('sent','accepted','preparing','ready') OR (r.status='cancelled' AND r.approved_at IS NOT NULL AND $4='prescription.cancel'))`
 	case strings.HasPrefix(action, "consent."):
 		recipients += ` UNION SELECT grantee_user_id FROM consents WHERE id=$2`
 	}

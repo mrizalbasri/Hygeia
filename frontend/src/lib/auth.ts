@@ -49,9 +49,16 @@ export async function authMutation(path: 'login' | 'logout' | 'register', body: 
 	const csrf = await fetch('/api/v1/auth/csrf', { cache: 'no-store' });
 	if (!csrf.ok) throw new Error('Layanan belum dapat dihubungi. Coba lagi sebentar.');
 	const { csrf_token } = (await csrf.json()) as { csrf_token: string };
-	return fetch(`/api/v1/auth/${path}`, {
+	const response = await fetch(`/api/v1/auth/${path}`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf_token },
 		body: JSON.stringify(body)
 	});
+	if (path === 'logout' && response.ok) {
+		const { authConfig, loadClerk } = await import('./clerk.js');
+		const config = await authConfig();
+		if (config.provider === 'clerk' && config.publishable_key)
+			await (await loadClerk(config.publishable_key)).signOut();
+	}
+	return response;
 }

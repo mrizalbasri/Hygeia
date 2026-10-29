@@ -20,7 +20,7 @@ const vite = spawn(
 	process.execPath,
 	['node_modules/vite/bin/vite.js', 'dev', '--host', '127.0.0.1', '--port', '5186', '--strictPort'],
 	{
-		env: { ...process.env, API_BASE_URL: 'http://127.0.0.1:18086' },
+		env: { ...process.env, AUTH_PROVIDER: 'local', API_BASE_URL: 'http://127.0.0.1:18086' },
 		stdio: ['ignore', 'pipe', 'pipe'],
 		windowsHide: true
 	}
@@ -49,6 +49,7 @@ try {
 		cursors = [];
 	page.on('pageerror', (error) => errors.push(error.message));
 	const id = '11111111-1111-4111-8111-111111111111';
+	let sessionEnded = false;
 	let conflict = false,
 		forbidden = false,
 		unavailable = false,
@@ -96,6 +97,7 @@ try {
 							id,
 							test_name: 'Hasil sintetis',
 							value: 'Nilai rahasia fixture',
+							flag: 'normal',
 							unit: 'demo',
 							corrections: [
 								{
@@ -130,7 +132,7 @@ try {
 		if (path === '/notifications/stream')
 			return route.fulfill({
 				contentType: 'text/event-stream',
-				body: 'event: session-ended\ndata: {}\n\n'
+				body: sessionEnded ? 'event: session-ended\ndata: {}\n\n' : ': connected\n\n'
 			});
 		if (unauthenticated) return send({ error: { message: 'Sesi berakhir' } }, 401);
 		if (unavailable) return send({ error: { message: 'Layanan terganggu' } }, 503);
@@ -173,7 +175,12 @@ try {
 	rows.lab_requests[0] = { id, test_name: 'Tes sintetis', status: 'completed', result_id: id };
 	await view('labs');
 	await page.getByRole('button', { name: 'Buka hasil pemeriksaan', exact: true }).click();
-	await page.getByRole('dialog').getByText('Nilai rahasia fixture demo', { exact: true }).waitFor();
+	await page.getByRole('dialog').getByText('Nilai koreksi fixture demo', { exact: true }).waitFor();
+	await page.getByRole('dialog').getByText('Riwayat hasil dan koreksi', { exact: true }).click();
+	await page
+		.getByRole('dialog')
+		.getByText(/Nilai rahasia fixture demo/)
+		.waitFor();
 	await page
 		.getByRole('dialog')
 		.getByText('Nilai koreksi fixture demo · normal', { exact: true })
@@ -183,7 +190,7 @@ try {
 	assert.equal(
 		await page
 			.getByRole('dialog')
-			.getByText('Nilai rahasia fixture demo', { exact: true })
+			.getByText(/Nilai rahasia fixture demo/)
 			.isVisible(),
 		true
 	);
@@ -216,6 +223,7 @@ try {
 	console.log(
 		'PASS forbidden detail clears old payload, unavailable/retry, lossless cursor pagination'
 	);
+	sessionEnded = true;
 	await page.goto(`${base}/dashboard/patient?view=notifications`);
 	await page.waitForURL('**/login');
 	unauthenticated = true;

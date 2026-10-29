@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"net/mail"
+	"net/netip"
 	"strings"
 	"sync"
 	"time"
@@ -31,22 +32,51 @@ type loginLimit struct {
 }
 
 type Handler struct {
-	store     Store
-	secure    bool
-	dummyHash string
-	mu        sync.Mutex
-	limits    map[string]*loginLimit
+	// Explicit frontend hosts permitted to submit CSRF-protected API requests.
+	CSRFTrustedOrigins []string
+	store              Store
+	secure             bool
+	dummyHash          string
+	mu                 sync.Mutex
+	limits             map[string]*loginLimit
+	trustedProxies     []netip.Prefix
+	external           *ClerkGate
 }
 
-func NewHandler(store Store, secure bool) (*Handler, error) {
+func (h *Handler) UseClerk(gate *ClerkGate) { h.external = gate }
+
+func NewHandler(store Store, secure bool, trustedProxies ...netip.Prefix) (*Handler, error) {
 	dummy, err := HashPassword("hygeia-dummy-password-never-a-user")
 	if err != nil {
 		return nil, err
 	}
-	return &Handler{store: store, secure: secure, dummyHash: dummy, limits: make(map[string]*loginLimit)}, nil
+	return &Handler{store: store, secure: secure, dummyHash: dummy, limits: make(map[string]*loginLimit), trustedProxies: append([]netip.Prefix(nil), trustedProxies...)}, nil
 }
 
 func (h *Handler) Register(mux *http.ServeMux) {
+	mux.HandleFunc("GET /api/v1/auth/config", func(w http.ResponseWriter, r *http.Request) {
+		if h.external != nil {
+			writeJSON(w, 200, map[string]string{"provider": "clerk", "publishable_key": h.external.PublishableKey})
+			return
+		}
+		writeJSON(w, 200, map[string]string{"provider": "local"})
+	})
+	mux.HandleFunc("GET /api/v1/auth/status", func(w http.ResponseWriter, r *http.Request) {
+		u, err := h.store.UserBySession(r.Context(), SessionHash(r))
+		if err != nil {
+			if h.external != nil {
+				h.external.failure(w, err)
+			} else {
+				writeError(w, 401, "unauthenticated", "Silakan masuk.")
+			}
+			return
+		}
+		required := false
+		if external, ok := r.Context().Value(clerkContextKey{}).(*clerkRequest); ok {
+			required = external.requiresMFA
+		}
+		writeJSON(w, 200, map[string]any{"user": u, "requires_mfa": required})
+	})
 	mux.HandleFunc("GET /api/v1/auth/csrf", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"csrf_token": csrf.Token(r)})
 	})
@@ -56,10 +86,11 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/me", h.Me)
 }
 
-func Protect(next http.Handler, key []byte, secure bool) http.Handler {
+func Protect(next http.Handler, key []byte, secure bool, trustedOrigins ...string) http.Handler {
 	protected := csrf.Protect(key,
 		csrf.CookieName("hygeia_csrf"), csrf.Path("/"), csrf.Secure(secure),
 		csrf.HttpOnly(true), csrf.SameSite(csrf.SameSiteLaxMode),
+		csrf.TrustedOrigins(trustedOrigins),
 		csrf.ErrorHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusForbidden, "csrf_invalid", "Permintaan tidak valid. Muat ulang halaman dan coba lagi.")
 		})),
@@ -100,7 +131,7 @@ func (h *Handler) allowLogin(remoteAddr string) bool {
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
-	if !h.allowLogin(r.RemoteAddr) {
+	if !h.allowLogin(h.clientIP(r)) {
 		w.Header().Set("Retry-After", "12")
 		writeError(w, http.StatusTooManyRequests, "rate_limited", "Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.")
 		return
@@ -179,7 +210,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) RegisterPatient(w http.ResponseWriter, r *http.Request) {
-	if !h.allowLogin(r.RemoteAddr) {
+	if !h.allowLogin(h.clientIP(r)) {
 		w.Header().Set("Retry-After", "12")
 		writeError(w, http.StatusTooManyRequests, "rate_limited", "Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.")
 		return
@@ -279,6 +310,14 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	if h.external != nil {
+		if current, ok := r.Context().Value(clerkContextKey{}).(*clerkRequest); ok {
+			if err := h.external.Provider.Revoke(r.Context(), current.sessionID); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				h.external.failure(w, err)
+				return
+			}
+		}
+	}
 	if cookie, err := r.Cookie(sessionCookie); err == nil {
 		hash := sha256.Sum256([]byte(cookie.Value))
 		if err := h.store.DeleteSession(r.Context(), hash[:]); err != nil {

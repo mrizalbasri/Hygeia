@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { subscribeRealtime } from './realtime.js';
 	import { resolve } from '$app/paths';
 	import type { User } from '../auth.js';
 	import WorkspaceIcon from '../WorkspaceIcon.svelte';
@@ -14,6 +15,7 @@
 		{ label: 'Diterima lab', status: 'accepted' },
 		{ label: 'Sedang diperiksa', status: 'in_progress' }
 	]);
+	onMount(() => subscribeRealtime(() => void refresh()));
 	async function refresh() {
 		if (refreshing) return;
 		controller?.abort();

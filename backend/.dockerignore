@@ -1,6 +1,5 @@
 .env
 .env.*
-!.env.example
 bin
 coverage.out
 .git
@@ -8,3 +7,5 @@ coverage.out
 *.tar
 *.tar.gz
 *.tgz
+node_modules
+.test-results

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import PagedList from './PagedList.svelte';
 	import DirectoryPicker from './DirectoryPicker.svelte';
+	import CancelAction from './CancelAction.svelte';
 	import { formText, statusText, dateText, type Run, type Medication } from './api.js';
 	let {
 		doctor,
@@ -155,5 +156,33 @@
 							pharmacy = '';
 						}}>Batal memilih</button
 					>
-				</form>{/if}{/if}{/snippet}
+				</form>{/if}{/if}
+		{#if item.status !== 'completed' && item.status !== 'cancelled'}
+			<CancelAction path={`/prescriptions/${item.id}`} {run} {busy} />
+		{/if}
+		{#if item.status === 'cancelled'}
+			{#if item.cancellation_note}<p>Alasan pembatalan: {item.cancellation_note}</p>{/if}
+			{#if doctor}<details>
+					<summary>Terbitkan resep pengganti</summary>
+					<p>
+						Terbitkan resep baru dengan obat dan aturan pakai yang sama. Pasien memilih apotek dan
+						menyetujui kembali. Untuk mengubah obat, gunakan form Buat resep.
+					</p>
+					<button
+						class="button primary"
+						disabled={busy}
+						onclick={() => {
+							if (
+								confirm(
+									'Terbitkan resep pengganti? Tinjau obat dan aturan pakai terlebih dahulu. Pasien perlu menyetujui kembali.'
+								)
+							)
+								void run('/prescriptions', { episode_id: item.episode_id, items: item.items });
+						}}>Terbitkan resep baru untuk dipilih apoteknya</button
+					>
+				</details>{:else}<p>
+					Hubungi dokter untuk resep pengganti. Apotek dapat dipilih kembali pada resep baru.
+				</p>{/if}
+		{/if}
+	{/snippet}
 </PagedList>

@@ -18,6 +18,7 @@
 	import Notifications from './Notifications.svelte';
 	import LabCorrections from './LabCorrections.svelte';
 	import LaboratoryOverview from './LaboratoryOverview.svelte';
+	import CancelAction from './CancelAction.svelte';
 	import './workflow.css';
 
 	let { user }: { user: User } = $props();
@@ -255,6 +256,31 @@
 							</button>
 						{/if}
 					</div>
+					<CancelAction path={`/lab-requests/${item.id}`} {run} {busy} provider />
+				{/snippet}
+			</PagedList>
+		{:else if view === 'receipts'}
+			<p>
+				Tanda terima tersimpan untuk laboratorium Anda. Daftar ini tidak menampilkan isi hasil
+				pemeriksaan.
+			</p>
+			<PagedList
+				path="/lab-receipts"
+				listKey="receipts"
+				{revision}
+				empty="Belum ada tanda terima hasil."
+			>
+				{#snippet children(item)}
+					<h2>{item.test_name}</h2>
+					<p>Kode pasien: {item.patient_ref} · {dateText(item.submitted_at)}</p>
+					<p>ID hasil: <code>{item.id}</code></p>
+					<a
+						class="button secondary"
+						href={resolve(
+							`/dashboard/[role]?view=corrections&result_id=${encodeURIComponent(item.id)}`,
+							{ role: 'lab' }
+						)}>Koreksi hasil ini</a
+					>
 				{/snippet}
 			</PagedList>
 		{:else if view === 'corrections'}

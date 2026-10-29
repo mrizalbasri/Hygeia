@@ -68,6 +68,61 @@ CarePass memerlukan `PUBLIC_APP_URL` berupa origin aplikasi, default development
 `http://localhost:5173`. Production wajib origin HTTPS. QR mengarah ke route
 frontend `/carepass#token=...`; UI scan/redeem harus memakai kontrak backend.
 
+## Proxy tepercaya dan kuota autentikasi
+
+`TRUSTED_PROXY_CIDRS` opsional, berupa daftar CIDR dipisahkan koma. Nilai kosong
+mengabaikan semua header forwarding. CIDR tidak valid menghentikan startup
+sebelum koneksi database. Gunakan rentang sesempit mungkin milik proxy aktual,
+misalnya `127.0.0.1/32,::1/128` untuk proxy loopback; jangan menyalin contoh tanpa
+memeriksa alamat socket yang benar-benar dilihat API.
+
+Hanya socket dari proxy tepercaya yang boleh memasok `X-Forwarded-For` (XFF).
+Seluruh alamat divalidasi, lalu rantai ditelusuri dari kanan ke alamat pertama
+yang tidak tepercaya. IPv4-mapped IPv6 dinormalisasi ke IPv4. Header kosong,
+rusak, atau seluruh rantai tepercaya kembali ke IP socket. Login dan registrasi
+tetap berbagi burst 5 percobaan per identitas, isi ulang 1 token per 12 detik.
+
+Proxy wajib menimpa XFF dari pengunjung atau menyaringnya sebelum menyusun
+rantai dari alamat koneksi yang diamati. Pada proxy append-only yang membiarkan
+prefix rusak, fallback socket menjadi kuota bersama tambahan; klien dapat
+menghabiskan kuota klien dan kuota fallback. Ini konsekuensi kebijakan fallback,
+bukan pemisahan kuota penuh untuk header rusak. Tanpa XFF yang benar, pengguna
+tetap berbagi kuota socket. Vite development saat ini tidak otomatis
+menghasilkan XFF. Konfigurasi produksi harus diuji pada topologi hosting tujuan.
+
+## Demo perjalanan sintetis
+
+Perintah terpisah dari seed akun lama, dijalankan dari folder `backend` setelah
+migrasi:
+
+```powershell
+go run ./cmd/seed-workflow
+```
+
+Hanya `APP_ENV=development` atau `test` yang diterima. `DATABASE_URL`,
+`DEMO_PASSWORD` (12–1024 byte), dan `AUDIT_HMAC_KEY` dibaca dari konfigurasi lokal.
+Perintah membuat lima akun terpisah:
+
+| Peran  | Email                             |
+| ------ | --------------------------------- |
+| Pasien | `pilot.patient@demo.hygeia.test`  |
+| Dokter | `pilot.doctor@demo.hygeia.test`   |
+| Lab    | `pilot.lab@demo.hygeia.test`      |
+| Apotek | `pilot.pharmacy@demo.hygeia.test` |
+| Admin  | `pilot.admin@demo.hygeia.test`    |
+
+Kode pasien `HYG-PILOT-SYNTH-001`. Contoh berisi satu perawatan aktif, satu hasil
+lab, satu antrean pemeriksaan, satu resep siap diambil, satu antrean resep,
+timeline, notifikasi, dan audit HMAC dengan basis `synthetic_demo_seed`.
+Data bukan hasil diagnosis atau instruksi pengobatan. Seed tidak menambahkan
+consent atau CarePass otomatis; demonstrasikan izin secara eksplisit lewat UI.
+
+Seluruh pengisian memakai satu transaksi dan kunci seed untuk mencegah duplikasi
+serentak. Pengulangan mempertahankan password, nama, dan perkembangan alur;
+perintah tidak mereset demo yang sudah selesai. Konflik namespace akun/organisasi
+membatalkan transaksi tanpa mengambil alih data lama. Akun demo lama seperti
+Aulia tetap terpisah. Mengubah `DEMO_PASSWORD` tidak mengubah akun yang sudah ada.
+
 ## Migrasi dan akun demo
 
 Dari folder `backend`, jalankan:
@@ -82,8 +137,8 @@ Migrasi menggunakan `golang-migrate` dengan SQL tertanam di binary. Perintah `up
 aman diulang; `version` menampilkan versi dan status dirty. Jangan memaksa versi
 jika migrasi gagal; periksa SQL dan database terlebih dahulu. File `down.sql`
 tersedia untuk pengembangan, tetapi CLI ini tidak menyediakan rollback destruktif.
-API yang dijalankan langsung tidak menjalankan migrasi otomatis. Entrypoint
-container menjalankan migrasi sebelum API mulai.
+API dan container tidak menjalankan migrasi otomatis. Jalankan migrasi sebagai
+langkah terpisah sebelum merilis API, dengan koneksi direct untuk Neon.
 
 Seed hanya diizinkan saat `APP_ENV=development` atau `test`, memakai
 `DEMO_PASSWORD` dari `.env` (minimal 12 byte). Seed bisa diulang dan tidak
@@ -158,17 +213,24 @@ yang sama. Compose memerlukan variabel ini dan tidak membuat container database.
 Dari folder `backend`:
 
 ```powershell
+docker compose build
+docker compose run --rm api migrate up
 docker compose up --build -d --wait
 docker compose logs -f api
 docker compose down
 ```
 
-Entrypoint menerapkan migrasi, menjalankan seed hanya pada development/test,
-lalu mengeksekusi API sebagai pengguna non-root. Port host `127.0.0.1:8080`
+Entrypoint menjalankan API sebagai pengguna non-root tanpa migrasi/seed otomatis.
+Seed opsional dijalankan eksplisit: `docker compose run --rm api seed` atau
+`docker compose run --rm api seed-workflow`, hanya development/test.
+Port host `127.0.0.1:8080`
 meneruskan port container 8080. `.dockerignore` mengecualikan `.env` dan arsip
 `bin/` dari image. Variabel sesi/audit tetap dibaca melalui environment saat run.
 Compose memeriksa `/api/v1/readyz` di dalam container; `--wait` menunggu API
 sehat sebelum perintah selesai. Database PostgreSQL yang sudah ada harus aktif.
+
+Untuk Neon, Docker Hub, dan penghubung Vercel, lihat
+[panduan deployment](../docs/DOCKER-VERCEL-SETUP-2026-10-29.md).
 
 ## Health dan readiness
 
@@ -218,9 +280,67 @@ Registrasi pasien menerima `email`, `password` (12–1024 byte), `full_name`,
 (`female|male|other|unknown`). Akun, profil pasien, dan sesi dibuat dalam satu
 transaksi. Referensi `HYG-XXXX-XXXX` dibuat server. CSRF dan bucket pembatasan
 login juga berlaku untuk registrasi. Formulir web tersedia pada `/register`
-dan dapat dibuka dari halaman masuk. Verifikasi email, reset password,
-MFA, dan audit login berantai hash belum tersedia. Akun staf dikelola melalui API admin. Login,
+dan dapat dibuka dari halaman masuk pada mode lokal. Untuk Clerk, lihat bagian
+autentikasi Clerk di bawah: verifikasi email, reset password, dan pengaturan MFA
+ditangani oleh Clerk. Audit login berantai hash belum tersedia. Akun staf dikelola melalui API admin. Login,
 dashboard per peran, dan workflow pasien/dokter tersedia pada frontend.
+
+### Autentikasi Clerk
+
+Produksi wajib `AUTH_PROVIDER=clerk`; mode `local` hanya development/test.
+Tetapkan `CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, dan
+`CLERK_AUTHORIZED_PARTIES` (daftar exact origin browser). CLI Clerk dapat menulis
+nama `VITE_CLERK_PUBLISHABLE_KEY` pada backend; nama itu juga diterima sebagai
+fallback public key. Rahasia Clerk tidak boleh masuk frontend.
+
+Middleware SDK resmi memverifikasi JWT, issuer instance, expiry, dan azp.
+Sesi aktif serta email utama terverifikasi diperiksa langsung melalui API Clerk.
+Context yang sama dipakai domain untuk revalidasi SSE dan lock-wait; cache hanya
+berumur paling lama satu detik dalam satu request. Jika Clerk tidak tersedia,
+akses ditolak. Batas rate API Clerk/latensi harus diuji pada staging sebelum
+menambah pengguna; tidak ada klaim uji beban untuk mekanisme baru ini.
+
+Token sesi internal merupakan HMAC server yang tidak pernah diberikan ke
+browser. Cookie sesi lokal tidak dapat melewati middleware Clerk. Cookie JWT
+`__session` dipakai untuk browser/SSE dan Bearer untuk pemeriksaan SSR.
+CSRF tetap diperlukan pada mutasi. `GET /auth/config` hanya memuat provider dan
+publishable key; `GET /auth/status` mengembalikan pengguna/`requires_mfa` untuk
+onboarding. Admin/staf wajib mempunyai MFA aktif dan token yang menunjukkan
+faktor kedua telah dilewati sebelum domain klinis/admin dapat dibuka.
+
+Pengguna baru menjadi pasien. Metadata role/org dari Clerk tidak dipercaya.
+Email yang sama dengan akun lama menghasilkan `identity_link_required`, bukan
+auto-link. Setelah migrasi 12, operator dapat menautkan ID secara eksplisit:
+
+```powershell
+go run ./cmd/link-clerk-user --local-user-id LOCAL_UUID --clerk-user-id user_EXAMPLE
+```
+
+Email utama Clerk harus terverifikasi dan sama dengan akun lama. Penautan
+mempertahankan ID/data lokal dan mencabut sesi lokal lama. Untuk administrator
+pertama, buat/verifikasi akun di Clerk, lalu operator yang berwenang menjalankan:
+
+```powershell
+go run ./cmd/link-clerk-user --clerk-user-id user_EXAMPLE --bootstrap-admin
+```
+
+Perintah menolak jika sudah ada admin yang tertaut. Akun yang terlanjur masuk
+sebagai pasien hanya dapat dialihkan bila belum memiliki episode/riwayat audit;
+profil pasien kosong dihapus tanpa menghapus data klinis. Jangan gunakan flag bootstrap
+untuk akun yang belum disetujui sebagai administrator. Setelah itu, admin dapat
+memprovisikan akun staf lewat API admin dengan `clerk_user_id`, email terverifikasi,
+nama, role, dan organisasi; tanpa password lokal. Akun Clerk harus sudah ada,
+dan akun Hygeia untuk email tersebut belum ada. Konflik akun existing perlu
+ditangani operator; tidak ada perubahan role pasien secara diam-diam. Admin
+juga dapat memakai **Tetapkan peran staf** pada akun Clerk pasien baru yang masih
+kosong. Backend menolak konversi akun dengan episode atau audit pasien, mencatat
+perubahan pada aktivitas admin, dan mencabut sesi lama. Akun staf dengan riwayat
+pasien harus memakai akun/email staf terpisah.
+
+Mode lokal tetap memakai payload password lama untuk fixture sintetis. Tes
+`./scripts/Test-Backend.ps1 -UseLocalDatabase` memasukkan pengujian JWT signed,
+MFA, email collision, pencabutan sesi, dan kegagalan provider. Pengujian unit
+tanpa database tidak menjalankan tes integrasi.
 
 ## API care episode dan audit
 
@@ -291,8 +411,31 @@ catatan dan alasan koreksi disembunyikan. Pengiriman koreksi tersedia melalui
 API maupun menu Koreksi hasil pada ruang laboratorium; tanda terima menyediakan
 tautan yang mengisi ID hasil otomatis. Detail pasien/dokter menampilkan
 riwayat koreksi dan tombol Cetak / PDF melalui dialog cetak browser.
-Penarikan persetujuan penyedia yang sudah diberikan belum tersedia.
+Pembatalan permintaan aktif tersedia melalui `POST /api/v1/lab-requests/{id}/cancel`
+dan `POST /api/v1/prescriptions/{id}/cancel` dengan JSON `{"reason":"..."}`
+(5–500 karakter setelah trim). Pasien pemilik, dokter episode aktif, dan penyedia
+yang sudah ditugaskan dapat membatalkan; admin atau organisasi lain tidak dapat.
+Status selesai/dibatalkan tidak dapat dibuka kembali. Waktu persetujuan dan
+organisasi sebelumnya tetap tersimpan, berikut `cancellation_reason` dan
+`cancellation_note` untuk pasien/dokter. Pembatalan menutup akses pemrosesan
+penyedia dan menghasilkan audit/timeline/notifikasi dalam satu transaksi.
+Permintaan/resep pengganti dibuat baru oleh dokter dan memerlukan persetujuan
+baru dari pasien; apotek dipilih kembali pada resep baru.
+
+`GET /api/v1/lab-receipts?limit=20&offset=0` mengembalikan `receipts` untuk
+organisasi lab pemanggil: ID hasil/permintaan, status, waktu penyerahan, kode
+pasien, kode/nama tes. Nilai klinis, catatan, dan riwayat koreksi tidak disertakan;
+GET hasil tetap ditolak untuk lab. Daftar ini memulihkan ID koreksi setelah
+reload atau login ulang tanpa membuka akses baca hasil.
+
+Koreksi `lab_result.correct` masuk timeline dan notifikasi pasien/dokter episode
+aktif; notifikasi tidak membawa nilai atau alasan koreksi. Waktu koreksi memakai
+`clock_timestamp()` setelah resource terkunci agar urutan sesuai penulisan.
 Notifikasi perubahan status tersedia melalui inbox dan SSE.
+
+Migrasi `000011_workflow_cancellation` diperlukan sebelum menjalankan API baru:
+`go run ./cmd/migrate up`. Downgrade menolak penghapusan riwayat pembatalan baru;
+gunakan backup kompatibel jika benar-benar harus kembali ke skema lama.
 Kontrak payload dan contoh lengkap ada di panduan API frontend.
 
 ## API consent
