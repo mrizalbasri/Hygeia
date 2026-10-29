@@ -32,6 +32,7 @@ import (
 	"github.com/mrizalbasri/Hygeia/backend/internal/httpapi"
 	"github.com/mrizalbasri/Hygeia/backend/internal/laboratory"
 	"github.com/mrizalbasri/Hygeia/backend/internal/notification"
+	"github.com/mrizalbasri/Hygeia/backend/internal/patientprofile"
 	"github.com/mrizalbasri/Hygeia/backend/internal/prescription"
 )
 
@@ -93,7 +94,7 @@ func integrationFixture(t *testing.T) *fixture {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	for _, file := range []string{"000001_identity.up.sql", "000002_care_audit.up.sql", "000003_laboratory.up.sql", "000004_consents.up.sql", "000005_prescriptions.up.sql", "000006_admin.up.sql", "000007_notifications.up.sql", "000008_break_glass.up.sql", "000009_carepasses.up.sql", "000010_lab_corrections.up.sql"} {
+	for _, file := range []string{"000001_identity.up.sql", "000002_care_audit.up.sql", "000003_laboratory.up.sql", "000004_consents.up.sql", "000005_prescriptions.up.sql", "000006_admin.up.sql", "000007_notifications.up.sql", "000008_break_glass.up.sql", "000009_carepasses.up.sql", "000010_lab_corrections.up.sql", "000011_patient_profile.up.sql"} {
 		sql, err := db.Migrations.ReadFile("migrations/" + file)
 		if err != nil {
 			t.Fatal(err)
@@ -176,7 +177,8 @@ func integrationFixture(t *testing.T) *fixture {
 	notificationHandler := &notification.Handler{Service: &notification.Service{DB: pool}, Shutdown: streamContext}
 	breakGlassHandler := &breakglass.Handler{Service: f.breakGlassService}
 	carePassHandler := &carepass.Handler{Service: f.carePassService}
-	f.api = httpapi.NewAuthenticatedHandler(slog.New(slog.NewTextHandler(io.Discard, nil)), pool.Ping, login, bytes.Repeat([]byte{4}, 32), false, handler.Register, labHandler.Register, consentHandler.Register, prescriptionHandler.Register, adminHandler.Register, notificationHandler.Register, breakGlassHandler.Register, carePassHandler.Register)
+	profileHandler := &patientprofile.Handler{Service: &patientprofile.Service{DB: pool, Audit: writer}}
+	f.api = httpapi.NewAuthenticatedHandler(slog.New(slog.NewTextHandler(io.Discard, nil)), pool.Ping, login, bytes.Repeat([]byte{4}, 32), false, handler.Register, labHandler.Register, consentHandler.Register, prescriptionHandler.Register, adminHandler.Register, notificationHandler.Register, breakGlassHandler.Register, carePassHandler.Register, profileHandler.Register)
 	csrf := httptest.NewRecorder()
 	f.api.ServeHTTP(csrf, httptest.NewRequest("GET", "http://localhost/api/v1/auth/csrf", nil))
 	var body struct {

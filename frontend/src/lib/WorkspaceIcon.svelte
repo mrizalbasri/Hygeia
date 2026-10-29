@@ -35,6 +35,8 @@
 		<circle cx="9" cy="8" r="3" /><path
 			d="M3 21v-3a6 6 0 0 1 12 0v3m1-16a3 3 0 0 1 0 6m3 10v-3a6 6 0 0 0-3-5"
 		/>
+	{:else if name === 'profile'}
+		<circle cx="12" cy="8" r="4" /><path d="M4 21v-2a8 8 0 0 1 16 0v2" />
 	{:else if name === 'labs' || name === 'corrections' || name === 'queue'}
 		<path d="M9 3h6m-5 0v7l-5 8a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-8V3M8 15h8" />
 	{:else if name === 'prescriptions'}

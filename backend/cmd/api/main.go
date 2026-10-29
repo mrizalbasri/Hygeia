@@ -28,6 +28,7 @@ import (
 	"github.com/mrizalbasri/Hygeia/backend/internal/httpapi"
 	"github.com/mrizalbasri/Hygeia/backend/internal/laboratory"
 	"github.com/mrizalbasri/Hygeia/backend/internal/notification"
+	"github.com/mrizalbasri/Hygeia/backend/internal/patientprofile"
 	"github.com/mrizalbasri/Hygeia/backend/internal/prescription"
 )
 
@@ -133,10 +134,11 @@ func run(logger *slog.Logger) error {
 	notificationHandler := &notification.Handler{Service: &notification.Service{DB: pool}, Shutdown: ctx}
 	breakGlassHandler := &breakglass.Handler{Service: &breakglass.Service{DB: pool, Audit: auditWriter}}
 	carePassHandler := &carepass.Handler{Service: &carepass.Service{DB: pool, Audit: auditWriter, ShareBaseURL: shareBase}}
+	profileHandler := &patientprofile.Handler{Service: &patientprofile.Service{DB: pool, Audit: auditWriter}}
 
 	server := &http.Server{
 		Addr:              net.JoinHostPort("", port),
-		Handler:           httpapi.NewAuthenticatedHandler(logger, pool.Ping, authHandler, csrfKey, secure, careHandler.Register, labHandler.Register, consentHandler.Register, prescriptionHandler.Register, adminHandler.Register, notificationHandler.Register, breakGlassHandler.Register, carePassHandler.Register),
+		Handler:           httpapi.NewAuthenticatedHandler(logger, pool.Ping, authHandler, csrfKey, secure, careHandler.Register, labHandler.Register, consentHandler.Register, prescriptionHandler.Register, adminHandler.Register, notificationHandler.Register, breakGlassHandler.Register, carePassHandler.Register, profileHandler.Register),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,

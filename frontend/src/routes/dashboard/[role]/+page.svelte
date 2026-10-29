@@ -14,6 +14,9 @@
 	import { page } from '$app/state';
 	import type { PageProps } from './$types';
 	let { data }: PageProps = $props();
+    let savedName = $state<{ userID: string; name: string } | null>(null);
+    let displayName = $derived(savedName?.userID === data.user.id ? savedName.name : data.user.full_name);
+    let workspaceUser = $derived({ ...data.user, full_name: displayName });
 	const notifications = provideNotifications();
 	$effect(() => {
 		const userID = data.user.id;
@@ -50,7 +53,7 @@
 	let mobileMenuOpen = $state(false);
 	let menuToggle: HTMLButtonElement | undefined = $state();
 	let initials = $derived(
-		data.user.full_name
+		displayName
 			.split(' ')
 			.filter(Boolean)
 			.slice(0, 2)
@@ -133,7 +136,7 @@
 		<div class="sidebar-bottom">
 			<div class="sidebar-account">
 				<span class="account-avatar" aria-hidden="true">{initials}</span>
-				<div><strong>{data.user.full_name}</strong><span>{role.label}</span></div>
+				<div><strong>{displayName}</strong><span>{role.label}</span></div>
 			</div>
 		</div>
 	</aside>
@@ -160,7 +163,7 @@
 				>
 				<div class="header-account">
 					<span class="account-avatar" aria-hidden="true">{initials}</span><span
-						>{data.user.full_name}</span
+						>{displayName}</span
 					>
 				</div>
 				<button class="button secondary logout-button" onclick={logout} disabled={pending || !ready}
@@ -185,7 +188,7 @@
 			{#key data.user.id}
 				{#if clinical}
 					{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
-					<ClinicalWorkspace user={data.user} />
+					<ClinicalWorkspace user={workspaceUser} onProfileSaved={(name) => (savedName = { userID: data.user.id, name })} />
 				{:else if isLab}
 					{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
 					<LaboratoryWorkspace user={data.user} />
@@ -215,7 +218,7 @@
 					<section class="identity-panel" aria-labelledby="identity-title">
 						<div>
 							<p class="eyebrow muted">AKUN AKTIF</p>
-							<h2 id="identity-title">{data.user.full_name}</h2>
+							<h2 id="identity-title">{displayName}</h2>
 						</div>
 						<dl>
 							<div>

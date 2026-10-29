@@ -201,7 +201,8 @@ export const menus = {
 		['timeline', 'Perjalanan'],
 		['audit', 'Riwayat akses'],
 		['emergency', 'Akses darurat'],
-		['notifications', 'Notifikasi']
+		['notifications', 'Notifikasi'],
+		['profile', 'Profil saya']
 	],
 	doctor: [
 		['overview', 'Ringkasan dokter'],
