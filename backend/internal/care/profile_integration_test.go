@@ -209,3 +209,63 @@ func TestPatientProfileDisabledWhileWaitingIntegration(t *testing.T) {
 		t.Fatalf("disabled account changed name: %s %v", name, err)
 	}
 }
+
+func TestPatientProfileExpiresWhileWaitingIntegration(t *testing.T) {
+	f := integrationFixture(t)
+	ctx := context.Background()
+	tx, err := f.pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback(ctx)
+	var holder int
+	if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&holder); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(ctx, `SELECT id FROM users WHERE id=$1 FOR UPDATE`, f.ids["patient"]); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.pool.Exec(ctx, `UPDATE sessions SET expires_at=clock_timestamp()+interval '2 seconds' WHERE user_id=$1`, f.ids["patient"]); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan int, 1)
+	go func() { done <- f.request("patient", "PATCH", "/api/v1/me/profile", profileJSON, true).Code }()
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		var waiting bool
+		if err := f.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE wait_event_type='Lock' AND $1=ANY(pg_blocking_pids(pid)) AND query LIKE '%SELECT id FROM users WHERE id=%')`, holder).Scan(&waiting); err != nil {
+			t.Fatal(err)
+		}
+		if waiting {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("profile update never waited for account lock")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	for {
+		var expired bool
+		if err := f.pool.QueryRow(ctx, `SELECT expires_at<=clock_timestamp() FROM sessions WHERE user_id=$1`, f.ids["patient"]).Scan(&expired); err != nil {
+			t.Fatal(err)
+		}
+		if expired {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if status := <-done; status != 401 {
+		t.Fatalf("expired session updated profile after waiting: %d", status)
+	}
+	var name string
+	if err := f.pool.QueryRow(ctx, `SELECT full_name FROM users WHERE id=$1`, f.ids["patient"]).Scan(&name); err != nil || name != "Synthetic patient" {
+		t.Fatalf("expired session changed name: %s %v", name, err)
+	}
+	var writes int
+	if err := f.pool.QueryRow(ctx, `SELECT count(*) FROM audit_events WHERE action='patient.profile_update'`).Scan(&writes); err != nil || writes != 0 {
+		t.Fatalf("expired session wrote audit: %d %v", writes, err)
+	}
+}

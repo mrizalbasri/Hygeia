@@ -134,6 +134,16 @@ func (s *Service) Update(ctx context.Context, token []byte, in Input) (Profile, 
 		if _, err := tx.Exec(ctx, `SELECT id FROM users WHERE id=$1 FOR UPDATE`, actor.ID); err != nil {
 			return err
 		}
+		// PostgreSQL now() is fixed at transaction start. A session can expire
+		// while this transaction waits for the account lock, so use wall time.
+		var sessionActive bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM sessions
+			WHERE token_hash=$1 AND expires_at>clock_timestamp())`, token).Scan(&sessionActive); err != nil {
+			return err
+		}
+		if !sessionActive {
+			return apiutil.ErrUnauthenticated
+		}
 		current, err := (auth.Store{DB: tx}).UserBySession(ctx, token)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apiutil.ErrUnauthenticated
