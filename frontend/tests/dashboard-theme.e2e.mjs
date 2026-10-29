@@ -143,13 +143,19 @@ try {
 		const landingResponse = await page.goto(`${base}/`);
 		assert.equal(landingResponse.status(), 200);
 		assert.equal(new URL(page.url()).pathname, '/');
-		await page.locator('.hero-phone svg > image').waitFor();
+		await page.locator('.hero-three-backdrop').waitFor();
+		assert.equal(await page.locator('.hero-three-roles a').count(), 4);
+		assert.equal(
+			new URL(await page.locator('.hero-three-actions a').first().getAttribute('href'), base)
+				.pathname,
+			'/login'
+		);
 		await page.locator('.audience-options button:not([disabled])').first().waitFor();
-		for (const [label, title, image] of [
-			['Dokter', 'Lanjutkan perawatan dengan konteks yang jelas.', '/care-consultation.webp'],
-			['Laboratorium', 'Dari permintaan menjadi hasil pemeriksaan.', '/laboratory-supplies.webp'],
-			['Apotek', 'Siapkan resep yang ditujukan kepada Anda.', '/pharmacy-supplies.webp'],
-			['Pasien', 'Pahami apa yang sedang berjalan.', '/patient-care.webp']
+		for (const [label, title] of [
+			['Dokter', 'Lanjutkan perawatan dengan konteks yang jelas.'],
+			['Laboratorium', 'Dari permintaan menjadi hasil pemeriksaan.'],
+			['Apotek', 'Siapkan resep yang ditujukan kepada Anda.'],
+			['Pasien', 'Pahami apa yang sedang berjalan.']
 		]) {
 			const button = page
 				.locator('.audience-options')
@@ -161,16 +167,22 @@ try {
 				.getByRole('heading', { name: title, exact: true })
 				.waitFor();
 			assert.equal(await button.getAttribute('aria-pressed'), 'true');
-			const illustration = page.locator('.provider-visual img');
-			assert.equal(await illustration.getAttribute('src'), image);
-			await illustration.scrollIntoViewIfNeeded();
-			await illustration.evaluate((element) => element.decode());
-			assert.ok(await illustration.getAttribute('alt'));
+			assert.ok(await page.locator('.audience-detail li').count());
 		}
-		for (const image of await page.locator('.connected-care-visual img, .about-visual img').all()) {
-			await image.scrollIntoViewIfNeeded();
-			await image.evaluate((element) => element.decode());
+		await page.locator('.hero-three-backdrop').evaluate((element) => element.decode());
+		for (const [index, title] of [
+			[0, 'Anda menentukan siapa yang menerima.'],
+			[1, 'Bagikan sesuai kebutuhan perawatan.'],
+			[2, 'Setiap pihak melanjutkan bagiannya.']
+		]) {
+			const stage = page.locator('.permission-path button').nth(index);
+			await stage.focus();
+			await stage.press('Enter');
+			await page.getByRole('heading', { name: title, exact: true }).waitFor();
+			assert.equal(await stage.getAttribute('aria-pressed'), 'true');
 		}
+		assert.equal(await page.locator('.closing-primary').getAttribute('href'), '/register');
+		assert.equal(await page.locator('.closing-secondary').getAttribute('href'), '/login');
 		for (const detail of await page.locator('.faq-list details').all()) {
 			const summary = detail.locator('summary');
 			await summary.focus();
@@ -194,11 +206,12 @@ try {
 		console.log(
 			'PASS four role views and five FAQ disclosures by keyboard, complete care flow, footer navigation'
 		);
-		assert.equal((await page.request.get(`${base}/hero-phone-front.png`)).status(), 200);
+		assert.equal((await page.request.get(`${base}/hero-clinic-v2.png`)).status(), 200);
 		await page
 			.getByRole('navigation', { name: 'Navigasi beranda' })
 			.getByRole('button', { name: 'Fitur', exact: true })
-			.click();
+			.focus();
+		await page.getByRole('button', { name: 'Fitur', exact: true }).press('Enter');
 		await page
 			.locator('.nav-panel a')
 			.filter({ has: page.getByText('Perawatan', { exact: true }) })
@@ -222,7 +235,7 @@ try {
 			);
 			assert.ok(
 				await page
-					.locator('.landing-header a, .hero-actions a')
+					.locator('.landing-header a, .hero-three-actions a')
 					.evaluateAll((elements) =>
 						elements.every((element) => element.getBoundingClientRect().height >= 44)
 					),
@@ -239,11 +252,11 @@ try {
 					.screenshot({ path: `.test-results/landing-faq-${width}.png` });
 			}
 		}
-		await page.getByRole('link', { name: 'Masuk ke ruang Anda', exact: true }).click();
+		await page.getByRole('link', { name: /Masuk ke ruang Anda/ }).click();
 		await page.waitForURL('**/login');
 		assert.equal(new URL(page.url()).pathname, '/login');
 		console.log(
-			'PASS public landing, supplied phone asset, section navigation, login CTA, seven screen widths and touch targets'
+			'PASS public landing, hero preview asset, section navigation, login CTA, seven screen widths and touch targets'
 		);
 	}
 	await page.goto(`${base}/dashboard/patient`);

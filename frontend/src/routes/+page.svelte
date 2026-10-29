@@ -5,8 +5,30 @@
 	import HeroThree from '#lib/HeroThree.svelte';
 	import LandingNav from '#lib/LandingNav.svelte';
 	import './landing.css';
+	import './landing-sections.css';
 
 	let selectedRole = $state(0);
+	let selectedPermission = $state(0);
+	const permissionStages = [
+		{
+			label: 'Pasien',
+			icon: 'care' as const,
+			title: 'Anda menentukan siapa yang menerima.',
+			text: 'Dokter memerlukan hubungan perawatan atau izin yang sah. Laboratorium dan apotek menerima penugasan yang Anda setujui.'
+		},
+		{
+			label: 'Persetujuan',
+			icon: 'shield' as const,
+			title: 'Bagikan sesuai kebutuhan perawatan.',
+			text: 'Penerima, jenis data, dan masa akses mengikuti izin yang diberikan. Persetujuan pemeriksaan atau resep tidak membuka seluruh riwayat Anda.'
+		},
+		{
+			label: 'Penyedia layanan',
+			icon: 'lab' as const,
+			title: 'Setiap pihak melanjutkan bagiannya.',
+			text: 'Laboratorium mengerjakan pemeriksaan yang ditugaskan. Apotek menyiapkan resep yang dibagikan. Akses mengikuti masa episode, penugasan, atau izin yang berlaku.'
+		}
+	];
 	let ready = $state(false);
 	let scrollProgress = $state(0);
 
@@ -214,6 +236,7 @@
 		<!-- FEATURES SECTION (Scroll Reveal) -->
 		<section class="landing-features scroll-reveal" id="fitur" aria-labelledby="features-title">
 			<div class="features-intro">
+				<p class="landing-kicker">SETIAP LANGKAH, LEBIH JELAS</p>
 				<h2 id="features-title">Dari pemeriksaan<br />sampai resep.</h2>
 				<p>
 					Permintaan lab sedang diproses? Resep sudah siap diambil? Dashboard memperlihatkan status
@@ -240,6 +263,7 @@
 			aria-labelledby="audiences-title"
 		>
 			<div class="audiences-heading">
+				<p class="landing-kicker">RUANG UNTUK SETIAP PERAN</p>
 				<h2 id="audiences-title">Empat peran.<br />Satu perjalanan perawatan.</h2>
 				<p>
 					Kebutuhan setiap pihak berbeda. Informasi yang dibagikan mengikuti peran dan hubungan
@@ -278,15 +302,12 @@
 					{/key}
 				</div>
 			</div>
-			<p class="audience-implementation-note">
-				Ruang pasien, dokter, laboratorium, dan apotek terhubung ke API. Setiap peran melanjutkan
-				bagian perawatannya sesuai penugasan dan izin yang berlaku.
-			</p>
 		</section>
 
 		<!-- FLOW SECTION (Scroll Reveal) -->
 		<section class="landing-flow scroll-reveal" id="cara-kerja" aria-labelledby="flow-title">
 			<div class="flow-heading">
+				<p class="landing-kicker">DARI UNDANGAN HINGGA RESEP</p>
 				<h2 id="flow-title">Perawatan dimulai<br />dengan persetujuan Anda.</h2>
 				<p>
 					Hubungan dengan dokter menjadi dasar perjalanan perawatan. Akses data mengikuti izin yang
@@ -333,49 +354,42 @@
 			aria-labelledby="permission-title"
 		>
 			<div class="permission-intro">
-				<HealthIcon name="shield" />
+				<p class="landing-kicker">IZIN DATA, DI TANGAN ANDA</p>
 				<h2 id="permission-title">Berbagi seperlunya.<br />Dengan tujuan yang jelas.</h2>
-				<p>
-					Persetujuan bukan izin untuk membuka semua data. Penerima, jenis data, dan masa akses
-					mengikuti hubungan perawatan atau izin yang diberikan.
-				</p>
+				<p>Ikuti alurnya untuk memahami bagaimana informasi perawatan dibagikan.</p>
 			</div>
-			<dl class="permission-definitions">
-				<div>
-					<dt>Siapa yang menerima?</dt>
-					<dd>
-						Dokter yang memiliki hubungan perawatan, atau penyedia yang dituju pada permintaan dan
-						resep.
-					</dd>
-				</div>
-				<div>
-					<dt>Data apa yang dibagikan?</dt>
-					<dd>
-						Cakupannya mengikuti kebutuhan. Penugasan laboratorium dan apotek tidak memberi akses ke
-						seluruh riwayat pasien.
-					</dd>
-				</div>
-				<div>
-					<dt>Berapa lama akses berlaku?</dt>
-					<dd>
-						Episode, penugasan penyedia, dan izin berbatas waktu memiliki aturan masa akses
-						masing-masing.
-					</dd>
-				</div>
-				<div>
-					<dt>Apa yang dapat ditelusuri?</dt>
-					<dd>
-						Backend mencatat akses terlindungi. Timeline perawatan dan riwayat akses merupakan dua
-						catatan berbeda.
-					</dd>
-				</div>
-			</dl>
+			<div class="permission-path" aria-label="Jelajahi alur izin data">
+				{#each permissionStages as stage, index (stage.label)}
+					<button
+						aria-pressed={selectedPermission === index}
+						aria-controls="permission-explanation"
+						onclick={() => (selectedPermission = index)}
+					>
+						<span class="permission-node"><HealthIcon name={stage.icon} /></span>
+						<span class="permission-stage-number">0{index + 1}</span>
+						<span>{stage.label}</span>
+					</button>
+				{/each}
+			</div>
+			<div class="permission-explanation" id="permission-explanation" aria-live="polite">
+				{#key selectedPermission}
+					<div class="audience-detail-fade">
+						<h3>{permissionStages[selectedPermission].title}</h3>
+						<p>{permissionStages[selectedPermission].text}</p>
+					</div>
+				{/key}
+			</div>
+			<p class="permission-footnote">
+				<HealthIcon name="shield" /> Timeline perawatan dan riwayat akses dapat dilihat sebagai dua catatan
+				terpisah.
+			</p>
 		</section>
 
 		<!-- FAQ SECTION (Scroll Reveal) -->
 		<section class="landing-faq scroll-reveal" id="pertanyaan" aria-labelledby="faq-title">
 			<div class="faq-intro">
-				<h2 id="faq-title">Kenali Hygeia<br />sebelum mulai.</h2>
+				<p class="landing-kicker">PERTANYAAN YANG SERING DITANYAKAN</p>
+				<h2 id="faq-title">Mari mengenal Hygeia.</h2>
 				<p>Tentang akses data, alur resep, dan layanan yang tersedia.</p>
 			</div>
 			<div class="faq-list">
@@ -390,13 +404,21 @@
 
 		<!-- ABOUT & ACTION SECTION (Scroll Reveal) -->
 		<section class="landing-about scroll-reveal" id="tentang" aria-labelledby="about-title">
-			<h2 id="about-title">Tentang Hygeia</h2>
-			<div>
+			<!-- Centered actions adapted from sv-blocks call-to-action-one. -->
+			<div class="closing-card">
+				<p class="closing-eyebrow">KENALI PERAWATAN ANDA LEBIH DEKAT</p>
+				<h2 id="about-title">Satu ruang untuk mengikuti<br />perjalanan perawatan Anda.</h2>
 				<p>
-					Hygeia menghubungkan data kesehatan antara pasien, dokter, laboratorium, dan apotek,
-					dengan persetujuan pasien dan riwayat akses yang dapat diperiksa.
+					Hygeia menghubungkan pasien, dokter, laboratorium, dan apotek. Ikuti perkembangannya,
+					dengan persetujuan tetap di tangan Anda.
 				</p>
-				<a class="button primary about-action" href={resolve('/login')}>Masuk ke Hygeia</a>
+				<div class="closing-actions">
+					<a class="closing-primary" href={resolve('/register')}
+						>Mulai dengan Hygeia <span aria-hidden="true">↗</span></a
+					>
+					<a class="closing-secondary" href={resolve('/login')}>Masuk ke akun</a>
+				</div>
+				<span class="closing-note">Perawatan terhubung. Kendali di tangan Anda.</span>
 			</div>
 		</section>
 	</main>
