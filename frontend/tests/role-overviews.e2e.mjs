@@ -72,6 +72,11 @@ try {
 			const request = route.request();
 			const path = new URL(request.url()).pathname.replace('/api/v1', '');
 			assert.equal(request.method(), 'GET', 'overview only reads existing resources');
+			// The shared dashboard owns notifications; clinical reads remain role-specific.
+			if (path === '/notifications/unread-count')
+				return route.fulfill({ json: { unread_count: 0 } });
+			if (path === '/notifications') return route.fulfill({ json: { notifications: [] } });
+			if (path === '/notifications/stream') return route.abort();
 			calls.push(path);
 			if (path === '/me') return route.fulfill({ json: { user: users[role] } });
 			if (mode === 'error')

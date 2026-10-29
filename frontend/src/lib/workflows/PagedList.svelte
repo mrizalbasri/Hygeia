@@ -2,6 +2,8 @@
 	import type { Snippet } from 'svelte';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { api, errorText, statusText, type Entry, type Payload } from './api.js';
+	import { useNotifications } from './notification-state.svelte.js';
+	const notifications = useNotifications();
 	let {
 		path,
 		listKey,
@@ -32,7 +34,7 @@
 		retry = $state(0);
 	$effect(() => {
 		const currentPath = path,
-			currentRevision = revision,
+			currentRevision = revision + notifications.revision,
 			query = new SvelteURLSearchParams({ limit: '20' });
 		if (status) query.set('status', status);
 		if (cursorKey) {

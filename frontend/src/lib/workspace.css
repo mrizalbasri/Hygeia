@@ -13,6 +13,37 @@
 	background: var(--dashboard-surface);
 	color: var(--text);
 }
+.header-notifications {
+	position: relative;
+}
+.notification-connection {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 16px;
+	color: var(--muted);
+	font-size: 14px;
+}
+.notification-connection p {
+	flex: 1 1 240px;
+	margin: 0;
+}
+.notification-badge {
+	position: absolute;
+	top: -4px;
+	right: -6px;
+	min-width: 20px;
+	padding: 2px 4px;
+	border-radius: 999px;
+	background: var(--dashboard-action);
+	color: white;
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 16px;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+}
 body:has(.dashboard-workspace) {
 	background: var(--dashboard-canvas);
 	padding: 0 20px;

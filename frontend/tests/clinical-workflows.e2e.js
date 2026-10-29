@@ -52,7 +52,8 @@ try {
 	let conflict = false,
 		forbidden = false,
 		unavailable = false,
-		unauthenticated = false;
+		unauthenticated = false,
+		endSession = false;
 	let rows = {
 		episodes: [{ id, doctor_name: 'Dokter Sintetis', status: 'pending' }],
 		lab_requests: [{ id, test_name: 'Tes sintetis', status: 'pending_patient_approval' }],
@@ -130,7 +131,7 @@ try {
 		if (path === '/notifications/stream')
 			return route.fulfill({
 				contentType: 'text/event-stream',
-				body: 'event: session-ended\ndata: {}\n\n'
+				body: endSession ? 'event: session-ended\ndata: {}\n\n' : ': keep-alive\n\n'
 			});
 		if (unauthenticated) return send({ error: { message: 'Sesi berakhir' } }, 401);
 		if (unavailable) return send({ error: { message: 'Layanan terganggu' } }, 503);
@@ -216,6 +217,7 @@ try {
 	console.log(
 		'PASS forbidden detail clears old payload, unavailable/retry, lossless cursor pagination'
 	);
+	endSession = true;
 	await page.goto(`${base}/dashboard/patient?view=notifications`);
 	await page.waitForURL('**/login');
 	unauthenticated = true;

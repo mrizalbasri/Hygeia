@@ -14,7 +14,7 @@
 		"format": "prettier --write .",
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run",
-		"test:e2e": "node tests/dashboard-theme.e2e.mjs && node tests/clinical-workflows.e2e.js && node tests/provider-workflows.e2e.js && node tests/registration.e2e.js && node tests/role-overviews.e2e.mjs"
+		"test:e2e": "node tests/dashboard-theme.e2e.mjs && node tests/clinical-workflows.e2e.js && node tests/provider-workflows.e2e.js && node tests/registration.e2e.js && node tests/role-overviews.e2e.mjs && node tests/dashboard-reliability.e2e.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

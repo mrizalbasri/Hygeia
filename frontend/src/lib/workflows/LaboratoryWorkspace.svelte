@@ -11,6 +11,7 @@
 		menus,
 		statusText,
 		type Entry,
+		type LabResultInput,
 		type Payload,
 		type ResultReceipt
 	} from './api.js';
@@ -18,6 +19,7 @@
 	import Notifications from './Notifications.svelte';
 	import LabCorrections from './LabCorrections.svelte';
 	import LaboratoryOverview from './LaboratoryOverview.svelte';
+	import LabResultReview from './LabResultReview.svelte';
 	import './workflow.css';
 
 	let { user }: { user: User } = $props();
@@ -43,8 +45,9 @@
 		formValue = $state(''),
 		formUnit = $state(''),
 		formReferenceRange = $state(''),
-		formFlag = $state<'normal' | 'high' | 'low' | 'abnormal' | 'unknown'>('normal'),
+		formFlag = $state<LabResultInput['flag'] | ''>(''),
 		formNote = $state('');
+	let review = $state<LabResultInput | null>(null);
 
 	onMount(() => {
 		ready = true;
@@ -90,8 +93,9 @@
 		formValue = '';
 		formUnit = '';
 		formReferenceRange = '';
-		formFlag = 'normal';
+		formFlag = '';
 		formNote = '';
+		review = null;
 		if (dialog) dialog.showModal();
 	}
 
@@ -102,18 +106,31 @@
 		formValue = '';
 		formUnit = '';
 		formReferenceRange = '';
-		formFlag = 'normal';
+		formFlag = '';
 		formNote = '';
+		review = null;
 	}
 
-	async function submitResult(event: SubmitEvent) {
+	function reviewResult(event: SubmitEvent) {
 		event.preventDefault();
 		if (!activeRequest || busy) return;
 		const val = formValue.trim();
-		if (!val) {
-			modalError = 'Nilai pemeriksaan wajib diisi.';
+		if (!val || !formFlag) {
+			modalError = 'Nilai pemeriksaan dan pilihan penanda wajib diisi.';
 			return;
 		}
+		modalError = '';
+		review = {
+			value: val,
+			unit: formUnit.trim(),
+			reference_range: formReferenceRange.trim(),
+			flag: formFlag,
+			note: formNote.trim()
+		};
+	}
+
+	async function submitResult() {
+		if (!activeRequest || !review || busy) return;
 		busy = true;
 		modalError = '';
 		error = '';
@@ -122,13 +139,7 @@
 			const res = await api<{ result: ResultReceipt }>(
 				`/lab-requests/${activeRequest.id}/result`,
 				'POST',
-				{
-					value: val,
-					unit: formUnit.trim(),
-					reference_range: formReferenceRange.trim(),
-					flag: formFlag,
-					note: formNote.trim()
-				}
+				{ ...review }
 			);
 			receipt = res.result;
 			success = 'Hasil pemeriksaan berhasil diserahkan ke sistem.';
@@ -286,7 +297,20 @@
 	{#if modalError}
 		<p class="wf-error" role="alert">{modalError}</p>
 	{/if}
-	<form onsubmit={submitResult}>
+	{#if review && activeRequest}
+		<LabResultReview
+			result={review}
+			reference={`${activeRequest.test_name} (${activeRequest.test_code}) · Pasien: ${activeRequest.patient_ref}`}
+			pending={busy}
+			confirmLabel="Serahkan hasil pemeriksaan"
+			onconfirm={() => void submitResult()}
+			onedit={() => {
+				review = null;
+				modalError = '';
+			}}
+		/>
+	{/if}
+	<form onsubmit={reviewResult} hidden={!!review}>
 		<label>
 			Nilai hasil pemeriksaan (wajib, maks 500 karakter)
 			<input
@@ -321,6 +345,7 @@
 		<label>
 			Penanda laboratorium (Flag)
 			<select name="flag" required bind:value={formFlag} disabled={busy}>
+				<option value="" disabled>Pilih penanda hasil</option>
 				<option value="normal">Normal</option>
 				<option value="high">Tinggi (High)</option>
 				<option value="low">Rendah (Low)</option>
@@ -341,8 +366,12 @@
 			Setelah diserahkan, hasil bersifat tetap dan tidak dapat disunting kembali oleh laboratorium.
 		</p>
 		<div class="wf-actions">
-			<button type="submit" class="button primary" disabled={busy || !formValue.trim()}>
-				{busy ? 'Menyerahkan hasil…' : 'Serahkan hasil pemeriksaan'}
+			<button
+				type="submit"
+				class="button primary"
+				disabled={busy || !formValue.trim() || !formFlag}
+			>
+				Tinjau hasil pemeriksaan
 			</button>
 			<button type="button" class="button secondary" disabled={busy} onclick={closeResultForm}>
 				Batal

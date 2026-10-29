@@ -74,6 +74,21 @@ try {
 		}
 		const populated = mode === 'populated' || mode === 'pending';
 		const bodies = {
+			'/api/v1/patient/work-summary': {
+				summary: {
+					active_episodes: mode === 'populated' ? 1 : 0,
+					labs_in_progress: mode === 'populated' ? 1 : 0,
+					prescriptions_ready: mode === 'populated' ? 1 : 0,
+					pending: {
+						episodes: mode === 'pending' ? 25 : 0,
+						lab_requests: mode === 'pending' ? 21 : 0,
+						prescriptions: mode === 'pending' ? 3 : 0,
+						consents: mode === 'pending' ? 7 : 0
+					}
+				}
+			},
+			'/api/v1/notifications': { notifications: [] },
+			'/api/v1/notifications/unread-count': { unread_count: 0 },
 			'/api/v1/episodes': {
 				episodes: populated
 					? [
@@ -364,20 +379,21 @@ try {
 	assert.equal(new URL(page.url()).searchParams.get('view'), 'prescriptions');
 	mode = 'pending';
 	await page.goto(`${base}/dashboard/patient`);
-	await page.locator('.pending-list a').nth(2).waitFor();
+	await page.locator('.pending-list a').nth(3).waitFor();
 	assert.deepEqual(await page.locator('.overview-metric strong').allTextContents(), [
 		'0',
-		'3',
+		'56',
 		'0',
 		'0'
 	]);
-	assert.equal(await page.locator('.pending-list a').count(), 3);
+	assert.equal(await page.locator('.pending-list a').count(), 4);
+	await page.locator('.pending-list a').getByText('Permintaan izin dokter · 7').waitFor();
 	await page.locator('.overview-metric').nth(1).click();
 	assert.equal(new URL(page.url()).hash, '#perlu-tindakan');
 	await page.screenshot({ path: '.test-results/dashboard-pending-320.png', fullPage: true });
 	await page.locator('.pending-list a').first().click();
 	await page.waitForURL('**?view=episodes');
-	console.log('PASS pending invitation/lab/prescription counts and action navigation');
+	console.log('PASS complete counts beyond a page, pending consent, and action navigation');
 	mode = 'empty';
 	await page.goto(`${base}/dashboard/patient`);
 	await page.getByRole('button', { name: 'Perbarui data' }).click();
@@ -393,8 +409,8 @@ try {
 	console.log('PASS empty data states');
 	mode = 'error';
 	await page.getByRole('button', { name: 'Perbarui data' }).click();
-	await page.getByRole('button', { name: 'Coba lagi' }).first().waitFor();
-	assert.equal(await page.getByRole('alert').count(), 4);
+	await page.getByRole('button', { name: 'Coba lagi', exact: true }).first().waitFor();
+	assert.equal(await page.getByRole('alert').count(), 5);
 	assert.deepEqual(await page.locator('.overview-metric strong').allTextContents(), [
 		'—',
 		'—',
@@ -403,7 +419,7 @@ try {
 	]);
 	await page.getByRole('heading', { name: 'Ringkasan belum lengkap' }).waitFor();
 	mode = 'empty';
-	await page.getByRole('button', { name: 'Coba lagi' }).first().click();
+	await page.getByRole('button', { name: 'Coba lagi', exact: true }).first().click();
 	await page.getByRole('heading', { name: 'Belum ada resep', exact: true }).waitFor();
 	assert.deepEqual(errors, []);
 	console.log('PASS API failures, retry recovery, no browser runtime errors');

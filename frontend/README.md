@@ -55,7 +55,7 @@ pnpm test:e2e
 ```
 
 Tes E2E fixture menjalankan server sendiri dan menutupnya setelah selesai.
-`pnpm test:e2e` menjalankan kelima suite fixture secara berurutan. `pnpm test`
+`pnpm test:e2e` menjalankan keenam suite fixture secara berurutan. `pnpm test`
 sudah mengaktifkan mode run; jangan menambahkan `-- --run` lagi.
 Tes mencakup landing/mobile, persetujuan/penolakan, CSRF, konflik 409, detail 403,
 503/retry, cursor bigint, API 401 dan SSE session-ended, lifecycle antrean
@@ -82,8 +82,19 @@ tidak bergantung pada keluaran URL Vite di terminal.
 
 Modul shared berada di `src/lib/workflows`: `api.ts` untuk CSRF/error/cursor,
 `PagedList` untuk pagination, `DirectoryPicker` untuk direktori, `ClinicalDetail`
-untuk pembacaan berotorisasi, serta `Notifications` untuk inbox/SSE. Setiap mutasi
-memuat ulang daftar; server tetap menentukan izin dan status.
+untuk pembacaan berotorisasi, serta `Notifications` untuk inbox.
+`notification-state.svelte.ts` menyediakan satu pengelola SSE per dashboard
+melalui context, termasuk badge belum dibaca, reconnect, dan retry manual.
+Event menginvalidasi daftar/ringkasan agar dibaca ulang melalui API; tidak
+dipakai sebagai sumber nilai klinis. Setiap mutasi memuat ulang daftar; server
+tetap menentukan izin dan status.
+
+Ringkasan pasien memakai `/patient/work-summary` untuk seluruh jumlah pekerjaan,
+termasuk izin dokter. Daftar terbaru tetap dibatasi enam entri dan tidak
+dipakai untuk menghitung total. Kegagalan menampilkan tanda pisah dan retry.
+`dashboard-reliability.e2e.mjs` memeriksa badge, satu transport lintas menu,
+reconnect/retry, dan session expiry memakai transport deterministik; suite
+clinical juga memeriksa event `session-ended` melalui EventSource native.
 
 Detail hasil lab menampilkan hasil awal dan riwayat koreksi dari API. Tombol
 Cetak / PDF pada detail hasil/resep membuka dialog cetak browser; pilih Simpan
@@ -101,3 +112,6 @@ tanda terima. Masukkan ID hasil (bukan ID permintaan), alasan, serta seluruh
 nilai pengganti. Formulir tidak mengambil hasil lama melalui GET; hak baca lab
 tetap mengikuti kebijakan backend. Setelah berhasil, tampil ID koreksi dan
 isian klinis dibersihkan. Kesalahan mempertahankan isian untuk diperbaiki.
+Pada hasil awal dan koreksi, penanda wajib dipilih tanpa default Normal.
+Tombol **Tinjau** menampilkan snapshot seluruh isian dan referensi sebelum ada
+POST. Petugas dapat kembali mengedit; hanya konfirmasi akhir mengirim data.
