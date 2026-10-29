@@ -63,7 +63,8 @@ export class ApiError extends Error {
 	constructor(
 		message: string,
 		public status: number,
-		public requestId = ''
+		public requestId = '',
+		public code = ''
 	) {
 		super(message);
 	}
@@ -133,11 +134,13 @@ export async function api<T>(
 		if (response.status === 401) {
 			await goto(resolve('/login'), { replace: true, refreshAll: true });
 		}
-		const detail = data.error as { message?: string; request_id?: string } | undefined;
+		const detail = data.error as
+			{ message?: string; request_id?: string; code?: string } | undefined;
 		throw new ApiError(
 			detail?.message || 'Permintaan tidak dapat diproses.',
 			response.status,
-			detail?.request_id || response.headers.get('X-Request-ID') || ''
+			detail?.request_id || response.headers.get('X-Request-ID') || '',
+			detail?.code || ''
 		);
 	}
 	return data as T;

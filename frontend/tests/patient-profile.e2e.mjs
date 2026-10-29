@@ -88,7 +88,15 @@ try {
 			assert.equal(req.headers()['x-csrf-token'], 'profile-csrf');
 			mutations.push(req.postDataJSON());
 			if (saveStatus !== 200)
-				return send({ error: { message: 'Profil belum dapat disimpan. Coba lagi.' } }, saveStatus);
+				return send(
+					{
+						error: {
+							code: saveStatus === 403 ? 'csrf_invalid' : 'unavailable',
+							message: 'Profil belum dapat disimpan. Coba lagi.'
+						}
+					},
+					saveStatus
+				);
 			saveArrived?.();
 			await new Promise((resolve) => (releaseSave = resolve));
 			profile = { ...profile, ...req.postDataJSON(), birth_year: 2000 };
@@ -134,6 +142,10 @@ try {
 	assert.equal(mutations.length, 0, 'incomplete emergency contact must not submit');
 	await page.getByLabel('Telepon kontak darurat', { exact: true }).fill('08123456780');
 
+	saveStatus = 403;
+	await save.click();
+	await page.getByRole('alert').getByText('Profil belum dapat disimpan. Coba lagi.').waitFor();
+	assert.equal(await name.inputValue(), 'Pasien Profil Sintetis');
 	saveStatus = 503;
 	await save.click();
 	await page.getByRole('alert').getByText('Profil belum dapat disimpan. Coba lagi.').waitFor();
@@ -151,7 +163,7 @@ try {
 		.evaluate((form) =>
 			form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
 		);
-	assert.equal(mutations.length, 2, 'pending save must not submit twice');
+	assert.equal(mutations.length, 3, 'pending save must not submit twice');
 	assert.deepEqual(mutations.at(-1), {
 		full_name: 'Pasien Profil Sintetis',
 		birth_date: '2000-02-29',

@@ -94,7 +94,10 @@
 			success = 'Profil Anda berhasil disimpan.';
 		} catch (reason) {
 			error = errorText(reason);
-			if (reason instanceof ApiError && (reason.status === 401 || reason.status === 403)) {
+			if (
+				reason instanceof ApiError &&
+				(reason.status === 401 || (reason.status === 403 && reason.code !== 'csrf_invalid'))
+			) {
 				profile = null;
 				values = editable();
 			}

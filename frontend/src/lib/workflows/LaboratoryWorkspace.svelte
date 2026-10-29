@@ -73,7 +73,7 @@
 			return true;
 		} catch (reason) {
 			error = errorText(reason);
-			if (reason instanceof ApiError && reason.status === 403) {
+			if (reason instanceof ApiError && reason.status === 403 && reason.code !== 'csrf_invalid') {
 				revision++;
 				closeResultForm();
 			}
@@ -146,7 +146,7 @@
 			revision++;
 			closeResultForm();
 		} catch (reason) {
-			if (reason instanceof ApiError && reason.status === 403) {
+			if (reason instanceof ApiError && reason.status === 403 && reason.code !== 'csrf_invalid') {
 				error = errorText(reason);
 				revision++;
 				closeResultForm();

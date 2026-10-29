@@ -14,9 +14,11 @@
 	import { page } from '$app/state';
 	import type { PageProps } from './$types';
 	let { data }: PageProps = $props();
-    let savedName = $state<{ userID: string; name: string } | null>(null);
-    let displayName = $derived(savedName?.userID === data.user.id ? savedName.name : data.user.full_name);
-    let workspaceUser = $derived({ ...data.user, full_name: displayName });
+	let savedName = $state<{ userID: string; name: string } | null>(null);
+	let displayName = $derived(
+		savedName?.userID === data.user.id ? savedName.name : data.user.full_name
+	);
+	let workspaceUser = $derived({ ...data.user, full_name: displayName });
 	const notifications = provideNotifications();
 	$effect(() => {
 		const userID = data.user.id;
@@ -162,8 +164,7 @@
 					{/if}</a
 				>
 				<div class="header-account">
-					<span class="account-avatar" aria-hidden="true">{initials}</span><span
-						>{displayName}</span
+					<span class="account-avatar" aria-hidden="true">{initials}</span><span>{displayName}</span
 					>
 				</div>
 				<button class="button secondary logout-button" onclick={logout} disabled={pending || !ready}
@@ -188,7 +189,10 @@
 			{#key data.user.id}
 				{#if clinical}
 					{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
-					<ClinicalWorkspace user={workspaceUser} onProfileSaved={(name) => (savedName = { userID: data.user.id, name })} />
+					<ClinicalWorkspace
+						user={workspaceUser}
+						onProfileSaved={(name) => (savedName = { userID: data.user.id, name })}
+					/>
 				{:else if isLab}
 					{#if message}<p class="error-banner" role="alert">{message}</p>{/if}
 					<LaboratoryWorkspace user={data.user} />
