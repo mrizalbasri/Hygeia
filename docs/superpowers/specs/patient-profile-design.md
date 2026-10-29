@@ -27,7 +27,10 @@ Error audit membatalkan seluruh perubahan.
 
 ## Antarmuka
 
-Menu Profil saya hanya di ruang pasien, mengikuti token, tipografi, form,
+Menu Profil saya berada di dropdown nama/avatar pada navbar ruang pasien, bersama
+Keluar. Sidebar berfokus pada menu perawatan. Dropdown tetap terlihat di mobile,
+mendukung keyboard, tutup dengan Escape (fokus kembali ke pemicu), dan klik di luar.
+Halaman profil mengikuti token, tipografi, form,
 focus state, dan breakpoint dashboard yang ada (mode Operate). Header profil,
 identitas hanya baca, lalu kelompok Data diri dan Kontak darurat. Form memiliki
 loading, retry, simpan, batal perubahan, pesan error yang mempertahankan isian,

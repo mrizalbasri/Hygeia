@@ -74,6 +74,7 @@ try {
 				fullPage: true
 			});
 		}
+		await page.getByRole('button', { name: /^Menu akun / }).click();
 		await page.getByRole('button', { name: 'Keluar', exact: true }).click();
 		await page.waitForURL('**/login');
 		assert.equal(

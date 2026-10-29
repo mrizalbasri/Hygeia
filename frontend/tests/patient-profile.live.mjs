@@ -57,8 +57,9 @@ try {
 	await page.getByLabel('Konfirmasi password', { exact: true }).fill(password);
 	await page.getByRole('button', { name: 'Buat akun pasien', exact: true }).click();
 	await page.waitForURL('**/dashboard/patient');
+	await page.getByRole('button', { name: /^Menu akun / }).click();
 	await page
-		.getByRole('navigation', { name: 'Menu utama' })
+		.getByRole('navigation', { name: 'Menu akun' })
 		.getByRole('link', { name: 'Profil saya', exact: true })
 		.click();
 	const name = page.getByLabel('Nama lengkap', { exact: true });
@@ -78,6 +79,7 @@ try {
 		await page.getByLabel('Alamat', { exact: false }).inputValue(),
 		'Jalan Live Sintetis 1'
 	);
+	await page.getByRole('button', { name: /^Menu akun / }).click();
 	await page.getByRole('button', { name: 'Keluar', exact: true }).click();
 	await page.waitForURL('**/login');
 	await page.goto(`${base}/dashboard/patient?view=profile`);

@@ -8,6 +8,7 @@
 	import PharmacyWorkspace from '#lib/workflows/PharmacyWorkspace.svelte';
 	import AdminWorkspace from '#lib/workflows/AdminWorkspace.svelte';
 	import WorkspaceIcon from '#lib/WorkspaceIcon.svelte';
+	import AccountDropdown from '#lib/AccountDropdown.svelte';
 	import '#lib/workspace.css';
 	import { menus } from '#lib/workflows/api.js';
 	import { provideNotifications } from '#lib/workflows/notification-state.svelte.js';
@@ -114,7 +115,7 @@
 		<p class="workspace-label">Ruang {role.label}</p>
 		<nav id="workspace-navigation" aria-label="Menu utama">
 			{#if hasWorkspace}
-				{#each menu as [id, label] (id)}<a
+				{#each menu.filter(([id]) => id !== 'profile') as [id, label] (id)}<a
 						class:nav-divider={id === 'notifications' || id === 'audit'}
 						class:nav-active={activeView === id}
 						aria-current={activeView === id ? 'page' : undefined}
@@ -163,13 +164,18 @@
 						>
 					{/if}</a
 				>
-				<div class="header-account">
-					<span class="account-avatar" aria-hidden="true">{initials}</span><span>{displayName}</span
-					>
-				</div>
-				<button class="button secondary logout-button" onclick={logout} disabled={pending || !ready}
-					><WorkspaceIcon name="logout" />{pending ? 'Keluar…' : 'Keluar'}</button
-				>
+				{#key data.user.id}
+					<AccountDropdown
+						name={displayName}
+						role={role.label}
+						{initials}
+						showProfile={data.user.role === 'patient'}
+						profileActive={activeView === 'profile'}
+						{pending}
+						{ready}
+						onlogout={logout}
+					/>
+				{/key}
 			</div>
 		</header>
 		<main

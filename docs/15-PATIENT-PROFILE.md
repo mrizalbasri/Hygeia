@@ -1,6 +1,6 @@
 # Profil pasien mandiri
 
-Menu **Profil saya** pada dashboard pasien membaca dan menyimpan profil melalui
+Menu **Profil saya** di dropdown nama/avatar navbar dashboard pasien (bersama **Keluar**) membaca dan menyimpan profil melalui
 API Go. Tidak ada kartu atau QR baru. Tidak menambahkan NIK atau dokumen identitas.
 
 ## Endpoint

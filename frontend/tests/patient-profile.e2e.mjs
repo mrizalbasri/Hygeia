@@ -77,6 +77,7 @@ try {
 		const path = new URL(req.url()).pathname;
 		const send = (json, status = 200) => route.fulfill({ status, json });
 		if (path.endsWith('/auth/csrf')) return send({ csrf_token: 'profile-csrf' });
+		if (path.endsWith('/auth/logout')) return send({});
 		if (path.endsWith('/me')) return send({ user });
 		if (path.endsWith('/notifications/unread-count')) return send({ unread_count: 0 });
 		if (path.endsWith('/notifications')) return send({ notifications: [] });
@@ -112,6 +113,27 @@ try {
 
 	await page.goto(`${base}/dashboard/patient?view=profile`);
 	await page.getByRole('heading', { name: 'Profil saya', level: 1 }).waitFor();
+	assert.equal(
+		await page.locator('.sidebar').getByRole('link', { name: 'Profil saya' }).count(),
+		0
+	);
+	const accountTrigger = page.getByRole('button', { name: /^Menu akun / });
+	await accountTrigger.focus();
+	await accountTrigger.press('Enter');
+	const accountMenu = page.getByRole('navigation', { name: 'Menu akun' });
+	await accountMenu.getByRole('link', { name: 'Profil saya', exact: true }).focus();
+	await page.keyboard.press('Escape');
+	assert.equal(await accountTrigger.getAttribute('aria-expanded'), 'false');
+	assert.equal(
+		await accountTrigger.evaluate((element) => element === document.activeElement),
+		true
+	);
+	await accountTrigger.click();
+	await page.getByRole('heading', { name: 'Profil saya', level: 1 }).click();
+	assert.equal(await accountTrigger.getAttribute('aria-expanded'), 'false');
+	await accountTrigger.click();
+	await accountMenu.getByRole('link', { name: 'Profil saya', exact: true }).click();
+	assert.equal(await accountTrigger.getAttribute('aria-expanded'), 'false');
 	await page.getByRole('alert').getByText('Profil belum dapat dimuat. Coba lagi.').waitFor();
 	assert.equal(await page.locator('form').count(), 0);
 	getStatus = 200;
@@ -190,6 +212,11 @@ try {
 	await page.screenshot({ path: '.test-results/profile-desktop.png', fullPage: true });
 	for (const width of [768, 390, 320]) {
 		await page.setViewportSize({ width, height: 900 });
+		await accountTrigger.click();
+		await accountMenu.getByRole('link', { name: 'Profil saya', exact: true }).waitFor();
+		const bounds = await accountMenu.boundingBox();
+		assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width, `account menu fits ${width}`);
+		await page.keyboard.press('Escape');
 		assert.ok(
 			await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
 			`profile overflow at ${width}`
@@ -197,6 +224,10 @@ try {
 	}
 	await page.setViewportSize({ width: 390, height: 900 });
 	await page.screenshot({ path: '.test-results/profile-mobile.png', fullPage: true });
+	await accountTrigger.click();
+	await page.screenshot({ path: '.test-results/profile-account-menu-mobile.png' });
+	await accountMenu.getByRole('button', { name: 'Keluar', exact: true }).click();
+	await page.waitForURL('**/login');
 	assert.deepEqual(errors, []);
 	await context.close();
 	console.log(
