@@ -2,11 +2,33 @@
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import HealthIcon from '#lib/HealthIcon.svelte';
-	import HeroPhone from '#lib/HeroPhone.svelte';
+	import HeroThree from '#lib/HeroThree.svelte';
 	import LandingNav from '#lib/LandingNav.svelte';
 	import './landing.css';
+	import './landing-sections.css';
 
 	let selectedRole = $state(0);
+	let selectedPermission = $state(0);
+	const permissionStages = [
+		{
+			label: 'Pasien',
+			icon: 'care' as const,
+			title: 'Anda menentukan siapa yang menerima.',
+			text: 'Dokter memerlukan hubungan perawatan atau izin yang sah. Laboratorium dan apotek menerima penugasan yang Anda setujui.'
+		},
+		{
+			label: 'Persetujuan',
+			icon: 'shield' as const,
+			title: 'Bagikan sesuai kebutuhan perawatan.',
+			text: 'Penerima, jenis data, dan masa akses mengikuti izin yang diberikan. Persetujuan pemeriksaan atau resep tidak membuka seluruh riwayat Anda.'
+		},
+		{
+			label: 'Penyedia layanan',
+			icon: 'lab' as const,
+			title: 'Setiap pihak melanjutkan bagiannya.',
+			text: 'Laboratorium mengerjakan pemeriksaan yang ditugaskan. Apotek menyiapkan resep yang dibagikan. Akses mengikuti masa episode, penugasan, atau izin yang berlaku.'
+		}
+	];
 	let ready = $state(false);
 	let scrollProgress = $state(0);
 
@@ -24,23 +46,59 @@
 				entries.forEach((entry) => {
 					if (entry.isIntersecting) {
 						entry.target.classList.add('in-view');
+						observer.unobserve(entry.target);
 					}
 				});
 			},
 			{ threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
 		);
 		document.querySelectorAll('.scroll-reveal').forEach((el) => {
+			if (el.getBoundingClientRect().top > window.innerHeight) el.classList.add('reveal-pending');
 			observer.observe(el);
 		});
-		return () => observer.disconnect();
+		const steps = [...document.querySelectorAll('.flow-steps li')];
+		let stepFrame = 0;
+		function updateStep() {
+			stepFrame = 0;
+			const bounds = steps.map((step) => step.getBoundingClientRect());
+			if (
+				!bounds.length ||
+				bounds[0].top > window.innerHeight ||
+				bounds[bounds.length - 1].bottom < 0
+			)
+				return;
+			const readingLine = window.innerHeight * 0.33;
+			const activeIndex = bounds.reduce(
+				(best, rect, index) =>
+					Math.abs(rect.top - readingLine) < Math.abs(bounds[best].top - readingLine)
+						? index
+						: best,
+				0
+			);
+			steps.forEach((step, index) => {
+				step.classList.toggle('is-current', index === activeIndex);
+				step.classList.toggle('is-complete', index < activeIndex);
+				if (index === activeIndex) step.setAttribute('aria-current', 'step');
+				else step.removeAttribute('aria-current');
+			});
+		}
+		function scheduleStep() {
+			if (!stepFrame) stepFrame = requestAnimationFrame(updateStep);
+		}
+		window.addEventListener('scroll', scheduleStep, { passive: true });
+		window.addEventListener('resize', scheduleStep);
+		updateStep();
+		return () => {
+			observer.disconnect();
+			cancelAnimationFrame(stepFrame);
+			window.removeEventListener('scroll', scheduleStep);
+			window.removeEventListener('resize', scheduleStep);
+		};
 	});
 
 	const audiences = [
 		{
 			label: 'Pasien',
-			image: '/patient-care.webp',
-			imageAlt: 'Ilustrasi pasien membaca informasi di ponselnya dari rumah.',
-			imageCaption: 'Ilustrasi pasien mengikuti perjalanan perawatannya.',
 			title: 'Pahami apa yang sedang berjalan.',
 			description:
 				'Lihat hubungan perawatan, status pemeriksaan, resep, dan riwayat kejadian dari ruang pasien Anda.',
@@ -54,9 +112,6 @@
 		},
 		{
 			label: 'Dokter',
-			image: '/care-consultation.webp',
-			imageAlt: 'Ilustrasi pasien berdiskusi dengan dokter sambil memegang ponselnya.',
-			imageCaption: 'Ilustrasi konsultasi pasien bersama dokter.',
 			title: 'Lanjutkan perawatan dengan konteks yang jelas.',
 			description:
 				'Alur dokter menghubungkan pasien, permintaan pemeriksaan, hasil, dan resep melalui episode perawatan.',
@@ -70,9 +125,6 @@
 		},
 		{
 			label: 'Laboratorium',
-			image: '/laboratory-supplies.webp',
-			imageAlt: 'Ilustrasi mikroskop, tabung sampel tertutup, dan tablet di meja laboratorium.',
-			imageCaption: 'Ilustrasi perlengkapan laboratorium.',
 			title: 'Dari permintaan menjadi hasil pemeriksaan.',
 			description:
 				'Laboratorium menerima penugasan pemeriksaan setelah pasien menyetujui pengiriman permintaan tersebut.',
@@ -86,10 +138,6 @@
 		},
 		{
 			label: 'Apotek',
-			image: '/pharmacy-supplies.webp',
-			imageAlt:
-				'Ilustrasi kemasan obat polos, blister tablet, dan botol obat bernuansa biru putih.',
-			imageCaption: 'Ilustrasi perlengkapan apotek.',
 			title: 'Siapkan resep yang ditujukan kepada Anda.',
 			description:
 				'Pasien memilih apotek dan menyetujui pengiriman resep. Apotek tujuan melanjutkan proses penyiapan.',
@@ -129,7 +177,7 @@
 		{
 			question: 'Apa yang sudah bisa saya coba sekarang?',
 			answer:
-				'Dengan akun demo dari pengelola, pasien dapat menyetujui perawatan dan pemeriksaan, memilih apotek, mengatur izin, serta membagikan CarePass. Dokter dapat mengundang pasien, meminta pemeriksaan, menerbitkan resep, dan membaca data sesuai izin. Data demo bersifat sintetis.'
+				'Pasien dapat menyetujui perawatan dan pemeriksaan, memilih apotek, mengatur izin, serta membagikan CarePass. Dokter dapat mengundang pasien, meminta pemeriksaan, menerbitkan resep, dan membaca data sesuai izin.'
 		}
 	];
 
@@ -158,7 +206,7 @@
 </script>
 
 <svelte:head>
-	<link rel="preload" as="image" href="/hero-phone-front.png" />
+	<link rel="preload" as="image" href="/hero-clinic-v2.png" />
 	<title>Hygeia · Perawatan terhubung, kendali di tangan Anda</title>
 	<meta
 		name="description"
@@ -183,30 +231,12 @@
 
 	<main id="utama">
 		<!-- HERO SECTION -->
-		<section class="landing-hero" aria-labelledby="landing-title">
-			<div class="hero-copy">
-				<p class="landing-kicker">Pasien · Dokter · Laboratorium · Apotek</p>
-				<h1 id="landing-title">
-					Perawatan<br />terhubung.<br /><span>Kendali di tangan Anda.</span>
-				</h1>
-				<p class="hero-description">
-					Ikuti pemeriksaan dari dokter sampai laboratorium, dan resep sampai apotek. Lihat
-					perkembangannya dari ruang pasien Anda.
-				</p>
-				<div class="hero-actions">
-					<a class="button primary" href={resolve('/login')}>Masuk ke ruang Anda</a>
-					<a class="landing-text-link" href="#cara-kerja">Kenali cara kerjanya</a>
-				</div>
-				<p class="hero-note">Prototipe Hygeia · Lingkungan demo dengan data sintetis</p>
-			</div>
-			<div class="hero-product" aria-label="Ilustrasi dashboard pasien">
-				<HeroPhone />
-			</div>
-		</section>
+		<HeroThree onSelectRole={(index) => (selectedRole = index)} />
 
 		<!-- FEATURES SECTION (Scroll Reveal) -->
 		<section class="landing-features scroll-reveal" id="fitur" aria-labelledby="features-title">
 			<div class="features-intro">
+				<p class="landing-kicker">SETIAP LANGKAH, LEBIH JELAS</p>
 				<h2 id="features-title">Dari pemeriksaan<br />sampai resep.</h2>
 				<p>
 					Permintaan lab sedang diproses? Resep sudah siap diambil? Dashboard memperlihatkan status
@@ -233,23 +263,13 @@
 			aria-labelledby="audiences-title"
 		>
 			<div class="audiences-heading">
+				<p class="landing-kicker">RUANG UNTUK SETIAP PERAN</p>
 				<h2 id="audiences-title">Empat peran.<br />Satu perjalanan perawatan.</h2>
 				<p>
 					Kebutuhan setiap pihak berbeda. Informasi yang dibagikan mengikuti peran dan hubungan
 					perawatannya.
 				</p>
 			</div>
-
-			<figure class="connected-care-visual">
-				<img
-					src="/connected-care.webp"
-					width="1536"
-					height="1024"
-					loading="lazy"
-					decoding="async"
-					alt="Ilustrasi pasien memegang ponselnya bersama dokter, petugas laboratorium, dan apoteker."
-				/>
-			</figure>
 
 			<div class="audience-explorer">
 				<div class="audience-options" aria-label="Pilih peran untuk mengetahui alurnya">
@@ -274,16 +294,6 @@
 									<li>{item}</li>
 								{/each}
 							</ul>
-							<figure class="provider-visual">
-								<img
-									src={audience.image}
-									width="1536"
-									height="1024"
-									loading="lazy"
-									decoding="async"
-									alt={audience.imageAlt}
-								/>
-							</figure>
 							<div class="audience-access">
 								<HealthIcon name="shield" />
 								<p>{audience.access}</p>
@@ -292,15 +302,12 @@
 					{/key}
 				</div>
 			</div>
-			<p class="audience-implementation-note">
-				Ruang pasien, dokter, laboratorium, dan apotek terhubung ke API. Setiap peran melanjutkan
-				bagian perawatannya sesuai penugasan dan izin yang berlaku.
-			</p>
 		</section>
 
 		<!-- FLOW SECTION (Scroll Reveal) -->
 		<section class="landing-flow scroll-reveal" id="cara-kerja" aria-labelledby="flow-title">
 			<div class="flow-heading">
+				<p class="landing-kicker">DARI UNDANGAN HINGGA RESEP</p>
 				<h2 id="flow-title">Perawatan dimulai<br />dengan persetujuan Anda.</h2>
 				<p>
 					Hubungan dengan dokter menjadi dasar perjalanan perawatan. Akses data mengikuti izin yang
@@ -347,50 +354,43 @@
 			aria-labelledby="permission-title"
 		>
 			<div class="permission-intro">
-				<HealthIcon name="shield" />
+				<p class="landing-kicker">IZIN DATA, DI TANGAN ANDA</p>
 				<h2 id="permission-title">Berbagi seperlunya.<br />Dengan tujuan yang jelas.</h2>
-				<p>
-					Persetujuan bukan izin untuk membuka semua data. Penerima, jenis data, dan masa akses
-					mengikuti hubungan perawatan atau izin yang diberikan.
-				</p>
+				<p>Ikuti alurnya untuk memahami bagaimana informasi perawatan dibagikan.</p>
 			</div>
-			<dl class="permission-definitions">
-				<div>
-					<dt>Siapa yang menerima?</dt>
-					<dd>
-						Dokter yang memiliki hubungan perawatan, atau penyedia yang dituju pada permintaan dan
-						resep.
-					</dd>
-				</div>
-				<div>
-					<dt>Data apa yang dibagikan?</dt>
-					<dd>
-						Cakupannya mengikuti kebutuhan. Penugasan laboratorium dan apotek tidak memberi akses ke
-						seluruh riwayat pasien.
-					</dd>
-				</div>
-				<div>
-					<dt>Berapa lama akses berlaku?</dt>
-					<dd>
-						Episode, penugasan penyedia, dan izin berbatas waktu memiliki aturan masa akses
-						masing-masing.
-					</dd>
-				</div>
-				<div>
-					<dt>Apa yang dapat ditelusuri?</dt>
-					<dd>
-						Backend mencatat akses terlindungi. Timeline perawatan dan riwayat akses merupakan dua
-						catatan berbeda.
-					</dd>
-				</div>
-			</dl>
+			<div class="permission-path" aria-label="Jelajahi alur izin data">
+				{#each permissionStages as stage, index (stage.label)}
+					<button
+						aria-pressed={selectedPermission === index}
+						aria-controls="permission-explanation"
+						onclick={() => (selectedPermission = index)}
+					>
+						<span class="permission-node"><HealthIcon name={stage.icon} /></span>
+						<span class="permission-stage-number">0{index + 1}</span>
+						<span>{stage.label}</span>
+					</button>
+				{/each}
+			</div>
+			<div class="permission-explanation" id="permission-explanation" aria-live="polite">
+				{#key selectedPermission}
+					<div class="audience-detail-fade">
+						<h3>{permissionStages[selectedPermission].title}</h3>
+						<p>{permissionStages[selectedPermission].text}</p>
+					</div>
+				{/key}
+			</div>
+			<p class="permission-footnote">
+				<HealthIcon name="shield" /> Timeline perawatan dan riwayat akses dapat dilihat sebagai dua catatan
+				terpisah.
+			</p>
 		</section>
 
 		<!-- FAQ SECTION (Scroll Reveal) -->
 		<section class="landing-faq scroll-reveal" id="pertanyaan" aria-labelledby="faq-title">
 			<div class="faq-intro">
-				<h2 id="faq-title">Kenali Hygeia<br />sebelum mulai.</h2>
-				<p>Tentang akses data, alur resep, dan apa yang tersedia di versi demo.</p>
+				<p class="landing-kicker">PERTANYAAN YANG SERING DITANYAKAN</p>
+				<h2 id="faq-title">Mari mengenal Hygeia.</h2>
+				<p>Tentang akses data, alur resep, dan layanan yang tersedia.</p>
 			</div>
 			<div class="faq-list">
 				{#each questions as item (item.question)}
@@ -404,27 +404,21 @@
 
 		<!-- ABOUT & ACTION SECTION (Scroll Reveal) -->
 		<section class="landing-about scroll-reveal" id="tentang" aria-labelledby="about-title">
-			<figure class="about-visual">
-				<img
-					src="/care-consultation.webp"
-					width="1536"
-					height="1024"
-					loading="lazy"
-					decoding="async"
-					alt="Ilustrasi pasien berdiskusi dengan dokter sambil memegang ponselnya sendiri."
-				/>
-			</figure>
-			<div>
-				<h2 id="about-title">Tentang Hygeia</h2>
+			<!-- Centered actions adapted from sv-blocks call-to-action-one. -->
+			<div class="closing-card">
+				<p class="closing-eyebrow">KENALI PERAWATAN ANDA LEBIH DEKAT</p>
+				<h2 id="about-title">Satu ruang untuk mengikuti<br />perjalanan perawatan Anda.</h2>
 				<p>
-					Hygeia adalah prototipe pertukaran data kesehatan antara pasien, dokter, laboratorium, dan
-					apotek, dengan persetujuan pasien dan riwayat akses yang dapat diperiksa.
+					Hygeia menghubungkan pasien, dokter, laboratorium, dan apotek. Ikuti perkembangannya,
+					dengan persetujuan tetap di tangan Anda.
 				</p>
-				<p class="about-demo">
-					Saat ini tersedia sebagai lingkungan demo dengan data sintetis. Gunakan akun yang
-					diberikan pengelola untuk mencoba ruang Anda.
-				</p>
-				<a class="button primary about-action" href={resolve('/login')}>Masuk ke Hygeia</a>
+				<div class="closing-actions">
+					<a class="closing-primary" href={resolve('/register')}
+						>Mulai dengan Hygeia <span aria-hidden="true">↗</span></a
+					>
+					<a class="closing-secondary" href={resolve('/login')}>Masuk ke akun</a>
+				</div>
+				<span class="closing-note">Perawatan terhubung. Kendali di tangan Anda.</span>
 			</div>
 		</section>
 	</main>
