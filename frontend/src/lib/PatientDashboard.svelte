@@ -1,10 +1,14 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import WorkspaceIcon from './WorkspaceIcon.svelte';
 	import type { User } from './auth.js';
+	import { useNotifications } from './workflows/notification-state.svelte.js';
 	import {
 		readPatientList,
+		readWorkSummary,
+		pendingWork,
+		type SummaryResource,
 		statuses,
 		type Resource,
 		type Episode,
@@ -17,81 +21,41 @@
 	let labs = $state<Resource<LabRequest>>({ items: [], loading: true, error: '' });
 	let prescriptions = $state<Resource<Prescription>>({ items: [], loading: true, error: '' });
 	let timeline = $state<Resource<TimelineEvent>>({ items: [], loading: true, error: '' });
+	let summary = $state<SummaryResource>({ data: null, loading: true, error: '' });
+	const notifications = useNotifications();
+	let controller: AbortController | null = null;
+	let disposed = false;
+	let refreshAgain = false;
 	let filter = $state('all');
 	let refreshing = $state(false);
 	let today = $state('');
 	let filteredEvents = $derived(
 		timeline.items.filter((event) => filter === 'all' || event.kind === filter)
 	);
-	let pendingItems = $derived([
-		...episodes.items
-			.filter((item) => item.status === 'pending')
-			.map((item) => ({
-				id: item.id,
-				title: `Undangan dari ${item.doctor_name}`,
-				text: 'Tinjau hubungan perawatan dengan dokter.',
-				view: 'episodes',
-				icon: 'episodes'
-			})),
-		...labs.items
-			.filter((item) => item.status === 'pending_patient_approval')
-			.map((item) => ({
-				id: item.id,
-				title: item.test_name,
-				text: 'Tinjau pengiriman pemeriksaan ke laboratorium.',
-				view: 'labs',
-				icon: 'labs'
-			})),
-		...prescriptions.items
-			.filter((item) => item.status === 'pending_patient_approval')
-			.map((item) => ({
-				id: item.id,
-				title: 'Persetujuan resep',
-				text: 'Pilih apotek dan tinjau pengiriman resep.',
-				view: 'prescriptions',
-				icon: 'prescriptions'
-			}))
-	]);
-	let pendingUnavailable = $derived(
-		episodes.loading ||
-			labs.loading ||
-			prescriptions.loading ||
-			!!episodes.error ||
-			!!labs.error ||
-			!!prescriptions.error
-	);
+	let pendingItems = $derived(summary.data ? pendingWork(summary.data) : []);
+	let pendingUnavailable = $derived(summary.loading || !!summary.error || !summary.data);
 	let metrics = $derived([
 		{
 			label: 'Perawatan aktif',
-			value:
-				episodes.loading || episodes.error
-					? '—'
-					: episodes.items.filter((item) => item.status === 'active').length,
+			value: pendingUnavailable ? '—' : summary.data!.active_episodes,
 			view: 'episodes',
 			icon: 'episodes'
 		},
 		{
 			label: 'Perlu persetujuan',
-			value: pendingUnavailable ? '—' : pendingItems.length,
+			value: pendingUnavailable ? '—' : pendingItems.reduce((total, item) => total + item.count, 0),
 			view: 'consents',
 			icon: 'consents'
 		},
 		{
 			label: 'Lab dalam proses',
-			value:
-				labs.loading || labs.error
-					? '—'
-					: labs.items.filter((item) => ['sent', 'accepted', 'in_progress'].includes(item.status))
-							.length,
+			value: pendingUnavailable ? '—' : summary.data!.labs_in_progress,
 			view: 'labs',
 			icon: 'labs'
 		},
 		{
 			label: 'Resep siap diambil',
-			value:
-				prescriptions.loading || prescriptions.error
-					? '—'
-					: prescriptions.items.filter((item) => item.status === 'ready').length,
+			value: pendingUnavailable ? '—' : summary.data!.prescriptions_ready,
 			view: 'prescriptions',
 			icon: 'prescriptions'
 		}
@@ -113,28 +77,53 @@
 				}).format(new Date(value))
 			: 'Waktu tidak tersedia';
 	async function refresh() {
-		if (refreshing) return;
+		if (disposed) return;
+		if (refreshing) {
+			refreshAgain = true;
+			return;
+		}
 		refreshing = true;
+		controller = new AbortController();
+		const signal = controller.signal;
+		summary.loading = true;
 		episodes.loading = labs.loading = prescriptions.loading = timeline.loading = true;
 		try {
 			await Promise.all([
-				readPatientList<Episode>('episodes?limit=6', 'episodes').then(
-					(value) => (episodes = value)
+				readWorkSummary(signal).then((value) => {
+					if (!signal.aborted) summary = value;
+				}),
+				readPatientList<Episode>('episodes?limit=6', 'episodes', signal).then((value) => {
+					if (!signal.aborted) episodes = value;
+				}),
+				readPatientList<LabRequest>('lab-requests?limit=6', 'lab_requests', signal).then(
+					(value) => {
+						if (!signal.aborted) labs = value;
+					}
 				),
-				readPatientList<LabRequest>('lab-requests?limit=6', 'lab_requests').then(
-					(value) => (labs = value)
+				readPatientList<Prescription>('prescriptions?limit=6', 'prescriptions', signal).then(
+					(value) => {
+						if (!signal.aborted) prescriptions = value;
+					}
 				),
-				readPatientList<Prescription>('prescriptions?limit=6', 'prescriptions').then(
-					(value) => (prescriptions = value)
-				),
-				readPatientList<TimelineEvent>('patient/timeline?limit=8', 'events').then(
-					(value) => (timeline = value)
+				readPatientList<TimelineEvent>('patient/timeline?limit=8', 'events', signal).then(
+					(value) => {
+						if (!signal.aborted) timeline = value;
+					}
 				)
 			]);
 		} finally {
 			refreshing = false;
+			if (refreshAgain && !disposed) {
+				refreshAgain = false;
+				void refresh();
+			}
 		}
 	}
+	$effect(() => {
+		const revision = notifications.revision;
+		void revision;
+		untrack(() => void refresh());
+	});
 	onMount(() => {
 		today = new Intl.DateTimeFormat('id-ID', {
 			weekday: 'long',
@@ -143,7 +132,10 @@
 			year: 'numeric',
 			timeZone: 'Asia/Jakarta'
 		}).format(new Date());
-		void refresh();
+		return () => {
+			disposed = true;
+			controller?.abort();
+		};
 	});
 </script>
 
@@ -169,8 +161,8 @@
 		>{/each}
 </div>
 <p class="overview-limit">
-	Ringkasan dari maksimal 6 perawatan, pemeriksaan, dan resep terbaru. Buka setiap menu untuk daftar
-	lengkap.
+	Angka mencakup seluruh pekerjaan Anda. Daftar di bawah menampilkan maksimal 6 perawatan,
+	pemeriksaan, dan resep terbaru.
 </p>
 
 <section class="health-panel care-table-panel" id="perawatan" aria-labelledby="care-title">
@@ -397,28 +389,22 @@
 					<h2 id="pending-title">Perlu tindakan Anda</h2>
 				</div>
 			</div>
-			{#if episodes.loading || labs.loading || prescriptions.loading}<p
-					class="resource-message"
-					role="status"
-				>
+			{#if summary.loading}<p class="resource-message" role="status">
 					Memeriksa persetujuan…
 				</p>{:else if pendingUnavailable}<div class="compact-empty">
 					<h3>Ringkasan belum lengkap</h3>
-					<p>Perbarui data atau buka menu Perawatan, Pemeriksaan, dan Resep & apotek.</p>
+					<p role="alert">{summary.error}</p>
+					<button class="text-button" onclick={refresh}>Coba lagi ringkasan</button>
 				</div>{:else if !pendingItems.length}<div class="compact-empty pending-empty">
 					<span class="pending-check"><WorkspaceIcon name="consents" /></span>
 					<h3>Tidak ada persetujuan tertunda</h3>
-					<p>
-						Dari daftar terbaru yang dimuat. Periksa juga permintaan di <a
-							href={resolve('/dashboard/[role]?view=consents', { role: 'patient' })}>Izin dokter</a
-						>.
-					</p>
+					<p>Seluruh undangan, pemeriksaan, resep, dan permintaan izin dokter sudah diperiksa.</p>
 				</div>{:else}<div class="pending-list">
 					{#each pendingItems as item (`${item.view}-${item.id}`)}<a
 							href={resolve(`/dashboard/[role]?view=${item.view}`, { role: 'patient' })}
 							><WorkspaceIcon name={item.icon} />
 							<div>
-								<h3>{item.title}</h3>
+								<h3>{item.title} · {item.count}</h3>
 								<p>{item.text}</p>
 							</div>
 							<WorkspaceIcon name="arrow" /></a
