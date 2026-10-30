@@ -8,7 +8,7 @@
 	</div>
 	<div class="preview-body">
 		<div class="preview-brand">
-			<img src="/logo-light.png" width="18" height="18" alt="" /><span>HYGEIA</span>
+			<img src="/logo-light.webp" width="18" height="18" alt="" /><span>HYGEIA</span>
 		</div>
 		<p class="preview-title">Perawatan<br /><span>Anda.</span></p>
 		<p class="preview-description">Satu perjalanan.<br />Terhubung di setiap langkah.</p>

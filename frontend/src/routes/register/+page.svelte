@@ -1,5 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import ClerkPanel from '#lib/ClerkPanel.svelte';
+	import '#lib/auth-layout.css';
+	import type { PageProps } from './$types';
+	let { data }: PageProps = $props();
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { authMutation, type User } from '#lib/auth.js';
@@ -73,10 +77,10 @@
 	/></svelte:head
 >
 
-<main class="login-shell register-shell">
+<main class="login-shell register-shell auth-shell">
 	<section class="login-story" aria-label="Tentang akun pasien">
 		<a class="brand" href={resolve('/')}
-			><img src="/logo-light.png" alt="" width="44" height="44" /><span>Hygeia</span></a
+			><img src="/logo-light.webp" alt="" width="44" height="44" /><span>Hygeia</span></a
 		>
 		<div class="story-body">
 			<h1>Mulai perjalanan<br /> perawatan&nbsp;<span>Anda.</span></h1>
@@ -92,92 +96,116 @@
 	</section>
 	<section class="login-form-side" aria-labelledby="register-title">
 		<div class="login-form-wrap register-form-wrap">
-			<h2 id="register-title">Daftar sebagai pasien</h2>
-			<p class="muted intro">Setelah mendaftar, Anda langsung masuk ke ruang pasien.</p>
-			<form method="POST" onsubmit={register} aria-busy={pending}>
-				<label for="full-name">Nama lengkap</label>
-				<input
-					id="full-name"
-					name="full_name"
-					autocomplete="name"
-					bind:value={fullName}
-					maxlength="200"
-					required
-					disabled={pending}
-				/>
-				<label for="email">Email</label>
-				<input
-					id="email"
-					name="email"
-					type="email"
-					autocomplete="username"
-					bind:value={email}
-					maxlength="254"
-					required
-					disabled={pending}
-				/>
-				<div class="registration-demographics">
-					<div>
-						<label for="birth-year">Tahun lahir</label><input
-							id="birth-year"
-							name="birth_year"
-							type="number"
-							inputmode="numeric"
-							min="1900"
-							max={currentYear}
-							step="1"
-							bind:value={birthYear}
-							required
-							disabled={pending}
-						/>
-					</div>
-					<div>
-						<label for="sex">Jenis kelamin</label><select
-							id="sex"
-							name="sex"
-							bind:value={sex}
-							disabled={pending}
-							><option value="unknown">Tidak disebutkan</option><option value="female"
-								>Perempuan</option
-							><option value="male">Laki-laki</option><option value="other">Lainnya</option></select
-						>
-					</div>
-				</div>
-				<label for="password">Password</label>
-				<input
-					id="password"
-					name="password"
-					type="password"
-					autocomplete="new-password"
-					aria-describedby="password-hint"
-					bind:value={password}
-					maxlength="1024"
-					required
-					disabled={pending}
-				/>
-				<p id="password-hint" class="auth-hint">
-					Gunakan minimal 12 karakter. Password tidak boleh lebih dari 1024 byte.
-				</p>
-				<label for="confirmation">Konfirmasi password</label>
-				<input
-					id="confirmation"
-					name="confirmation"
-					type="password"
-					autocomplete="new-password"
-					bind:value={confirmation}
-					maxlength="1024"
-					required
-					disabled={pending}
-				/>
-				<div class="form-message" aria-live="polite">
-					{#if message}<p role="alert">{message}</p>{/if}
-				</div>
-				<button class="button primary login-submit" type="submit" disabled={pending || !ready}
-					>{pending ? 'Mendaftarkan akun…' : 'Buat akun pasien'}</button
+			{#if data.authProvider === 'clerk'}
+				<h2 id="register-title" class="sr-only">Daftar sebagai pasien</h2>
+			{:else}
+				<h2 id="register-title">Daftar sebagai pasien</h2>
+				<p class="muted intro">Setelah mendaftar, Anda langsung masuk ke ruang pasien.</p>
+			{/if}
+			{#if data.authProvider === 'clerk'}{#if data.clerkPublishableKey}<ClerkPanel
+						publishableKey={data.clerkPublishableKey}
+						mode="register"
+					/>{:else}<p role="alert">Konfigurasi autentikasi belum tersedia.</p>{/if}{:else}<form
+					method="POST"
+					onsubmit={register}
+					aria-busy={pending}
 				>
-			</form>
-			<p class="auth-switch">Sudah punya akun? <a href={resolve('/login')}>Masuk</a></p>
+					<label for="full-name">Nama lengkap</label>
+					<input
+						id="full-name"
+						name="full_name"
+						autocomplete="name"
+						bind:value={fullName}
+						maxlength="200"
+						required
+						disabled={pending}
+					/>
+					<label for="email">Email</label>
+					<input
+						id="email"
+						name="email"
+						type="email"
+						autocomplete="username"
+						bind:value={email}
+						maxlength="254"
+						required
+						disabled={pending}
+					/>
+					<div class="registration-demographics">
+						<div>
+							<label for="birth-year">Tahun lahir</label><input
+								id="birth-year"
+								name="birth_year"
+								type="number"
+								inputmode="numeric"
+								min="1900"
+								max={currentYear}
+								step="1"
+								bind:value={birthYear}
+								required
+								disabled={pending}
+							/>
+						</div>
+						<div>
+							<label for="sex">Jenis kelamin</label><select
+								id="sex"
+								name="sex"
+								bind:value={sex}
+								disabled={pending}
+								><option value="unknown">Tidak disebutkan</option><option value="female"
+									>Perempuan</option
+								><option value="male">Laki-laki</option><option value="other">Lainnya</option
+								></select
+							>
+						</div>
+					</div>
+					<label for="password">Password</label>
+					<input
+						id="password"
+						name="password"
+						type="password"
+						autocomplete="new-password"
+						aria-describedby="password-hint"
+						bind:value={password}
+						maxlength="1024"
+						required
+						disabled={pending}
+					/>
+					<p id="password-hint" class="auth-hint">
+						Gunakan minimal 12 karakter. Password tidak boleh lebih dari 1024 byte.
+					</p>
+					<label for="confirmation">Konfirmasi password</label>
+					<input
+						id="confirmation"
+						name="confirmation"
+						type="password"
+						autocomplete="new-password"
+						bind:value={confirmation}
+						maxlength="1024"
+						required
+						disabled={pending}
+					/>
+					<div class="form-message" aria-live="polite">
+						{#if message}<p role="alert">{message}</p>{/if}
+					</div>
+					<button class="button primary login-submit" type="submit" disabled={pending || !ready}
+						>{pending ? 'Mendaftarkan akun…' : 'Buat akun pasien'}</button
+					>
+				</form>{/if}
+			{#if data.authProvider !== 'clerk'}<p class="auth-switch">
+					Sudah punya akun? <a href={resolve('/login')}>Masuk</a>
+				</p>{/if}
 		</div>
-		<a class="form-footer button secondary" href={resolve('/')}>Kembali ke beranda</a>
+		<a class="form-footer button secondary" href={resolve('/')}
+			><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+				><path
+					d="m10 5-7 7 7 7M3 12h18"
+					stroke="currentColor"
+					stroke-width="1.7"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/></svg
+			>Kembali ke beranda</a
+		>
 	</section>
 </main>

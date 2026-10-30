@@ -35,6 +35,11 @@ Semua path endpoint API menggunakan prefix `/api/v1`.
 - [Frontend](../frontend/README.md): SSR, proxy API, dashboard, dan tes browser.
 - [Kontribusi](../CONTRIBUTING.md): branch, commit, PR, dan pemeriksaan perubahan.
 - [Verifikasi backend](14-BACKEND-READINESS.md): bukti pemeriksaan dan batas kesiapan pada waktu pencatatan.
+- [Persiapan pilot tahap 1](PILOT-STAGE1-2026-10-28.md): perbaikan dasar, demo sintetis, hasil tes, dan sembilan prioritas lanjutan menuju pilot.
+- [Perbaikan flow dan realtime](WORKFLOW-RECOVERY-2026-10-29.md): koreksi hasil, pemulihan tanda terima, pembatalan/penggantian layanan, SSE, dan bukti pengujian.
+- [Integrasi Clerk](CLERK-INTEGRATION-2026-10-29.md): autentikasi, MFA staf, penautan identitas, dan batas validasi development.
+- [Database staging Neon](NEON-STAGING-2026-10-29.md): lingkungan staging terpisah, koneksi TLS, migrasi, dan cara menjalankan API.
+- [Docker dan Vercel](DOCKER-VERCEL-SETUP-2026-10-29.md): build image Docker Hub, konfigurasi frontend, dan environment backend.
 - [Setup backend, 25 Oktober 2026](BACKEND-SETUP-2026-10-25.md).
 - [Inventaris aplikasi, 25 Oktober 2026](APP-INVENTORY-2026-10-25.md).
 - [Handoff pasien, dokter, dan penyedia](plans/2026-10-15-patient-doctor-and-provider-handoff.md).

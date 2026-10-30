@@ -29,6 +29,16 @@
 	let filter = $state('all');
 	let refreshing = $state(false);
 	let today = $state('');
+	let copyMessage = $state('');
+	async function copyPatientCode() {
+		if (!user.patient_ref) return;
+		try {
+			await navigator.clipboard.writeText(user.patient_ref);
+			copyMessage = 'Kode pasien berhasil disalin.';
+		} catch {
+			copyMessage = 'Kode belum dapat disalin. Pilih dan salin kode secara manual.';
+		}
+	}
 	let filteredEvents = $derived(
 		timeline.items.filter((event) => filter === 'all' || event.kind === filter)
 	);
@@ -149,6 +159,20 @@
 		><WorkspaceIcon name="refresh" />{refreshing ? 'Memperbarui…' : 'Perbarui data'}</button
 	>
 </div>
+
+<section class="health-panel patient-start" aria-labelledby="first-step-title">
+	<h2 id="first-step-title">Mulai perawatan</h2>
+	<p>Berikan kode pasien ini kepada dokter, lalu tinjau undangan melalui menu Perawatan.</p>
+	{#if user.patient_ref}
+		<div class="patient-code">
+			<span>Kode pasien Anda</span><code>{user.patient_ref}</code>
+			<button type="button" class="button secondary" onclick={copyPatientCode}
+				>Salin kode pasien</button
+			>
+		</div>
+	{:else}<p>Kode pasien belum tersedia. Hubungi pengelola.</p>{/if}
+	{#if copyMessage}<p role="status">{copyMessage}</p>{/if}
+</section>
 
 <div class="overview-metrics" aria-label="Ringkasan data terbaru">
 	{#each metrics as metric (metric.label)}<a
@@ -373,9 +397,11 @@
 				{#each filteredEvents as event (event.seq)}<li>
 						<span class="timeline-marker" aria-hidden="true"></span>
 						<div>
-							<span class="timeline-kind">{kinds[event.kind] || event.kind}</span>
+							<div class="timeline-event-heading">
+								<span class="timeline-kind">{kinds[event.kind] || event.kind}</span>
+								<time datetime={event.occurred_at}>{date(event.occurred_at)} WIB</time>
+							</div>
 							<p>{event.message}</p>
-							<time datetime={event.occurred_at}>{date(event.occurred_at)} WIB</time>
 						</div>
 					</li>{/each}
 			</ol>{/if}

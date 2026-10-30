@@ -14,6 +14,7 @@ terlindungi memakai `Cache-Control: no-store` dan `X-Request-ID`.
 | GET | `/prescriptions/{id}` | Detail sesuai izin |
 | POST | `/prescriptions/{id}/approval` | Pasien pemilik: pilih apotek dan setujui, atau tolak |
 | PATCH | `/prescriptions/{id}/status` | Staf apotek tujuan: pindahkan satu tahap |
+| POST | `/prescriptions/{id}/cancel` | Pasien pemilik, dokter episode aktif, atau apotek yang ditugaskan: batalkan dengan alasan |
 
 Direktori dan daftar mendukung `limit` (default 20, 1–100) dan `offset`
 (default 0, 0–10000). Daftar resep mendukung filter `status` dari seluruh status
@@ -91,8 +92,14 @@ Episode yang berakhir mencabut akses klinis dokter, membatalkan resep pending,
 dan mempertahankan penugasan apotek yang sudah disetujui sampai selesai. Ini
 konsisten dengan perilaku penugasan laboratorium. Status selesai mengeluarkan
 resep dari antrean dan menutup pembacaan berikutnya oleh apotek. Pasien tetap
-dapat membaca riwayatnya. Pembatalan setelah pengiriman, transfer apotek,
-penyuntingan obat, dan consent lintas dokter untuk resep tidak tersedia.
+dapat membaca riwayatnya. Pembatalan setelah pengiriman tersedia melalui
+`POST /prescriptions/{id}/cancel` dengan `{"reason":"Alasan pembatalan"}`
+(5–500 karakter setelah trim). Respons `200 {"status":"cancelled"}`;
+selesai/dibatalkan menolak pembatalan ulang. Audit, timeline, notifikasi dan
+status ditulis atomik; apotek yang kehilangan akses menerima notifikasi generik.
+Untuk mengganti apotek, dokter menerbitkan resep baru dan pasien memilih serta
+menyetujui kembali apoteknya. Item resep lama tetap tersimpan. Transfer langsung,
+penyuntingan obat lama, dan consent lintas dokter untuk resep tidak tersedia.
 
 ## Bentuk respons dan aturan akses
 
@@ -118,7 +125,10 @@ penyuntingan obat, dan consent lintas dokter untuk resep tidak tersedia.
 
 Saat disetujui, `pharmacy_org_id`, `pharmacy_name`, dan `approved_at` terisi.
 Saat selesai, `completed_at` terisi. Pembatalan mengisi `cancelled_at` dan
-`cancellation_reason`, tanpa penugasan apotek.
+`cancellation_reason`. Pembatalan sebelum persetujuan tidak memiliki penugasan;
+pembatalan setelah persetujuan mempertahankan apotek/waktu persetujuan lama
+dan menambahkan `cancellation_note`. Kode alasan operasional:
+`patient_cancelled`, `doctor_cancelled`, atau `provider_unavailable`.
 
 `QueuePrescription` adalah proyeksi khusus apotek:
 

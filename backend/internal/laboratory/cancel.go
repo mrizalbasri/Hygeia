@@ -6,7 +6,35 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/mrizalbasri/Hygeia/backend/internal/audit"
 	"github.com/mrizalbasri/Hygeia/backend/internal/auth"
+	"github.com/mrizalbasri/Hygeia/backend/internal/policy"
 )
+
+func (s *Service) Cancel(ctx context.Context, token []byte, id, note string) error {
+	return s.transact(ctx, token, func(ctx context.Context, tx pgx.Tx, actor auth.User) error {
+		r, err := loadRequest(ctx, tx, id, true)
+		if err != nil {
+			return err
+		}
+		reason := ""
+		switch {
+		case policy.IsEpisodePatient(actor, r.episode):
+			reason = "patient_cancelled"
+		case policy.HasActiveEpisode(actor, r.episode):
+			reason = "doctor_cancelled"
+		case policy.IsAssignedLab(actor, r.access()) && r.ApprovedAt != nil:
+			reason = "provider_unavailable"
+		default:
+			return s.reject(ctx, tx, actor, r, "lab_request.cancel", ErrForbidden)
+		}
+		if r.Status == "completed" || r.Status == "cancelled" {
+			return s.reject(ctx, tx, actor, r, "lab_request.cancel", ErrConflict)
+		}
+		if _, err := tx.Exec(ctx, `UPDATE lab_requests SET status='cancelled',cancelled_at=clock_timestamp(),cancellation_reason=$2,cancellation_note=$3,updated_at=clock_timestamp() WHERE id=$1`, id, reason, note); err != nil {
+			return err
+		}
+		return s.record(ctx, tx, actor, r, "lab_request.cancel", "allow", accessBasis(actor))
+	})
+}
 
 // CancelPending is called by care while holding the episode row lock, in the
 // same transaction as ending it. Already approved assignments are preserved.

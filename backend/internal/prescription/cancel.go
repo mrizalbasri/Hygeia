@@ -6,7 +6,35 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/mrizalbasri/Hygeia/backend/internal/audit"
 	"github.com/mrizalbasri/Hygeia/backend/internal/auth"
+	"github.com/mrizalbasri/Hygeia/backend/internal/policy"
 )
+
+func (s *Service) Cancel(ctx context.Context, token []byte, id, note string) error {
+	return s.transact(ctx, token, func(ctx context.Context, tx pgx.Tx, actor auth.User) error {
+		p, err := loadPrescription(ctx, tx, id, true)
+		if err != nil {
+			return err
+		}
+		reason := ""
+		switch {
+		case policy.IsEpisodePatient(actor, p.episode):
+			reason = "patient_cancelled"
+		case policy.HasActiveEpisode(actor, p.episode):
+			reason = "doctor_cancelled"
+		case policy.IsAssignedPharmacy(actor, p.access()) && p.ApprovedAt != nil:
+			reason = "provider_unavailable"
+		default:
+			return s.reject(ctx, tx, actor, p, "prescription.cancel", ErrForbidden)
+		}
+		if p.Status == "completed" || p.Status == "cancelled" {
+			return s.reject(ctx, tx, actor, p, "prescription.cancel", ErrConflict)
+		}
+		if _, err := tx.Exec(ctx, `UPDATE prescriptions SET status='cancelled',cancelled_at=clock_timestamp(),cancellation_reason=$2,cancellation_note=$3,updated_at=clock_timestamp() WHERE id=$1`, id, reason, note); err != nil {
+			return err
+		}
+		return s.record(ctx, tx, actor, p, "prescription.cancel", "allow", accessBasis(actor))
+	})
+}
 
 // CancelPending runs inside care's episode-end transaction, after locking the
 // episode. Already approved pharmacy assignments continue independently.

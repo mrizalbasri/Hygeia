@@ -14,6 +14,17 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/admin/users", h.users)
 	mux.HandleFunc("POST /api/v1/admin/users", h.createUser)
 	mux.HandleFunc("PATCH /api/v1/admin/users/{id}", h.updateUser)
+	mux.HandleFunc("POST /api/v1/admin/users/{id}/staff-role", func(w http.ResponseWriter, r *http.Request) {
+		var input struct {
+			Role           string `json:"role"`
+			OrganizationID string `json:"organization_id"`
+		}
+		if !apiutil.Decode(w, r, &input) {
+			return
+		}
+		value, err := h.Service.AssignStaff(r.Context(), auth.SessionHash(r), r.PathValue("id"), input.Role, input.OrganizationID)
+		output(w, r, 200, "user", value, err)
+	})
 	mux.HandleFunc("GET /api/v1/admin/organizations", h.organizations)
 	mux.HandleFunc("POST /api/v1/admin/organizations", h.createOrganization)
 	mux.HandleFunc("PATCH /api/v1/admin/organizations/{id}", h.renameOrganization)

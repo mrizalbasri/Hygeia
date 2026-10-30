@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { api, errorText, statusText, type Entry, type Payload } from './api.js';
 	import { useNotifications } from './notification-state.svelte.js';
@@ -32,6 +32,7 @@
 		next = $state(''),
 		previous = $state<string[]>([]),
 		retry = $state(0);
+	let lastQuery = '';
 	$effect(() => {
 		const currentPath = path,
 			currentRevision = revision + notifications.revision,
@@ -44,16 +45,14 @@
 		void currentRevision;
 		void currentRetry;
 		const controller = new AbortController();
-		items = [];
+		const requestURL = `${currentPath}${currentPath.includes('?') ? '&' : '?'}${query}`;
+		const changedQuery = lastQuery !== requestURL;
+		lastQuery = requestURL;
+		if (changedQuery) items = [];
 		error = '';
-		loading = true;
+		loading = changedQuery || untrack(() => items.length === 0);
 		next = '';
-		void api<Payload>(
-			`${currentPath}${currentPath.includes('?') ? '&' : '?'}${query}`,
-			'GET',
-			undefined,
-			controller.signal
-		)
+		void api<Payload>(requestURL, 'GET', undefined, controller.signal)
 			.then((data) => {
 				if (controller.signal.aborted) return;
 				if (!Array.isArray(data[listKey])) throw new Error('Invalid list');
@@ -61,7 +60,10 @@
 				next = String(data[nextKey] || '');
 			})
 			.catch((reason) => {
-				if (!controller.signal.aborted) error = errorText(reason);
+				if (!controller.signal.aborted) {
+					items = [];
+					error = errorText(reason);
+				}
 			})
 			.finally(() => {
 				if (!controller.signal.aborted) loading = false;

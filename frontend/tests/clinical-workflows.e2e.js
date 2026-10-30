@@ -11,7 +11,17 @@ const user = {
 	role: 'patient',
 	organization: null
 };
+let endSession = false;
 const server = createServer((request, response) => {
+	if (request.url.startsWith('/api/v1/notifications/stream')) {
+		response.writeHead(200, {
+			'Content-Type': 'text/event-stream',
+			'Cache-Control': 'no-cache'
+		});
+		if (endSession) response.end('event: session-ended\ndata: {}\n\n');
+		else response.write(': connected\n\n');
+		return;
+	}
 	response.setHeader('Content-Type', 'application/json');
 	response.end(JSON.stringify({ user }));
 });
@@ -20,7 +30,7 @@ const vite = spawn(
 	process.execPath,
 	['node_modules/vite/bin/vite.js', 'dev', '--host', '127.0.0.1', '--port', '5186', '--strictPort'],
 	{
-		env: { ...process.env, API_BASE_URL: 'http://127.0.0.1:18086' },
+		env: { ...process.env, AUTH_PROVIDER: 'local', API_BASE_URL: 'http://127.0.0.1:18086' },
 		stdio: ['ignore', 'pipe', 'pipe'],
 		windowsHide: true
 	}
@@ -52,8 +62,7 @@ try {
 	let conflict = false,
 		forbidden = false,
 		unavailable = false,
-		unauthenticated = false,
-		endSession = false;
+		unauthenticated = false;
 	let rows = {
 		episodes: [{ id, doctor_name: 'Dokter Sintetis', status: 'pending' }],
 		lab_requests: [{ id, test_name: 'Tes sintetis', status: 'pending_patient_approval' }],
@@ -97,6 +106,7 @@ try {
 							id,
 							test_name: 'Hasil sintetis',
 							value: 'Nilai rahasia fixture',
+							flag: 'normal',
 							unit: 'demo',
 							corrections: [
 								{
@@ -128,11 +138,8 @@ try {
 				],
 				next_before_id: null
 			});
-		if (path === '/notifications/stream')
-			return route.fulfill({
-				contentType: 'text/event-stream',
-				body: endSession ? 'event: session-ended\ndata: {}\n\n' : ': keep-alive\n\n'
-			});
+		// Keep the SSE connection open so pagination is tested independently of reconnects.
+		if (path === '/notifications/stream') return route.continue();
 		if (unauthenticated) return send({ error: { message: 'Sesi berakhir' } }, 401);
 		if (unavailable) return send({ error: { message: 'Layanan terganggu' } }, 503);
 		const key = path === '/lab-requests' ? 'lab_requests' : path.slice(1);
@@ -174,7 +181,12 @@ try {
 	rows.lab_requests[0] = { id, test_name: 'Tes sintetis', status: 'completed', result_id: id };
 	await view('labs');
 	await page.getByRole('button', { name: 'Buka hasil pemeriksaan', exact: true }).click();
-	await page.getByRole('dialog').getByText('Nilai rahasia fixture demo', { exact: true }).waitFor();
+	await page.getByRole('dialog').getByText('Nilai koreksi fixture demo', { exact: true }).waitFor();
+	await page.getByRole('dialog').getByText('Riwayat hasil dan koreksi', { exact: true }).click();
+	await page
+		.getByRole('dialog')
+		.getByText(/Nilai rahasia fixture demo/)
+		.waitFor();
 	await page
 		.getByRole('dialog')
 		.getByText('Nilai koreksi fixture demo · normal', { exact: true })
@@ -184,7 +196,7 @@ try {
 	assert.equal(
 		await page
 			.getByRole('dialog')
-			.getByText('Nilai rahasia fixture demo', { exact: true })
+			.getByText(/Nilai rahasia fixture demo/)
 			.isVisible(),
 		true
 	);

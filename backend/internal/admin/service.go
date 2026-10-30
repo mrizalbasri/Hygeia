@@ -13,7 +13,10 @@ import (
 	"github.com/mrizalbasri/Hygeia/backend/internal/auth"
 )
 
-type Service struct{ DB apiutil.DB }
+type Service struct {
+	DB         apiutil.DB
+	ClerkUsers func(context.Context, string) (auth.ClerkIdentity, error)
+}
 type Account struct {
 	ID             string     `json:"id"`
 	Email          string     `json:"email"`
@@ -29,11 +32,85 @@ type CreateAccount struct {
 	Password       string `json:"password"`
 	Role           string `json:"role"`
 	OrganizationID string `json:"organization_id"`
+	ClerkUserID    string `json:"clerk_user_id"`
 }
 type UpdateAccount struct {
 	FullName *string `json:"full_name"`
 	Disabled *bool   `json:"disabled"`
 }
+
+// AssignStaff converts only a pristine, Clerk-linked patient onboarding record.
+// Existing clinical/audit history prevents conversion and is never discarded.
+func (s *Service) AssignStaff(ctx context.Context, token []byte, id, role, organizationID string) (Account, error) {
+	var result Account
+	if !apiutil.UUID(id) {
+		return result, apiutil.ErrInvalid
+	}
+	switch role {
+	case "admin":
+		if organizationID != "" {
+			return result, apiutil.ErrInvalid
+		}
+	case "doctor", "lab", "pharmacy":
+		if !apiutil.UUID(organizationID) {
+			return result, apiutil.ErrInvalid
+		}
+	default:
+		return result, apiutil.ErrInvalid
+	}
+	err := s.transact(ctx, token, true, func(ctx context.Context, tx pgx.Tx, actor auth.User) error {
+		var current string
+		var linked *string
+		if err := tx.QueryRow(ctx, `SELECT role,clerk_user_id FROM users WHERE id=$1 AND disabled_at IS NULL FOR UPDATE`, id).Scan(&current, &linked); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return apiutil.ErrForbidden
+			}
+			return err
+		}
+		if current != "patient" || linked == nil {
+			return apiutil.ErrConflict
+		}
+		var patient string
+		if err := tx.QueryRow(ctx, `SELECT id::text FROM patients WHERE user_id=$1 FOR UPDATE`, id).Scan(&patient); err != nil {
+			return err
+		}
+		var used bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM care_episodes WHERE patient_id=$1) OR EXISTS(SELECT 1 FROM audit_events WHERE chain_id=$1)`, patient).Scan(&used); err != nil {
+			return err
+		}
+		if used {
+			return apiutil.ErrConflict
+		}
+		if organizationID != "" {
+			var kind string
+			if err := tx.QueryRow(ctx, `SELECT type FROM organizations WHERE id=$1 FOR SHARE`, organizationID).Scan(&kind); err != nil || kind != organizationType(role) {
+				return apiutil.ErrInvalid
+			}
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM patients WHERE id=$1`, patient); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `UPDATE users SET role=$2 WHERE id=$1`, id, role); err != nil {
+			return err
+		}
+		if organizationID != "" {
+			if _, err := tx.Exec(ctx, `INSERT INTO organization_memberships(user_id,organization_id,staff_role) VALUES($1,$2,$3)`, id, organizationID, role); err != nil {
+				return err
+			}
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM sessions WHERE user_id=$1`, id); err != nil {
+			return err
+		}
+		var err error
+		result, err = scanAccount(tx.QueryRow(ctx, accountSelect+`WHERE u.id=$1`, id))
+		if err != nil {
+			return err
+		}
+		return record(ctx, tx, actor, "user.update", id)
+	})
+	return result, err
+}
+
 type Activity struct {
 	ID         int64     `json:"id"`
 	ActorID    string    `json:"actor_id"`
@@ -117,7 +194,7 @@ func organizationType(role string) string {
 	return ""
 }
 func ValidCreate(input CreateAccount) bool {
-	if !apiutil.Text(input.FullName, 1, 200) || len(input.Password) < 12 || len(input.Password) > 1024 || len(input.Email) > 254 || strings.ContainsAny(input.Email, " \t\r\n\x00") || strings.Count(input.Email, "@") != 1 {
+	if !apiutil.Text(input.FullName, 1, 200) || (input.ClerkUserID == "" && (len(input.Password) < 12 || len(input.Password) > 1024)) || (input.ClerkUserID != "" && (!strings.HasPrefix(input.ClerkUserID, "user_") || len(input.ClerkUserID) > 128 || input.Password != "")) || len(input.Email) > 254 || strings.ContainsAny(input.Email, " \t\r\n\x00") || strings.Count(input.Email, "@") != 1 {
 		return false
 	}
 	parts := strings.Split(input.Email, "@")
@@ -149,13 +226,41 @@ func (s *Service) CreateUser(ctx context.Context, token []byte, input CreateAcco
 				return err
 			}
 		}
-		hash, err := auth.HashPassword(input.Password)
-		if err != nil {
-			return err
+		var err error
+		hash := "!clerk"
+		if s.ClerkUsers != nil {
+			if input.ClerkUserID == "" {
+				return apiutil.ErrInvalid
+			}
+			identity, err := s.ClerkUsers(ctx, input.ClerkUserID)
+			if err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return apiutil.ErrInvalid
+				}
+				return err
+			}
+			if identity.Email != strings.ToLower(input.Email) {
+				return apiutil.ErrInvalid
+			}
+		} else {
+			if input.ClerkUserID != "" {
+				return apiutil.ErrInvalid
+			}
+			var err error
+			hash, err = auth.HashPassword(input.Password)
+			if err != nil {
+				return err
+			}
 		}
 		var id string
-		if err := tx.QueryRow(ctx, `INSERT INTO users(email,password_hash,full_name,role) VALUES($1,$2,$3,$4) RETURNING id::text`, strings.ToLower(input.Email), hash, input.FullName, input.Role).Scan(&id); err != nil {
-			return err
+		var createErr error
+		if s.ClerkUsers != nil {
+			createErr = tx.QueryRow(ctx, `INSERT INTO users(email,password_hash,full_name,role,clerk_user_id) VALUES($1,$2,$3,$4,$5) RETURNING id::text`, strings.ToLower(input.Email), hash, input.FullName, input.Role, input.ClerkUserID).Scan(&id)
+		} else {
+			createErr = tx.QueryRow(ctx, `INSERT INTO users(email,password_hash,full_name,role) VALUES($1,$2,$3,$4) RETURNING id::text`, strings.ToLower(input.Email), hash, input.FullName, input.Role).Scan(&id)
+		}
+		if createErr != nil {
+			return createErr
 		}
 		if input.OrganizationID != "" {
 			if _, err := tx.Exec(ctx, `INSERT INTO organization_memberships(user_id,organization_id,staff_role) VALUES($1,$2,$3)`, id, input.OrganizationID, input.Role); err != nil {

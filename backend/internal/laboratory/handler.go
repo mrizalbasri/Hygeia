@@ -33,6 +33,44 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/lab-requests/{id}/result", h.submit)
 	mux.HandleFunc("GET /api/v1/lab-results/{id}", h.result)
 	mux.HandleFunc("POST /api/v1/lab-results/{id}/corrections", h.correct)
+	mux.HandleFunc("GET /api/v1/lab-receipts", h.receipts)
+	mux.HandleFunc("POST /api/v1/lab-requests/{id}/cancel", h.cancel)
+}
+
+func (h *Handler) receipts(w http.ResponseWriter, r *http.Request) {
+	limit, offset, ok := pagination(w, r)
+	if !ok {
+		return
+	}
+	receipts, err := h.Service.Receipts(r.Context(), auth.SessionHash(r), limit, offset)
+	if err != nil {
+		h.respondError(w, r, err)
+		return
+	}
+	jsonResponse(w, 200, map[string]any{"receipts": receipts, "limit": limit, "offset": offset})
+}
+
+func (h *Handler) cancel(w http.ResponseWriter, r *http.Request) {
+	id, ok := resourceID(w, r)
+	if !ok {
+		return
+	}
+	var input struct {
+		Reason string `json:"reason"`
+	}
+	if !decode(w, r, &input) {
+		return
+	}
+	input.Reason = strings.TrimSpace(input.Reason)
+	if !validText(input.Reason, 5, 500) {
+		invalid(w)
+		return
+	}
+	if err := h.Service.Cancel(r.Context(), auth.SessionHash(r), id, input.Reason); err != nil {
+		h.respondError(w, r, err)
+		return
+	}
+	jsonResponse(w, 200, map[string]string{"status": "cancelled"})
 }
 
 func jsonResponse(w http.ResponseWriter, status int, body any) {
@@ -276,7 +314,7 @@ func (h *Handler) correct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.Reason = strings.TrimSpace(input.Reason)
-	if len(input.Reason) < 5 || len(input.Reason) > 500 {
+	if length := utf8.RuneCountInString(input.Reason); length < 5 || length > 500 {
 		apiError(w, 400, "invalid_input", "Alasan koreksi harus antara 5 dan 500 karakter.")
 		return
 	}

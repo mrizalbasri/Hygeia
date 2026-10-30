@@ -1,7 +1,6 @@
 import { getContext, setContext } from 'svelte';
-import { goto } from '$app/navigation';
-import { resolve } from '$app/paths';
-import { api, parseJSON, type Entry } from './api.js';
+import { api } from './api.js';
+import { subscribeRealtime, reconnectRealtime } from './realtime.js';
 
 const notificationContext = Symbol('dashboard-notifications');
 
@@ -11,7 +10,7 @@ export class NotificationState {
 	revision = $state(0);
 	connection = $state('Menghubungkan pembaruan…');
 	failed = $state(false);
-	private source: EventSource | null = null;
+	private unsubscribe: (() => void) | null = null;
 	private controller: AbortController | null = null;
 	private countVersion = 0;
 
@@ -44,65 +43,21 @@ export class NotificationState {
 		this.failed = false;
 		this.connection = 'Menghubungkan pembaruan…';
 		void this.refreshUnread();
-		void api<{ notifications: Entry[] }>(
-			'/notifications?limit=1',
-			'GET',
-			undefined,
-			controller.signal
-		)
-			.then((data) => {
+		reconnectRealtime();
+		this.unsubscribe = subscribeRealtime(
+			() => {
 				if (controller.signal.aborted) return;
-				const last = data.notifications[0]?.id || '0';
-				const source = new EventSource(
-					`/api/v1/notifications/stream?after_id=${encodeURIComponent(String(last))}`
-				);
-				this.source = source;
-				const invalidate = () => {
-					if (controller.signal.aborted) return;
-					this.revision++;
-					void this.refreshUnread();
-				};
-				source.onopen = () => {
-					if (controller.signal.aborted) return;
-					this.failed = false;
-					this.connection = 'Pembaruan langsung aktif';
-					// Also catch up after reconnecting: events may have arrived offline.
-					invalidate();
-				};
-				source.onerror = () => {
-					if (controller.signal.aborted) return;
-					this.failed = true;
-					this.connection =
-						'Koneksi terputus; mencoba menyambungkan kembali. Anda dapat mencoba lagi.';
-				};
-				source.addEventListener('notification', (event) => {
-					if (controller.signal.aborted) return;
-					try {
-						parseJSON((event as MessageEvent).data);
-						invalidate();
-					} catch {
-						this.failed = true;
-						this.connection = 'Pembaruan tidak dapat dibaca. Coba sambungkan kembali.';
-					}
-				});
-				source.addEventListener('unavailable', () => {
-					if (controller.signal.aborted) return;
-					this.failed = true;
-					this.connection = 'Layanan pembaruan terganggu; mencoba menyambungkan kembali.';
-				});
-				source.addEventListener('session-ended', () => {
-					if (controller.signal.aborted) return;
-					this.disconnect();
-					void goto(resolve('/login'), { replace: true, refreshAll: true });
-				});
-			})
-			.catch(() => {
+				this.revision++;
+				void this.refreshUnread();
+			},
+			(message) => {
 				if (controller.signal.aborted) return;
-				this.failed = true;
-				this.connection = 'Pembaruan langsung belum tersedia. Coba sambungkan kembali.';
-			});
+				this.connection = message;
+				this.failed =
+					message !== 'Pembaruan langsung aktif' && message !== 'Menghubungkan pembaruan…';
+			}
+		);
 		return () => {
-			// An old dashboard cleanup must not close a newer connection.
 			if (this.controller === controller) this.disconnect();
 		};
 	}
@@ -110,8 +65,8 @@ export class NotificationState {
 	disconnect() {
 		this.controller?.abort();
 		this.controller = null;
-		this.source?.close();
-		this.source = null;
+		this.unsubscribe?.();
+		this.unsubscribe = null;
 		this.countVersion++;
 		this.unread = null;
 	}

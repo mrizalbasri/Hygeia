@@ -11,6 +11,8 @@ export type Entry = {
 	corrections?: (Entry & { reason: string; corrected_at: string })[];
 	id: string;
 	status?: string;
+	cancellation_reason?: string | null;
+	cancellation_note?: string | null;
 	patient_ref?: string;
 	doctor_name?: string;
 	doctor_user_id?: string;
@@ -135,7 +137,9 @@ export async function api<T>(
 			await goto(resolve('/login'), { replace: true, refreshAll: true });
 		}
 		const detail = data.error as
-			{ message?: string; request_id?: string; code?: string } | undefined;
+			{ code?: string; message?: string; request_id?: string } | undefined;
+		if (response.status === 403 && detail?.code === 'mfa_required')
+			await goto(resolve('/account/security'), { replace: true, refreshAll: true });
 		throw new ApiError(
 			detail?.message || 'Permintaan tidak dapat diproses.',
 			response.status,
@@ -220,6 +224,7 @@ export const menus = {
 	lab: [
 		['overview', 'Ringkasan lab'],
 		['queue', 'Permintaan masuk'],
+		['receipts', 'Tanda terima hasil'],
 		['corrections', 'Koreksi hasil'],
 		['notifications', 'Notifikasi']
 	],

@@ -63,7 +63,7 @@ func (s *Service) transact(ctx context.Context, token []byte, fn func(context.Co
 }
 
 const requestSelect = `SELECT r.id::text,r.episode_id::text,p.patient_ref,r.lab_org_id::text,l.name,
-    r.test_code,r.test_name,r.status,r.created_at,r.updated_at,r.approved_at,r.completed_at,r.cancelled_at,r.cancellation_reason,x.id::text,
+    r.test_code,r.test_name,r.status,r.created_at,r.updated_at,r.approved_at,r.completed_at,r.cancelled_at,r.cancellation_reason,r.cancellation_note,x.id::text,
     p.id::text,e.doctor_id::text,p.user_id::text,e.organization_id::text,e.status
     FROM lab_requests r JOIN care_episodes e ON e.id=r.episode_id JOIN patients p ON p.id=e.patient_id
     JOIN organizations l ON l.id=r.lab_org_id LEFT JOIN lab_results x ON x.lab_request_id=r.id `
@@ -71,7 +71,7 @@ const requestSelect = `SELECT r.id::text,r.episode_id::text,p.patient_ref,r.lab_
 func scanRequest(row interface{ Scan(...any) error }) (Request, error) {
 	var r Request
 	err := row.Scan(&r.ID, &r.EpisodeID, &r.PatientRef, &r.LabOrgID, &r.LabName, &r.TestCode, &r.TestName, &r.Status,
-		&r.CreatedAt, &r.UpdatedAt, &r.ApprovedAt, &r.CompletedAt, &r.CancelledAt, &r.CancellationReason, &r.ResultID,
+		&r.CreatedAt, &r.UpdatedAt, &r.ApprovedAt, &r.CompletedAt, &r.CancelledAt, &r.CancellationReason, &r.CancellationNote, &r.ResultID,
 		&r.patientID, &r.episode.DoctorID, &r.episode.PatientUserID, &r.episode.OrganizationID, &r.episode.Status)
 	return r, err
 }
@@ -499,8 +499,8 @@ func (s *Service) CorrectResult(ctx context.Context, token []byte, resultID stri
 			return s.reject(ctx, tx, actor, r, "lab_result.correct", ErrConflict)
 		}
 		err = tx.QueryRow(ctx, `
-			INSERT INTO lab_result_corrections(lab_result_id, corrected_by, reason, value, unit, reference_range, flag, note)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			INSERT INTO lab_result_corrections(lab_result_id, corrected_by, reason, value, unit, reference_range, flag, note, corrected_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, clock_timestamp())
 			RETURNING id::text, lab_result_id::text, corrected_by::text, reason, value, unit, reference_range, flag, note, corrected_at`,
 			resultID, actor.ID, input.Reason, input.Value, input.Unit, input.ReferenceRange, input.Flag, input.Note,
 		).Scan(&corr.ID, &corr.LabResultID, &corr.CorrectedBy, &corr.Reason, &corr.Value, &corr.Unit, &corr.ReferenceRange, &corr.Flag, &corr.Note, &corr.CorrectedAt)

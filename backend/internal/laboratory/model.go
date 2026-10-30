@@ -22,6 +22,7 @@ type Request struct {
 	CompletedAt        *time.Time `json:"completed_at"`
 	CancelledAt        *time.Time `json:"cancelled_at"`
 	CancellationReason *string    `json:"cancellation_reason"`
+	CancellationNote   *string    `json:"cancellation_note"`
 	ResultID           *string    `json:"result_id"`
 	patientID          string
 	episode            policy.Episode
@@ -104,4 +105,12 @@ type Receipt struct {
 type Laboratory struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+// ReceiptMetadata deliberately excludes all result values and clinical notes.
+type ReceiptMetadata struct {
+	Receipt
+	PatientRef string `json:"patient_ref"`
+	TestCode   string `json:"test_code"`
+	TestName   string `json:"test_name"`
 }
