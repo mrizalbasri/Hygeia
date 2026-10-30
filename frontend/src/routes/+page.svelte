@@ -420,12 +420,8 @@
 					<p class="footer-tagline">Perawatan terhubung. Kendali di tangan Anda.</p>
 					<p class="footer-desc">
 						Platform pertukaran data kesehatan dengan persetujuan pasien. Menghubungkan pasien,
-						dokter, laboratorium, dan apotek secara aman, terstruktur, dan transparan.
+						dokter, laboratorium, dan apotek dalam satu sistem terintegrasi.
 					</p>
-					<div class="footer-trust-badge">
-						<HealthIcon name="shield" />
-						<span>Akses klinis berbasis persetujuan & masa berlaku</span>
-					</div>
 				</div>
 
 				<div class="footer-nav-col">
@@ -449,8 +445,13 @@
 				</div>
 			</div>
 
+			<div class="footer-statement" aria-hidden="true">
+				<span class="footer-big-wordmark">HYGEIA</span>
+			</div>
+
 			<div class="footer-bottom">
 				<p>© 2026 Hygeia. Hak cipta dilindungi.</p>
+				<p class="footer-subtext">Pertukaran data klinis aman berbasis persetujuan pasien.</p>
 			</div>
 		</div>
 	</footer>
