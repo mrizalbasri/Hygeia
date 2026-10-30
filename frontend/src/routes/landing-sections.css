@@ -13,6 +13,17 @@
 	text-align: center;
 	max-width: 640px;
 	margin: auto;
+	transition:
+		opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+		transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.landing-features.reveal-pending:not(.in-view) .features-intro {
+	opacity: 0;
+	transform: translateY(22px);
+}
+.landing-features.in-view .features-intro {
+	opacity: 1;
+	transform: translateY(0);
 }
 .features-intro > p:not(.landing-kicker) {
 	max-width: 540px;
@@ -30,8 +41,10 @@
 	gap: 22px;
 	padding: 24px 0 0;
 	border-top: 1px solid var(--landing-rule);
-	opacity: 1;
-	transform: none;
+	transition:
+		opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+		transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+		border-color 0.25s ease;
 }
 .feature-list h3 {
 	font-size: 16px;
@@ -44,19 +57,59 @@
 	height: 46px;
 	padding: 0;
 	background: #edf5ff;
+	color: #0052cc;
 	border-radius: 14px;
+	transition:
+		transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+		background-color 0.25s ease,
+		color 0.25s ease;
 }
 .landing-features.reveal-pending:not(.in-view) .feature-list article {
 	opacity: 0;
-	transform: translateY(14px);
+	transform: translateY(26px) scale(0.97);
+}
+.landing-features.in-view .feature-list article {
+	opacity: 1;
+	transform: translateY(0) scale(1);
+}
+.landing-features.in-view .feature-list article:nth-child(1) {
+	transition-delay: 0.08s;
+}
+.landing-features.in-view .feature-list article:nth-child(2) {
+	transition-delay: 0.16s;
+}
+.landing-features.in-view .feature-list article:nth-child(3) {
+	transition-delay: 0.24s;
+}
+.landing-features.in-view .feature-list article:nth-child(4) {
+	transition-delay: 0.32s;
 }
 .landing-features.in-view .feature-list article:hover {
-	transform: translateY(-4px);
+	transform: translateY(-5px);
+	border-top-color: #0052cc;
+}
+.feature-list article:hover .feature-icon {
+	transform: scale(1.12) rotate(2deg);
+	background: #0052cc;
+	color: #ffffff;
 }
 
 .landing-audiences {
 	padding-top: 24px;
 	padding-bottom: 96px;
+}
+.audiences-heading {
+	transition:
+		opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+		transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.landing-audiences.reveal-pending:not(.in-view) .audiences-heading {
+	opacity: 0;
+	transform: translateY(22px);
+}
+.landing-audiences.in-view .audiences-heading {
+	opacity: 1;
+	transform: translateY(0);
 }
 .audience-explorer {
 	display: block;
@@ -74,6 +127,32 @@
 	border-radius: 999px;
 	padding: 12px 24px;
 	justify-content: center;
+	transition:
+		opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+		transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+		background-color 0.2s ease,
+		border-color 0.2s ease,
+		color 0.2s ease;
+}
+.landing-audiences.reveal-pending:not(.in-view) .audience-options button {
+	opacity: 0;
+	transform: translateY(16px);
+}
+.landing-audiences.in-view .audience-options button {
+	opacity: 1;
+	transform: translateY(0);
+}
+.landing-audiences.in-view .audience-options button:nth-child(1) {
+	transition-delay: 0.1s;
+}
+.landing-audiences.in-view .audience-options button:nth-child(2) {
+	transition-delay: 0.18s;
+}
+.landing-audiences.in-view .audience-options button:nth-child(3) {
+	transition-delay: 0.26s;
+}
+.landing-audiences.in-view .audience-options button:nth-child(4) {
+	transition-delay: 0.34s;
 }
 .audience-options button span {
 	display: none;
@@ -82,6 +161,17 @@
 	margin-top: 32px;
 	min-height: 320px;
 	max-width: 840px;
+	transition:
+		opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.2s,
+		transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.2s;
+}
+.landing-audiences.reveal-pending:not(.in-view) .audience-detail {
+	opacity: 0;
+	transform: translateY(24px) scale(0.99);
+}
+.landing-audiences.in-view .audience-detail {
+	opacity: 1;
+	transform: translateY(0) scale(1);
 }
 .audience-detail ul {
 	display: grid;
@@ -100,6 +190,42 @@
 .landing-flow {
 	padding-inline: max(32px, calc((100vw - 1088px) / 2));
 }
+.flow-heading {
+	transition:
+		opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+		transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.landing-flow.reveal-pending:not(.in-view) .flow-heading {
+	opacity: 0;
+	transform: translateY(22px);
+}
+.landing-flow.in-view .flow-heading {
+	opacity: 1;
+	transform: translateY(0);
+}
+.landing-flow.reveal-pending:not(.in-view) .flow-steps li {
+	opacity: 0;
+	transform: translateX(-24px);
+}
+.landing-flow.in-view .flow-steps li {
+	opacity: 1;
+	transform: translateX(0);
+}
+.landing-flow.in-view .flow-steps li:nth-child(1) {
+	transition-delay: 0.08s;
+}
+.landing-flow.in-view .flow-steps li:nth-child(2) {
+	transition-delay: 0.16s;
+}
+.landing-flow.in-view .flow-steps li:nth-child(3) {
+	transition-delay: 0.24s;
+}
+.landing-flow.in-view .flow-steps li:nth-child(4) {
+	transition-delay: 0.32s;
+}
+.landing-flow.in-view .flow-steps li:nth-child(5) {
+	transition-delay: 0.4s;
+}
 
 .landing-permission {
 	display: block;
@@ -111,6 +237,17 @@
 .permission-intro {
 	max-width: 640px;
 	margin: 0 auto;
+	transition:
+		opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+		transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.landing-permission.reveal-pending:not(.in-view) .permission-intro {
+	opacity: 0;
+	transform: translateY(22px);
+}
+.landing-permission.in-view .permission-intro {
+	opacity: 1;
+	transform: translateY(0);
 }
 .permission-intro h2 {
 	font-size: clamp(30px, 3.4vw, 42px);
@@ -137,6 +274,14 @@
 	right: 16.66%;
 	height: 1px;
 	background: #abc8ed;
+	transform-origin: left center;
+	transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s;
+}
+.landing-permission.reveal-pending:not(.in-view) .permission-path::before {
+	transform: scaleX(0);
+}
+.landing-permission.in-view .permission-path::before {
+	transform: scaleX(1);
 }
 .permission-path button {
 	display: flex;
@@ -153,6 +298,26 @@
 	cursor: pointer;
 	position: relative;
 	white-space: normal;
+	transition:
+		opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+		transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.landing-permission.reveal-pending:not(.in-view) .permission-path button {
+	opacity: 0;
+	transform: translateY(24px) scale(0.92);
+}
+.landing-permission.in-view .permission-path button {
+	opacity: 1;
+	transform: translateY(0) scale(1);
+}
+.landing-permission.in-view .permission-path button:nth-child(1) {
+	transition-delay: 0.1s;
+}
+.landing-permission.in-view .permission-path button:nth-child(2) {
+	transition-delay: 0.22s;
+}
+.landing-permission.in-view .permission-path button:nth-child(3) {
+	transition-delay: 0.34s;
 }
 .permission-node {
 	display: grid;
@@ -193,6 +358,17 @@
 	max-width: 640px;
 	min-height: 160px;
 	margin: auto;
+	transition:
+		opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.35s,
+		transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.35s;
+}
+.landing-permission.reveal-pending:not(.in-view) .permission-explanation {
+	opacity: 0;
+	transform: translateY(18px);
+}
+.landing-permission.in-view .permission-explanation {
+	opacity: 1;
+	transform: translateY(0);
 }
 .permission-explanation h3 {
 	font-size: 22px;
@@ -215,6 +391,17 @@
 	color: #526780;
 	font-size: 12px;
 	line-height: 1.7;
+	transition:
+		opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.45s,
+		transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.45s;
+}
+.landing-permission.reveal-pending:not(.in-view) .permission-footnote {
+	opacity: 0;
+	transform: translateY(16px);
+}
+.landing-permission.in-view .permission-footnote {
+	opacity: 1;
+	transform: translateY(0);
 }
 .permission-footnote svg {
 	flex-shrink: 0;
@@ -230,9 +417,49 @@
 }
 .faq-intro {
 	margin-bottom: 32px;
+	transition:
+		opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+		transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.landing-faq.reveal-pending:not(.in-view) .faq-intro {
+	opacity: 0;
+	transform: translateY(22px);
+}
+.landing-faq.in-view .faq-intro {
+	opacity: 1;
+	transform: translateY(0);
 }
 .faq-intro > p {
 	max-width: none;
+}
+.faq-list details {
+	transition:
+		opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+		transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+		background-color 0.2s ease;
+}
+.landing-faq.reveal-pending:not(.in-view) .faq-list details {
+	opacity: 0;
+	transform: translateY(18px);
+}
+.landing-faq.in-view .faq-list details {
+	opacity: 1;
+	transform: translateY(0);
+}
+.landing-faq.in-view .faq-list details:nth-child(1) {
+	transition-delay: 0.08s;
+}
+.landing-faq.in-view .faq-list details:nth-child(2) {
+	transition-delay: 0.15s;
+}
+.landing-faq.in-view .faq-list details:nth-child(3) {
+	transition-delay: 0.22s;
+}
+.landing-faq.in-view .faq-list details:nth-child(4) {
+	transition-delay: 0.29s;
+}
+.landing-faq.in-view .faq-list details:nth-child(5) {
+	transition-delay: 0.36s;
 }
 
 .landing-about {
@@ -250,6 +477,32 @@
 	text-align: center;
 	color: #fff;
 	isolation: isolate;
+	transition:
+		opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+		transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+		box-shadow 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.landing-about.reveal-pending:not(.in-view) .closing-card {
+	opacity: 0;
+	transform: translateY(32px) scale(0.96);
+}
+.landing-about.in-view .closing-card {
+	opacity: 1;
+	transform: translateY(0) scale(1);
+	box-shadow:
+		0 24px 64px -16px rgba(7, 57, 119, 0.42),
+		0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+}
+.landing-about.reveal-pending:not(.in-view) .closing-actions {
+	opacity: 0;
+	transform: translateY(16px);
+}
+.landing-about.in-view .closing-actions {
+	opacity: 1;
+	transform: translateY(0);
+	transition:
+		opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.25s,
+		transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.25s;
 }
 .closing-card::before,
 .closing-card::after {
@@ -427,8 +680,24 @@
 	}
 }
 @media (prefers-reduced-motion: reduce) {
-	.landing-features.reveal-pending:not(.in-view) .feature-list article {
-		opacity: 1;
-		transform: none;
+	.landing-features.reveal-pending:not(.in-view) .features-intro,
+	.landing-features.reveal-pending:not(.in-view) .feature-list article,
+	.landing-audiences.reveal-pending:not(.in-view) .audiences-heading,
+	.landing-audiences.reveal-pending:not(.in-view) .audience-options button,
+	.landing-audiences.reveal-pending:not(.in-view) .audience-detail,
+	.landing-flow.reveal-pending:not(.in-view) .flow-heading,
+	.landing-flow.reveal-pending:not(.in-view) .flow-steps li,
+	.landing-permission.reveal-pending:not(.in-view) .permission-intro,
+	.landing-permission.reveal-pending:not(.in-view) .permission-path button,
+	.landing-permission.reveal-pending:not(.in-view) .permission-path::before,
+	.landing-permission.reveal-pending:not(.in-view) .permission-explanation,
+	.landing-permission.reveal-pending:not(.in-view) .permission-footnote,
+	.landing-faq.reveal-pending:not(.in-view) .faq-intro,
+	.landing-faq.reveal-pending:not(.in-view) .faq-list details,
+	.landing-about.reveal-pending:not(.in-view) .closing-card,
+	.landing-about.reveal-pending:not(.in-view) .closing-actions {
+		opacity: 1 !important;
+		transform: none !important;
+		transition: none !important;
 	}
 }

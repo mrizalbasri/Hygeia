@@ -53,8 +53,13 @@
 			{ threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
 		);
 		document.querySelectorAll('.scroll-reveal').forEach((el) => {
-			if (el.getBoundingClientRect().top > window.innerHeight) el.classList.add('reveal-pending');
-			observer.observe(el);
+			const rect = el.getBoundingClientRect();
+			if (rect.top < window.innerHeight * 0.75 && rect.bottom > 0) {
+				el.classList.add('in-view');
+			} else {
+				el.classList.add('reveal-pending');
+				observer.observe(el);
+			}
 		});
 		const steps = [...document.querySelectorAll('.flow-steps li')];
 		let stepFrame = 0;
