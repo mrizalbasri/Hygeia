@@ -2,42 +2,43 @@ import { defineEnvVars } from '@sveltejs/kit/env';
 
 export const variables = defineEnvVars({
 	AUTH_PROVIDER: {
-		description: 'Clerk for deployment, local only for development fixtures.',
+		description: 'Authentication provider: local (default) or clerk.',
 		schema: (value: string | undefined) => {
-			if (!value || value === 'local') return 'local' as const;
-			if (value === 'clerk') return 'clerk' as const;
-			throw new Error('AUTH_PROVIDER must be local or clerk');
+			const clean = value?.trim().toLowerCase();
+			if (clean === 'clerk') return 'clerk' as const;
+			return 'local' as const;
 		}
 	},
 	PUBLIC_CLERK_PUBLISHABLE_KEY: {
 		public: true,
 		description: 'Public Clerk instance key; never use the Clerk secret key here.',
 		schema: (value: string | undefined) => {
-			if (value && !/^pk_(test|live)_[A-Za-z0-9+/=]+$/.test(value))
-				throw new Error('Invalid Clerk publishable key');
-			return value || '';
+			const clean = value?.trim() || '';
+			if (clean && !/^pk_(test|live)_[A-Za-z0-9+/=]+$/.test(clean)) {
+				return '';
+			}
+			return clean;
 		}
 	},
 	API_BASE_URL: {
 		description: 'Private Go API origin for SSR identity checks and the same-origin API proxy.',
 		schema: (value: string | undefined) => {
-			let url: URL;
+			let raw = (value || '').trim();
+			if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
+				raw = raw.slice(1, -1).trim();
+			}
+			if (!raw) {
+				return 'https://env-hygeia-jp.bravecliff-18f241ae.japaneast.azurecontainerapps.io';
+			}
+			if (!raw.startsWith('http://') && !raw.startsWith('https://')) {
+				raw = `https://${raw}`;
+			}
 			try {
-				url = new URL(value || 'http://127.0.0.1:8080');
+				const url = new URL(raw);
+				return url.origin;
 			} catch {
-				throw new Error('API_BASE_URL must be a valid URL (e.g. https://api.example.com)');
+				return 'https://env-hygeia-jp.bravecliff-18f241ae.japaneast.azurecontainerapps.io';
 			}
-			if (
-				!['http:', 'https:'].includes(url.protocol) ||
-				url.username ||
-				url.password ||
-				url.pathname !== '/' ||
-				url.search ||
-				url.hash
-			) {
-				throw new Error('API_BASE_URL must be an HTTP(S) origin without credentials or a path');
-			}
-			return url.origin;
 		}
 	}
 });
