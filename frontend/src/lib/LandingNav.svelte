@@ -219,6 +219,21 @@
 			0 2px 6px -1px rgba(10, 31, 68, 0.04);
 		transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 	}
+	@keyframes nav-enter {
+		from {
+			opacity: 0;
+			transform: translateY(-12px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+	@media (prefers-reduced-motion: no-preference) {
+		.site-header {
+			animation: nav-enter 520ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+		}
+	}
 	.brand {
 		display: inline-flex;
 		align-items: center;

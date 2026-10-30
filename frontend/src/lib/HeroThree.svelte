@@ -129,21 +129,37 @@
 	.hero-three-actions .button {
 		background: var(--landing-action);
 		min-height: 46px;
-		padding-inline: 22px;
-		font-size: 13px;
+		padding-inline: 24px;
+		font-size: 14px;
+		font-weight: 600;
+		border-radius: 9999px;
+		box-shadow: 0 4px 14px -3px rgba(0, 82, 204, 0.38);
+		transition:
+			transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+			box-shadow 200ms ease,
+			background-color 200ms ease;
 	}
 	.hero-three-actions .button:hover {
 		background: var(--landing-action-hover);
+		transform: translateY(-2px);
+		box-shadow: 0 8px 24px -3px rgba(0, 82, 204, 0.48);
+	}
+	.hero-three-actions .button:active {
+		transform: translateY(0) scale(0.98);
 	}
 	.hero-three-link {
 		display: inline-flex;
 		align-items: center;
 		min-height: 44px;
-		font-size: 13px;
+		font-size: 14px;
+		font-weight: 500;
 		color: var(--landing-action);
 		text-decoration: underline;
 		text-underline-offset: 5px;
 		text-decoration-color: #adbfda;
+		transition:
+			color 180ms ease,
+			text-decoration-color 180ms ease;
 	}
 	.hero-three-link:hover {
 		text-decoration-color: currentColor;
@@ -157,28 +173,50 @@
 		align-items: center;
 		justify-content: center;
 		flex-wrap: wrap;
-		gap: 24px 64px;
+		gap: 16px 36px;
 		padding: 0;
-		margin: 58px auto 42px;
+		margin: 54px auto 38px;
 		list-style: none;
 	}
 	.hero-three-roles a {
-		display: flex;
+		display: inline-flex;
 		align-items: center;
-		gap: 10px;
-		font-size: 16px;
+		gap: 9px;
+		font-size: 15px;
 		font-weight: 600;
-		color: #526984;
+		color: #4b6482;
 		min-height: 44px;
+		padding: 6px 16px;
+		border-radius: 9999px;
 		text-decoration: none;
-		transition: color 180ms ease;
+		background: rgba(255, 255, 255, 0.65);
+		border: 1px solid rgba(173, 191, 218, 0.45);
+		box-shadow: 0 2px 8px -2px rgba(10, 31, 68, 0.05);
+		backdrop-filter: blur(8px);
+		transition:
+			color 200ms ease,
+			background-color 200ms ease,
+			border-color 200ms ease,
+			transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+			box-shadow 200ms ease;
 	}
 	.hero-three-roles a:hover {
 		color: var(--landing-action);
+		background: #ffffff;
+		border-color: rgba(0, 102, 255, 0.32);
+		transform: translateY(-2px);
+		box-shadow: 0 6px 18px -3px rgba(0, 82, 204, 0.16);
+	}
+	.hero-three-roles a:active {
+		transform: translateY(0);
 	}
 	.hero-three-roles :global(svg) {
-		width: 24px;
-		height: 24px;
+		width: 22px;
+		height: 22px;
+		transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+	}
+	.hero-three-roles a:hover :global(svg) {
+		transform: scale(1.12);
 	}
 	.hero-three-stage {
 		--hero-travel: 0;
@@ -187,7 +225,11 @@
 		padding: 64px 0 76px;
 		overflow: hidden;
 		border-radius: 24px;
-		background: #e4eef8;
+		background:
+			radial-gradient(ellipse 70% 50% at 50% 35%, rgba(0, 102, 255, 0.12), transparent 85%), #e4eef8;
+		box-shadow:
+			0 24px 54px -16px rgba(8, 28, 58, 0.14),
+			0 2px 6px rgba(8, 28, 58, 0.04);
 	}
 	.hero-three-backdrop {
 		position: absolute;
@@ -197,6 +239,7 @@
 		object-fit: cover;
 		object-position: center 44%;
 		transform: scale(calc(1 + var(--hero-travel) * 0.045));
+		transition: transform 200ms ease-out;
 	}
 	.hero-three-phone {
 		position: relative;
@@ -205,37 +248,115 @@
 		margin: 0 auto;
 		transform: translateY(calc(var(--hero-travel) * -22px));
 	}
-	@keyframes hero-enter {
+	.hero-three-device {
+		will-change: transform;
+	}
+	@keyframes hero-headline-enter {
 		from {
-			opacity: 0.35;
-			translate: 0 14px;
-			filter: blur(1.5px);
+			opacity: 0;
+			transform: translateY(28px) scale(0.98);
+			filter: blur(8px);
 		}
 		to {
 			opacity: 1;
-			translate: 0 0;
+			transform: translateY(0) scale(1);
 			filter: blur(0);
 		}
 	}
+	@keyframes hero-copy-enter {
+		from {
+			opacity: 0;
+			transform: translateY(20px);
+			filter: blur(5px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+			filter: blur(0);
+		}
+	}
+	@keyframes hero-actions-enter {
+		from {
+			opacity: 0;
+			transform: translateY(16px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+	@keyframes role-chip-enter {
+		from {
+			opacity: 0;
+			transform: translateY(18px) scale(0.94);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
+	}
+	@keyframes hero-stage-enter {
+		from {
+			opacity: 0;
+			transform: translateY(32px) scale(0.98);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
+	}
+	@keyframes hero-device-enter {
+		from {
+			opacity: 0;
+			transform: translateY(44px) scale(0.96);
+			filter: blur(4px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+			filter: blur(0);
+		}
+	}
+	@keyframes hero-device-float {
+		0% {
+			transform: translateY(0);
+		}
+		100% {
+			transform: translateY(-8px);
+		}
+	}
 	@media (prefers-reduced-motion: no-preference) {
-		.hero-three h1,
-		.hero-three-description,
-		.hero-three-actions,
-		.hero-three-roles,
-		.hero-three-device {
-			animation: hero-enter 560ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+		.hero-three h1 {
+			animation: hero-headline-enter 780ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
 		}
 		.hero-three-description {
-			animation-delay: 80ms;
+			animation: hero-copy-enter 700ms cubic-bezier(0.16, 1, 0.3, 1) 90ms backwards;
 		}
 		.hero-three-actions {
-			animation-delay: 140ms;
+			animation: hero-actions-enter 640ms cubic-bezier(0.16, 1, 0.3, 1) 170ms backwards;
 		}
-		.hero-three-roles {
-			animation-delay: 200ms;
+		.hero-three-roles li {
+			animation: role-chip-enter 580ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+		}
+		.hero-three-roles li:nth-child(1) {
+			animation-delay: 220ms;
+		}
+		.hero-three-roles li:nth-child(2) {
+			animation-delay: 280ms;
+		}
+		.hero-three-roles li:nth-child(3) {
+			animation-delay: 340ms;
+		}
+		.hero-three-roles li:nth-child(4) {
+			animation-delay: 400ms;
+		}
+		.hero-three-stage {
+			animation: hero-stage-enter 880ms cubic-bezier(0.16, 1, 0.3, 1) 240ms backwards;
 		}
 		.hero-three-device {
-			animation-delay: 260ms;
+			animation:
+				hero-device-enter 900ms cubic-bezier(0.16, 1, 0.3, 1) 360ms backwards,
+				hero-device-float 5s ease-in-out infinite alternate 1.3s;
 		}
 	}
 	@media (min-width: 1700px) {
