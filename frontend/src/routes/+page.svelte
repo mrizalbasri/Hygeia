@@ -30,17 +30,9 @@
 		}
 	];
 	let ready = $state(false);
-	let scrollProgress = $state(0);
-
-	function updateScrollProgress() {
-		const scrollTop = window.scrollY || document.documentElement.scrollTop;
-		const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-		scrollProgress = docHeight > 0 ? Math.min(1, Math.max(0, scrollTop / docHeight)) : 0;
-	}
 
 	onMount(() => {
 		ready = true;
-		updateScrollProgress();
 		const observer = new IntersectionObserver(
 			(entries) => {
 				entries.forEach((entry) => {
@@ -219,18 +211,7 @@
 	/>
 </svelte:head>
 
-<svelte:window onscroll={updateScrollProgress} />
-
 <div class="landing">
-	<div
-		class="scroll-progress-bar"
-		style:transform="scaleX({scrollProgress})"
-		role="progressbar"
-		aria-valuenow={Math.round(scrollProgress * 100)}
-		aria-valuemin="0"
-		aria-valuemax="100"
-		aria-label="Progres baca beranda"
-	></div>
 	<a class="landing-skip" href="#utama">Lewati ke konten</a>
 	<LandingNav onSelectRole={(index) => (selectedRole = index)} />
 
@@ -430,15 +411,51 @@
 
 	<!-- FOOTER -->
 	<footer class="landing-footer">
-		<a class="brand" href={resolve('/')}>
-			<img src="/logo-light.webp" width="32" height="32" alt="" /><span>Hygeia</span>
-		</a>
-		<p>Perawatan terhubung. Kendali di tangan Anda.</p>
-		<nav aria-label="Informasi tambahan">
-			<a href="#untuk-siapa">Untuk siapa</a>
-			<a href="#izin-data">Izin data</a>
-			<a href="#pertanyaan">Pertanyaan</a>
-			<a href={resolve('/login')}>Masuk</a>
-		</nav>
+		<div class="footer-inner">
+			<div class="footer-main">
+				<div class="footer-brand-col">
+					<a class="brand" href={resolve('/')}>
+						<img src="/logo-light.webp" width="32" height="32" alt="" /><span>Hygeia</span>
+					</a>
+					<p class="footer-tagline">Perawatan terhubung. Kendali di tangan Anda.</p>
+					<p class="footer-desc">
+						Platform pertukaran data kesehatan dengan persetujuan pasien. Menghubungkan pasien,
+						dokter, laboratorium, dan apotek secara aman, terstruktur, dan transparan.
+					</p>
+					<div class="footer-trust-badge">
+						<HealthIcon name="shield" />
+						<span>Akses klinis berbasis persetujuan & masa berlaku</span>
+					</div>
+				</div>
+
+				<div class="footer-nav-col">
+					<h3 class="footer-heading">Navigasi Halaman</h3>
+					<nav aria-label="Informasi tambahan">
+						<a href="#fitur">Fitur</a>
+						<a href="#untuk-siapa">Untuk siapa</a>
+						<a href="#cara-kerja">Cara kerja</a>
+						<a href="#izin-data">Izin data</a>
+						<a href="#pertanyaan">Pertanyaan</a>
+					</nav>
+				</div>
+
+				<div class="footer-nav-col">
+					<h3 class="footer-heading">Akses Layanan</h3>
+					<nav aria-label="Tautan portal">
+						<a href={resolve('/login')}>Masuk ke Akun</a>
+						<a href={resolve('/register')}>Daftar Pasien Baru</a>
+						<a href={resolve('/carepass')}>Portal CarePass</a>
+					</nav>
+				</div>
+			</div>
+
+			<div class="footer-bottom">
+				<p>© 2026 Hygeia. Hak cipta dilindungi.</p>
+				<div class="footer-status">
+					<span class="status-dot" aria-hidden="true"></span>
+					<span>Layanan Aktif & Terlindungi</span>
+				</div>
+			</div>
+		</div>
 	</footer>
 </div>
