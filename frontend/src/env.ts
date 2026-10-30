@@ -21,7 +21,12 @@ export const variables = defineEnvVars({
 	API_BASE_URL: {
 		description: 'Private Go API origin for SSR identity checks and the same-origin API proxy.',
 		schema: (value: string | undefined) => {
-			const url = new URL(value || 'http://127.0.0.1:8080');
+			let url: URL;
+			try {
+				url = new URL(value || 'http://127.0.0.1:8080');
+			} catch {
+				throw new Error('API_BASE_URL must be a valid URL (e.g. https://api.example.com)');
+			}
 			if (
 				!['http:', 'https:'].includes(url.protocol) ||
 				url.username ||
