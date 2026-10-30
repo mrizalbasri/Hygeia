@@ -80,6 +80,7 @@ try {
 		const req = route.request();
 		const path = new URL(req.url()).pathname;
 		const send = (json, status = 200) => route.fulfill({ status, json });
+		if (path.endsWith('/auth/config')) return send({ provider: 'local' });
 		if (path.endsWith('/auth/csrf')) return send({ csrf_token: 'profile-csrf' });
 		if (path.endsWith('/auth/logout')) return send({});
 		if (path.endsWith('/me')) return send({ user });
