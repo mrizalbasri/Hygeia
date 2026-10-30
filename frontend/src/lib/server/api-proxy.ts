@@ -18,8 +18,7 @@ function cleanHeaders(source: Headers) {
 	return headers;
 }
 
-const DEFAULT_ORIGIN =
-	'https://env-hygeia-jp.bravecliff-18f241ae.japaneast.azurecontainerapps.io';
+const DEFAULT_ORIGIN = 'https://env-hygeia-jp.bravecliff-18f241ae.japaneast.azurecontainerapps.io';
 
 // Fixed backend origin: the browser cannot choose the upstream destination.
 export async function proxyApi(
@@ -33,8 +32,10 @@ export async function proxyApi(
 		let origin = (apiOrigin || '').trim();
 		if (
 			!origin ||
+			origin.toLowerCase() === 'local' ||
 			origin.includes('0.0.0.0') ||
-			(process.env.VERCEL && (origin.includes('localhost') || origin.includes('127.0.0.1')))
+			(process.env.VERCEL &&
+				(origin.includes('localhost') || origin.includes('127.0.0.1') || !origin.includes('.')))
 		) {
 			origin = DEFAULT_ORIGIN;
 		}
@@ -42,6 +43,16 @@ export async function proxyApi(
 			origin = `https://${origin}`;
 		}
 		target = new URL(origin);
+		if (
+			process.env.VERCEL &&
+			(target.hostname === 'localhost' ||
+				target.hostname === '127.0.0.1' ||
+				target.hostname === '0.0.0.0' ||
+				target.hostname === 'local' ||
+				!target.hostname.includes('.'))
+		) {
+			target = new URL(DEFAULT_ORIGIN);
+		}
 		target.pathname = url.pathname;
 		target.search = url.search;
 	} catch {
