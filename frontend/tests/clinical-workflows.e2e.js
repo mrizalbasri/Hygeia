@@ -11,7 +11,17 @@ const user = {
 	role: 'patient',
 	organization: null
 };
+let endSession = false;
 const server = createServer((request, response) => {
+	if (request.url.startsWith('/api/v1/notifications/stream')) {
+		response.writeHead(200, {
+			'Content-Type': 'text/event-stream',
+			'Cache-Control': 'no-cache'
+		});
+		if (endSession) response.end('event: session-ended\ndata: {}\n\n');
+		else response.write(': connected\n\n');
+		return;
+	}
 	response.setHeader('Content-Type', 'application/json');
 	response.end(JSON.stringify({ user }));
 });
@@ -52,8 +62,7 @@ try {
 	let conflict = false,
 		forbidden = false,
 		unavailable = false,
-		unauthenticated = false,
-		endSession = false;
+		unauthenticated = false;
 	let rows = {
 		episodes: [{ id, doctor_name: 'Dokter Sintetis', status: 'pending' }],
 		lab_requests: [{ id, test_name: 'Tes sintetis', status: 'pending_patient_approval' }],
@@ -129,11 +138,8 @@ try {
 				],
 				next_before_id: null
 			});
-		if (path === '/notifications/stream')
-			return route.fulfill({
-				contentType: 'text/event-stream',
-				body: endSession ? 'event: session-ended\ndata: {}\n\n' : ': keep-alive\n\n'
-			});
+		// Keep the SSE connection open so pagination is tested independently of reconnects.
+		if (path === '/notifications/stream') return route.continue();
 		if (unauthenticated) return send({ error: { message: 'Sesi berakhir' } }, 401);
 		if (unavailable) return send({ error: { message: 'Layanan terganggu' } }, 503);
 		const key = path === '/lab-requests' ? 'lab_requests' : path.slice(1);
