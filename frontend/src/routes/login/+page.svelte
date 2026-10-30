@@ -50,8 +50,8 @@
 
 <main class="login-shell auth-shell">
 	<section class="login-story" aria-label="Tentang Hygeia">
-		<a class="brand" href={resolve('/login')}
-			><img src="/logo-light.webp" alt="" width="44" height="44" /><span>Hygeia</span></a
+		<a class="brand" href={resolve('/')} title="Kembali ke beranda Hygeia"
+			><img src="/logo-light.webp" alt="Hygeia" width="44" height="44" /><span>Hygeia</span></a
 		>
 		<div class="story-body">
 			<h1>Perawatan terhubung.<br /> Kendali tetap<br /> <span>di tangan Anda.</span></h1>
@@ -65,6 +65,20 @@
 		<p class="story-footer">Diizinkan pasien. Dibatasi seperlunya. Tercatat setiap aksesnya.</p>
 	</section>
 	<section class="login-form-side" aria-labelledby="login-title">
+		<div class="auth-top-action">
+			<a class="back-link" href={resolve('/')} title="Kembali ke beranda">
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+					><path
+						d="m14 18-6-6 6-6"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/></svg
+				>
+				<span>Kembali ke beranda</span>
+			</a>
+		</div>
 		<div class="login-form-wrap">
 			{#if data.authProvider === 'clerk'}
 				<h2 id="login-title" class="sr-only">Masuk ke ruang Anda</h2>
@@ -112,16 +126,5 @@
 					Belum punya akun pasien? <a href={resolve('/register')}>Daftar sebagai pasien</a>
 				</p>{/if}
 		</div>
-		<a class="form-footer button secondary" href={resolve('/')}
-			><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"
-				><path
-					d="m10 5-7 7 7 7M3 12h18"
-					stroke="currentColor"
-					stroke-width="1.7"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				/></svg
-			>Kembali ke beranda</a
-		>
 	</section>
 </main>
