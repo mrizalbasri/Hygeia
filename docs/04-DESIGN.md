@@ -8,7 +8,7 @@ Referensi terbaru adalah **Hygeia Healthcare Brand Showcase** yang diberikan pem
 - **Palet brand:** blue `#0066FF`, cyan `#00D6FF`, light blue `#E8F3FF`, soft white `#F8FBFF`, navy `#0A1F44`, slate `#334155`, gray `#94A3B8`, light gray `#E5E7EB`. Gray adalah dekorasi; teks pendukung memakai slate untuk kontras.
 - **Token aplikasi:** `--bg`, `--surface`, `--text`, `--primary`, `--primary-hover`, `--muted`, `--border`, dan `--ribbon` di `frontend/src/routes/layout.css`. Warna aksi hover `#0052CC`; garis pemisah kebiruan `#D7E5F5`.
 - **Tipografi:** Plus Jakarta Sans, mempertahankan bentuk bulat yang selaras dengan logo. Judul utama tebal; isi dan label tetap tenang dan terbaca.
-- **Logo:** gunakan varian latar terang `frontend/static/logo-light.png`, dengan rasio asli dan `object-fit: contain`. Batang H berwarna biru es agar terbaca di permukaan putih; pita biru–cyan dan plus dipertahankan. Aset PNG memakai transparansi dan juga menjadi favicon. Aset asli `frontend/static/logo.webp` tetap disimpan sebagai referensi. Jangan gunakan referensi lama `/logo.png`.
+- **Logo:** gunakan varian latar terang `frontend/static/logo-light.webp`, dengan rasio asli dan `object-fit: contain`. Batang H berwarna biru es agar terbaca di permukaan putih; pita biru–cyan dan plus dipertahankan. Aset WebP memakai transparansi; favicon memakai `frontend/static/favicon.ico`. Aset asli `frontend/static/logo.webp` tetap disimpan sebagai referensi. Jangan gunakan referensi lama `/logo.png`.
 - **Login:** dua panel terang pada desktop, pengenalan brand di kiri dan form di kanan. Pita melengkung mengikuti motif koneksi pada referensi. Di ponsel panel ditumpuk dan ilustrasi besar disembunyikan agar form mudah dicapai.
 - **Dashboard:** sidebar putih, pilihan aktif biru muda, panel sambutan lembut, dan identitas akun pada permukaan putih. Semua peran memakai token yang sama.
 - **Bentuk dan interaksi:** tombol bulat mengikuti referensi, input radius 12 px, panel besar 24–28 px. Target sentuh minimum 44 px, fokus keyboard 3 px, tanpa animasi dekoratif berulang. Hierarki berasal dari ruang dan warna; bayangan tidak diperlukan.
@@ -461,3 +461,7 @@ export default {
 - [ ] Semua status punya ikon dan teks.
 - [ ] Mode terang dan gelap diuji untuk kontras.
 - [ ] Alur demo (PRD bagian 8) diuji dengan keyboard dan di layar kecil.
+
+### Pembersihan aset 29 Oktober 2026
+
+Catatan banner pita dan hero ponsel di atas mendeskripsikan versi lama. Landing aktif memakai `HeroThree.svelte` dan `hero-clinic-v2.png`. Aset `brand-ribbon.jpg` dan `hero-phone.jpg` yang tidak lagi dirujuk kode sudah dihapus, bersama PNG duplikat dan ilustrasi connected-care, laboratory-supplies, serta pharmacy-supplies yang tidak dipakai.

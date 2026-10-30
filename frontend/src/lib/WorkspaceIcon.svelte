@@ -37,7 +37,7 @@
 		/>
 	{:else if name === 'profile'}
 		<circle cx="12" cy="8" r="4" /><path d="M4 21v-2a8 8 0 0 1 16 0v2" />
-	{:else if name === 'labs' || name === 'corrections' || name === 'queue'}
+	{:else if name === 'labs' || name === 'corrections' || name === 'queue' || name === 'receipts'}
 		<path d="M9 3h6m-5 0v7l-5 8a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-8V3M8 15h8" />
 	{:else if name === 'prescriptions'}
 		<path d="m5 12 7-7a5 5 0 0 1 7 7l-7 7a5 5 0 0 1-7-7Zm4-4 7 7" />

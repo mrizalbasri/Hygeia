@@ -59,7 +59,7 @@ func newHandler(logger *slog.Logger, ping func(context.Context) error, h *auth.H
 		for _, routes := range register {
 			routes(mux)
 		}
-		handler = auth.Protect(mux, key, secure)
+		handler = auth.Protect(mux, key, secure, h.CSRFTrustedOrigins...)
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := make([]byte, 16)

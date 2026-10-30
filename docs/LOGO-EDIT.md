@@ -1,6 +1,6 @@
 # Perbaikan logo latar terang
 
-Aset: `frontend/static/logo-light.png` (PNG transparan). Sumber: `frontend/static/logo.webp`, tetap disimpan. Diedit dengan tool imagegen bawaan pada 14 Oktober 2026.
+Aset aplikasi: `frontend/static/logo-light.webp` (WebP lossless transparan, identik piksel dengan PNG sumber). Favicon: `frontend/static/favicon.ico`, salinan logo yang dikonversi ke ukuran 16, 24, 32, 48, 64, 128, dan 256 px. PNG duplikat dihapus pada 29 Oktober 2026. Aset asli `frontend/static/logo.webp` tetap dipakai README. Logo light diedit dengan imagegen pada 14 Oktober 2026.
 
 Tujuan edit: batang H biru es agar terbaca di background putih, tanpa mengganti bentuk H, pita biru–cyan, atau tanda plus. Pemeriksaan visual dilakukan di browser pada ukuran 40, 64, dan 180 px.
 

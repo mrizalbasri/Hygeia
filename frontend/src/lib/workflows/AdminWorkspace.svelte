@@ -14,10 +14,13 @@
 		type Payload
 	} from './api.js';
 	import PagedList from './PagedList.svelte';
+	import DirectoryPicker from './DirectoryPicker.svelte';
 	import Notifications from './Notifications.svelte';
+	import StaffAssignment from './StaffAssignment.svelte';
 	import './workflow.css';
 
 	let { user }: { user: User } = $props();
+	let clerkMode = $derived(page.data.authProvider === 'clerk');
 
 	let menu = $derived(menus.admin);
 	let view = $derived(
@@ -32,7 +35,7 @@
 		success = $state(''),
 		revision = $state(0);
 
-	// Organizations cache for the user creation form and organization names.
+	// Best-effort display-name cache only; account selection has its own pagination.
 	let orgList = $state<{ id: string; name: string; type: string }[]>([]);
 	let orgNames = $derived(new Map(orgList.map((org) => [org.id, org.name])));
 	const orgLabel = (id?: string | null) => (id ? orgNames.get(id) || id : '');
@@ -62,6 +65,11 @@
 	// Form states
 	let newUserRole = $state('doctor'),
 		newUserOrgId = $state('');
+	let expectedOrgType = $derived(
+		({ doctor: 'clinic', lab: 'laboratory', pharmacy: 'pharmacy' } as Record<string, string>)[
+			newUserRole
+		]
+	);
 
 	onMount(() => {
 		ready = true;
@@ -158,6 +166,10 @@
 		const role = newUserRole;
 
 		const body: Payload = { email, full_name, password, role };
+		if (clerkMode) {
+			delete body.password;
+			body.clerk_user_id = formText(data, 'clerk_user_id');
+		}
 		if (role === 'doctor' || role === 'lab' || role === 'pharmacy') {
 			if (!newUserOrgId) {
 				error = 'Organisasi wajib dipilih untuk peran dokter, lab, atau apotek.';
@@ -353,21 +365,40 @@
 							disabled={busy}
 						/>
 					</label>
-					<label>
-						Kata sandi * (minimal 12 karakter)
-						<input
-							name="password"
-							type="password"
-							required
-							minlength="12"
-							maxlength="1024"
-							placeholder="Minimal 12 karakter"
-							disabled={busy}
-						/>
-					</label>
+					{#if clerkMode}<label
+							>ID pengguna Clerk<input
+								name="clerk_user_id"
+								required
+								pattern="user_[A-Za-z0-9]+"
+								maxlength="128"
+								disabled={busy}
+							/></label
+						>
+						<p>
+							Pengguna harus sudah terdaftar dan memverifikasi email di Clerk. Email di atas harus
+							cocok. Akun Hygeia yang sudah ada perlu ditautkan oleh pengelola.
+						</p>
+					{:else}<label>
+							Kata sandi * (minimal 12 karakter)
+							<input
+								name="password"
+								type="password"
+								required
+								minlength="12"
+								maxlength="1024"
+								placeholder="Minimal 12 karakter"
+								disabled={busy}
+							/>
+						</label>{/if}
 					<label>
 						Peran (Role) *
-						<select name="role" bind:value={newUserRole} required disabled={busy}>
+						<select
+							name="role"
+							bind:value={newUserRole}
+							onchange={() => (newUserOrgId = '')}
+							required
+							disabled={busy}
+						>
 							<option value="doctor">Dokter</option>
 							<option value="patient">Pasien</option>
 							<option value="lab">Petugas Laboratorium</option>
@@ -377,28 +408,16 @@
 					</label>
 
 					{#if newUserRole === 'doctor' || newUserRole === 'lab' || newUserRole === 'pharmacy'}
-						{@const expectedType =
-							newUserRole === 'doctor'
-								? 'clinic'
-								: newUserRole === 'lab'
-									? 'laboratory'
-									: 'pharmacy'}
-						{@const availableOrgs = orgList.filter((org) => org.type === expectedType)}
-						<label>
-							Organisasi {roles[newUserRole as keyof typeof roles]?.label} *
-							<select name="organization_id" bind:value={newUserOrgId} required disabled={busy}>
-								<option value="">Pilih {expectedType} yang sesuai</option>
-								{#each availableOrgs as org (org.id)}
-									<option value={org.id}>{org.name}</option>
-								{/each}
-							</select>
-						</label>
-						{#if availableOrgs.length === 0}
-							<p class="wf-warning" role="alert">
-								Belum ada organisasi bertipe {expectedType}. Daftarkan organisasi terlebih dahulu di
-								menu Organisasi.
-							</p>
-						{/if}
+						{#key `${newUserRole}-${revision}`}
+							<DirectoryPicker
+								path="/admin/organizations"
+								listKey="organizations"
+								label={`Organisasi ${roles[newUserRole as keyof typeof roles]?.label}`}
+								organizationType={expectedOrgType}
+								bind:value={newUserOrgId}
+								disabled={busy}
+							/>
+						{/key}
 					{/if}
 
 					<div class="wf-actions">
@@ -427,6 +446,11 @@
 							{item.disabled_at ? 'Dinonaktifkan' : 'Aktif'}
 						</span>
 					</div>
+					{#if clerkMode && item.role === 'patient' && !item.disabled_at}<StaffAssignment
+							id={item.id}
+							{run}
+							{busy}
+						/>{/if}
 					<div class="wf-actions">
 						<button
 							type="button"

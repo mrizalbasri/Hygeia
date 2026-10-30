@@ -3,6 +3,13 @@
 Backend Go pada `http://127.0.0.1:8080`. Semua endpoint diawali `/api/v1`.
 Setup database, migrasi, seed, dan API mengikuti [panduan backend](../backend/README.md).
 
+Pada `AUTH_PROVIDER=clerk`, browser memakai cookie JWT `__session`, SSR memakai
+Bearer token, dan backend memverifikasi identitas/sesi dengan Clerk. Endpoint
+login/register password lokal ditutup. Role, organisasi, dan izin klinis tetap
+ditentukan Hygeia. Bagian kontrak autentikasi lokal di bawah berlaku untuk mode
+development/test `local`; lihat [integrasi Clerk](CLERK-INTEGRATION-2026-10-29.md)
+untuk MFA staf, pengaturan akun, dan penautan identitas.
+
 Frontend sudah menyediakan `/login`, `/dashboard/{role}`, `/carepass`, helper
 SSR identitas, proxy `/api`, dan alur pasien/dokter. Rincian cara menjalankan dan
 pengujian ada di [panduan frontend](../frontend/README.md). Antarmuka lab/apotek
@@ -431,7 +438,9 @@ type LabResult = {
 ```
 
 Timestamp RFC 3339 dengan offset. Hasil tidak bisa diedit/dihapus lewat API;
-koreksi hasil, PDF, dan unggahan berkas belum tersedia. Pada kegagalan audit,
+koreksi ditambahkan melalui `POST /lab-results/{id}/corrections` dan dikembalikan
+dalam array `corrections` kronologis. UI menonjolkan koreksi terbaru; tombol
+Cetak / PDF menggunakan dialog cetak browser. Unggahan berkas belum tersedia. Pada kegagalan audit,
 mutasi dibatalkan dan GET hasil mengembalikan `503` tanpa payload klinis.
 
 ### Audit dan skenario frontend
@@ -570,6 +579,26 @@ sehingga rantai episode/lab yang sudah ada tetap dapat diverifikasi.
 8. Pasien periksa riwayat akses dan verifikasi rantai setelah aktivitas tersebut.
 
 UI consent dan notifikasi tersedia untuk pasien/dokter. Persetujuan satu jenis
-resource dan koreksi hasil belum tersedia; consent tetap untuk satu hasil lab.
+resource belum tersedia; consent tetap untuk satu hasil lab, termasuk riwayat koreksinya.
 Tes backend: `go test ./internal/care -run Consent -v` dengan
 `TEST_DATABASE_URL` lokal; setiap fixture menggunakan schema terpisah.
+
+### Pemulihan layanan dan realtime (29 Oktober 2026)
+
+`POST /lab-requests/{id}/cancel` dan `POST /prescriptions/{id}/cancel` menerima
+`{"reason":"Alasan pembatalan"}` (5–500 karakter setelah trim) dan mengembalikan
+`{"status":"cancelled"}`. Aktor: pasien pemilik, dokter episode aktif, atau
+penyedia yang telah ditugaskan. Belum disetujui tidak dapat dibatalkan penyedia;
+selesai/dibatalkan menolak pembatalan ulang. Riwayat persetujuan tetap tersimpan,
+dan detail pasien/dokter memuat `cancellation_reason`/`cancellation_note`.
+Layanan pengganti memakai endpoint create biasa dan membutuhkan persetujuan baru.
+
+`GET /lab-receipts?limit=20&offset=0` khusus lab pemilik penugasan, menghasilkan
+`{receipts:[{id,lab_request_id,status,submitted_at,patient_ref,test_code,test_name}],limit,offset}`.
+Nilai, satuan, catatan, dan riwayat koreksi tidak masuk proyeksi tanda terima.
+
+`lab_result.correct` mengirim notifikasi generik dan milestone timeline secara
+atomik. Frontend menggunakan satu SSE bersama untuk memuat ulang daftar,
+ringkasan, dan detail terbuka. Reconnect/kembali ke tab memuat ulang data;
+polling cadangan 30 detik tetap tersedia. Koneksi stream tidak membawa nilai
+klinis; setiap GET tetap memerlukan otorisasi. Migrasi database 11 diperlukan.

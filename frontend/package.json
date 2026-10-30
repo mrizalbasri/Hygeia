@@ -3,6 +3,10 @@
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
+	"engines": {
+		"node": "24.x"
+	},
+	"packageManager": "pnpm@11.18.0",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
@@ -14,16 +18,18 @@
 		"format": "prettier --write .",
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run",
-		"test:e2e": "node tests/dashboard-theme.e2e.mjs && node tests/clinical-workflows.e2e.js && node tests/provider-workflows.e2e.js && node tests/registration.e2e.js && node tests/role-overviews.e2e.mjs && node tests/dashboard-reliability.e2e.mjs && node tests/patient-profile.e2e.mjs"
+		"test:e2e": "node tests/dashboard-theme.e2e.mjs && node tests/clinical-workflows.e2e.js && node tests/provider-workflows.e2e.js && node tests/registration.e2e.js && node tests/role-overviews.e2e.mjs && node tests/admin-directory.e2e.js && node tests/workflow-recovery.e2e.js && node tests/dashboard-reliability.e2e.mjs && node tests/patient-profile.e2e.mjs",
+		"test:demo": "node tests/demo-workflow.live.js"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
-		"@sveltejs/adapter-auto": "^8.0.0",
+		"@sveltejs/adapter-auto": "8.0.0",
+		"@sveltejs/adapter-vercel": "7.0.1",
 		"@sveltejs/kit": "^3.0.0",
 		"@sveltejs/vite-plugin-svelte": "^7.2.0",
 		"@tailwindcss/vite": "^4.3.0",
 		"@types/node": "^24",
-		"@vitest/browser-playwright": "^4.1.8",
+		"@vitest/browser-playwright": "4.1.12",
 		"eslint": "^10.4.1",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.19.0",
@@ -38,11 +44,16 @@
 		"typescript": "^6.0.3",
 		"typescript-eslint": "^8.60.1",
 		"vite": "^8.3.0",
-		"vitest": "^4.1.8",
+		"vitest": "4.1.12",
 		"vitest-browser-svelte": "^2.1.1"
 	},
 	"imports": {
 		"#lib": "./src/lib/index.js",
 		"#lib/*": "./src/lib/*"
+	},
+	"dependencies": {
+		"@clerk/clerk-js": "^6.42.0",
+		"@clerk/localizations": "4.24.3",
+		"@clerk/ui": "^1.42.1"
 	}
 }

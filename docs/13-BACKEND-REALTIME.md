@@ -48,4 +48,15 @@ transaction lock sebelum alokasi notifikasi sampai commit, agar notifikasi ID
 lebih kecil tidak muncul terlambat setelah cursor lebih besar terkirim. Lock
 global ini cocok untuk volume MVP; penulisan milestone menunggu transaksi
 penghasil notifikasi lain, sedangkan pembacaan inbox/SSE tidak mengambil lock.
-Tidak ada migrasi tambahan; gunakan migrasi 1–9 dari rangkaian PR sebelumnya.
+Mekanisme stream sendiri tidak memerlukan migrasi tambahan. Aplikasi terkini
+memerlukan seluruh migrasi, termasuk migrasi 12 untuk pemulihan flow.
+
+Frontend berbagi satu stream per tab melalui `realtime.ts`. Daftar, ringkasan,
+dan detail terbuka membaca ulang API setelah event atau reconnect; tab yang
+kembali terlihat juga memuat ulang. Bootstrap gagal dicoba lagi setelah 5 detik;
+polling cadangan 30 detik tetap berjalan saat tab terlihat. Server tetap
+menentukan hak baca pada setiap GET. Payload yang ditolak dihapus dari panel.
+Koreksi lab dan pembatalan layanan menggunakan kanal notifikasi yang sama.
+Webhook belum menjadi bagian dari integrasi karena belum ada server mitra
+eksternal yang perlu diberi callback. Bukti pengujian ada di
+[laporan pemulihan flow](WORKFLOW-RECOVERY-2026-10-29.md).

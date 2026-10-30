@@ -1,15 +1,15 @@
 # Aset visual web Hygeia
 
-Semua ilustrasi memakai palet biru, cyan, navy, dan putih dari design system. Gambar merupakan ilustrasi buatan AI; tidak menggambarkan pasien, tenaga kesehatan, kemasan obat, atau fasilitas nyata.
+Ilustrasi merupakan gambar buatan AI dan tidak menggambarkan pasien atau fasilitas nyata.
 
-| Aset WebP di frontend/static | Penempatan |
+| Aset di frontend/static | Penempatan |
 | --- | --- |
-| patient-care.webp | Pilihan Pasien, panel pendaftaran |
-| care-consultation.webp | Pilihan Dokter, Tentang, panel login |
-| laboratory-supplies.webp | Pilihan Laboratorium |
-| pharmacy-supplies.webp | Pilihan Apotek |
-| connected-care.webp | Pengantar empat peran |
+| logo-light.webp | Logo aplikasi, WebP lossless transparan |
+| favicon.ico | Favicon dari logo light, ukuran 16 sampai 256 px |
+| logo.webp | Logo README |
+| hero-clinic-v2.png | Hero landing aktif |
+| care-consultation.webp | Panel login |
+| patient-care.webp | Panel pendaftaran |
+| hero-phone-front.png | Masih dirujuk komponen HeroPhone |
 
-Versi PNG disimpan sebagai sumber. Halaman memakai WebP dengan dimensi intrinsik 1536 × 1024, teks alternatif untuk gambar informatif, serta lazy loading untuk gambar di bawah area awal. Panel sambutan login dan pendaftaran mengikuti aturan mobile yang menyembunyikan ilustrasi besar agar form mudah dicapai. Logo dan mockup ponsel yang sudah ada tetap dipakai.
-
-Prompt dan asal masing-masing gambar ada pada dokumen `ASSET-*.md`. Untuk mengganti ilustrasi, simpan aset baru di `frontend/static`, lalu perbarui referensi gambar dan teks alternatif yang sesuai. Empat peran mengambil gambar dari metadata `audiences` pada `frontend/src/routes/+page.svelte`.
+Pada 29 Oktober 2026, PNG duplikat, foto pita dan ponsel perspektif lama, serta ilustrasi connected-care, laboratory-supplies, dan pharmacy-supplies yang tidak dipakai dihapus. Catatan ASSET-*.md menyimpan asal serta prompt historis. Panel ilustrasi login dan pendaftaran disembunyikan pada layar kecil.

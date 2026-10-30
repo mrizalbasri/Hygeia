@@ -3,8 +3,14 @@ name: Verify
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: ['**']
   workflow_dispatch:
+    inputs:
+      publish_image:
+        description: Publish the tested backend image to Docker Hub
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -71,3 +77,60 @@ jobs:
       - run: pnpm build
       - run: pnpm test
       - run: pnpm test:e2e
+
+  publish-backend:
+    name: Publish backend to Docker Hub
+    needs: [backend, frontend]
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish_image)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Check Docker Hub credential
+        env:
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -z "$DOCKERHUB_TOKEN" ]; then
+            echo '::error::Add repository secret DOCKERHUB_TOKEN with push access to mrizal23/hygeia-api.'
+            exit 1
+          fi
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Log in to Docker Hub
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4
+        with:
+          username: mrizal23
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Select image tags
+        id: image
+        run: |
+          tags="mrizal23/hygeia-api:sha-${GITHUB_SHA}"
+          if [ "$GITHUB_REF" = 'refs/heads/main' ]; then
+            tags="${tags},mrizal23/hygeia-api:latest"
+          fi
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+      - name: Build and push backend
+        id: publish
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: ./backend
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.image.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/mrizalbasri/Hygeia
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=hygeia-api
+          cache-to: type=gha,scope=hygeia-api,mode=max
+      - name: Record published image
+        env:
+          IMAGE_DIGEST: ${{ steps.publish.outputs.digest }}
+        run: |
+          {
+            echo '### Backend image published'
+            echo "Tag: mrizal23/hygeia-api:sha-${GITHUB_SHA}"
+            echo "Digest: mrizal23/hygeia-api@${IMAGE_DIGEST}"
+          } >> "$GITHUB_STEP_SUMMARY"

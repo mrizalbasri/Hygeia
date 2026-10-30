@@ -101,6 +101,11 @@ func (s Store) RegisterPatient(ctx context.Context, email, passwordHash, fullNam
 }
 
 func (s Store) UserBySession(ctx context.Context, tokenHash []byte) (User, error) {
+	if external, ok := ctx.Value(clerkContextKey{}).(*clerkRequest); ok {
+		if err := external.check(ctx); err != nil {
+			return User{}, err
+		}
+	}
 	var user User
 	var orgID, orgName, orgType *string
 	err := s.DB.QueryRow(ctx, `

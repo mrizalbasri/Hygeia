@@ -5,6 +5,7 @@
 	import { api, ApiError, errorText, menus, statusText, type Entry, type Payload } from './api.js';
 	import PagedList from './PagedList.svelte';
 	import Notifications from './Notifications.svelte';
+	import CancelAction from './CancelAction.svelte';
 	import './workflow.css';
 
 	let { user }: { user: User } = $props();
@@ -199,6 +200,7 @@
 							</button>
 						{/if}
 					</div>
+					<CancelAction path={`/prescriptions/${item.id}`} {run} {busy} provider />
 				{/snippet}
 			</PagedList>
 		{:else if view === 'notifications'}

@@ -108,7 +108,7 @@
 	}}
 >
 	<a class="brand" href={resolve('/')} aria-label="Hygeia, beranda">
-		<img src="/logo-light.png" width="34" height="34" alt="" /><span>Hygeia</span>
+		<img src="/logo-light.webp" width="34" height="34" alt="" /><span>Hygeia</span>
 	</a>
 	<nav id="landing-navigation" class:mobile-open={mobileOpen} aria-label="Navigasi beranda">
 		<button

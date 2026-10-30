@@ -47,7 +47,11 @@ const vite = spawn(
 		'--strictPort'
 	],
 	{
-		env: { ...process.env, API_BASE_URL: `http://127.0.0.1:${fixture.address().port}` },
+		env: {
+			...process.env,
+			AUTH_PROVIDER: 'local',
+			API_BASE_URL: `http://127.0.0.1:${fixture.address().port}`
+		},
 		stdio: ['ignore', 'pipe', 'pipe'],
 		windowsHide: true
 	}

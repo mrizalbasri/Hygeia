@@ -162,6 +162,29 @@ try {
 	await view(doctor, 'doctor', 'labs');
 	await doctor.getByRole('button', { name: 'Buka hasil pemeriksaan', exact: true }).click();
 	await doctor.getByRole('dialog').getByText('10 demo', { exact: true }).waitFor();
+	const receipts = await call(accounts.lab.client, '/lab-receipts');
+	assert.ok(receipts.receipts.some((receipt) => receipt.id === resultId));
+	assert.ok(receipts.receipts.every((receipt) => !('value' in receipt) && !('note' in receipt)));
+	await call(accounts.lab.client, `/lab-results/${resultId}/corrections`, 'POST', {
+		reason: 'Synthetic instrument recheck',
+		value: '10',
+		unit: 'demo',
+		flag: 'normal',
+		note: 'Synthetic correction only'
+	});
+	// No page reload or manual refresh: the real SSE must invalidate the open detail.
+	await doctor
+		.getByRole('dialog')
+		.getByText('Nilai terbaru setelah koreksi', { exact: true })
+		.waitFor({ timeout: 10000 });
+	assert.ok(
+		(await call(accounts.patient.client, '/notifications')).notifications.some(
+			(item) => item.action === 'lab_result.correct'
+		)
+	);
+	console.log(
+		'PASS real SSE correction refreshes open doctor result; lab receipts recover metadata only'
+	);
 	await doctor.getByRole('button', { name: 'Tutup', exact: true }).click();
 	await view(doctor, 'doctor', 'prescriptions');
 	await doctor.getByText('Buat resep', { exact: true }).click();
@@ -256,7 +279,10 @@ try {
 	await clickSaved(doctor, 'Mulai akses darurat 60 menit');
 	await doctor.getByRole('button', { name: 'Lihat data dalam cakupan', exact: true }).click();
 	await doctor.getByRole('button', { name: 'Buka detail data', exact: true }).first().click();
-	await doctor.getByRole('dialog').locator('details').waitFor();
+	await doctor
+		.getByRole('dialog')
+		.getByText('ID resource untuk berbagi', { exact: true })
+		.waitFor();
 	await doctor.getByRole('button', { name: 'Tutup', exact: true }).click();
 	await view(patient, 'patient', 'emergency');
 	await patient

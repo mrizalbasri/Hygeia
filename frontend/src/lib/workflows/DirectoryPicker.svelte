@@ -4,12 +4,16 @@
 		path,
 		listKey,
 		label,
+		organizationType,
+		disabled = false,
 		valueKey = 'id',
 		value = $bindable('')
 	}: {
 		path: string;
 		listKey: string;
 		label: string;
+		organizationType?: string;
+		disabled?: boolean;
 		value?: string;
 		valueKey?: 'id' | 'result_id';
 	} = $props();
@@ -24,6 +28,9 @@
 		loading = $state(true),
 		retry = $state(0),
 		chosen = $state<Entry | null>(null);
+	let visibleEntries = $derived(
+		organizationType ? entries.filter((item) => item.type === organizationType) : entries
+	);
 	$effect(() => {
 		const page = offset,
 			refresh = retry;
@@ -60,12 +67,12 @@
 			aria-label={label}
 			required
 			bind:value
-			disabled={loading || !!error}
-			onchange={() => (chosen = entries.find((item) => item[valueKey] === value) || chosen)}
+			disabled={disabled || loading || !!error}
+			onchange={() => (chosen = visibleEntries.find((item) => item[valueKey] === value) || null)}
 			><option value="">Pilih {label.toLowerCase()}</option
-			>{#if chosen && !entries.some((item) => item.id === chosen?.id)}<option
+			>{#if value && chosen && !visibleEntries.some((item) => item.id === chosen?.id)}<option
 					value={chosen[valueKey] || ''}>{describe(chosen)}</option
-				>{/if}{#each entries as item (item.id)}<option
+				>{/if}{#each visibleEntries as item (item.id)}<option
 					value={item[valueKey] || ''}
 					disabled={!item[valueKey]}>{describe(item)}</option
 				>{/each}</select
@@ -75,13 +82,17 @@
 			role="alert"
 		>
 			{error}<button type="button" class="text-button" onclick={() => retry++}>Coba lagi</button>
-		</p>{:else if !entries.length}<small>Tidak ada pilihan pada halaman ini.</small>{/if}
+		</p>{:else if !visibleEntries.length}<small
+			>Tidak ada pilihan yang sesuai pada halaman ini. Periksa halaman berikutnya jika tersedia.</small
+		>{/if}
 	<div class="wf-picker-pages">
-		<button type="button" disabled={loading || offset === 0} onclick={() => (offset -= 20)}
-			>Pilihan sebelumnya</button
+		<button
+			type="button"
+			disabled={disabled || loading || offset === 0}
+			onclick={() => (offset -= 20)}>Pilihan sebelumnya</button
 		><button
 			type="button"
-			disabled={loading || !!error || entries.length < 20}
+			disabled={disabled || loading || !!error || entries.length < 20}
 			onclick={() => (offset += 20)}>Pilihan berikutnya</button
 		>
 	</div>

@@ -99,7 +99,7 @@
 	<aside class="sidebar">
 		<div class="sidebar-mobile-heading">
 			<a class="brand" href={resolve('/dashboard/[role]', { role: data.user.role })}
-				><img src="/logo-light.png" alt="" width="40" height="40" /><span>Hygeia</span></a
+				><img src="/logo-light.webp" alt="" width="40" height="40" /><span>Hygeia</span></a
 			>
 			<button
 				class="workspace-menu-toggle"
@@ -164,6 +164,10 @@
 						>
 					{/if}</a
 				>
+				{#if data.authProvider === 'clerk'}<a
+						class="button secondary"
+						href={resolve('/account/security')}>Keamanan akun</a
+					>{/if}
 				{#key data.user.id}
 					<AccountDropdown
 						name={displayName}

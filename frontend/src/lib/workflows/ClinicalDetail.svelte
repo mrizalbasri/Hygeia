@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { subscribeRealtime } from './realtime.js';
 	import { api, errorText, dateText, statusText, type Entry } from './api.js';
 	let {
 		kind,
@@ -12,6 +13,9 @@
 		error = $state(''),
 		loading = $state(true),
 		retry = $state(0);
+	let latestCorrection = $derived(record?.corrections?.at(-1));
+	let currentResult = $derived(latestCorrection || record);
+	onMount(() => subscribeRealtime(() => retry++));
 	onMount(() => {
 		dialog.showModal();
 		return () => {
@@ -92,35 +96,47 @@
 		>{:else if record}{#if kind === 'lab_result'}<h3>{record.test_name}</h3>
 			<dl class="wf-facts">
 				<div>
-					<dt>Nilai</dt>
-					<dd>{record.value} {record.unit}</dd>
+					<dt>{latestCorrection ? 'Nilai terbaru setelah koreksi' : 'Nilai'}</dt>
+					<dd>{currentResult?.value} {currentResult?.unit}</dd>
 				</div>
 				<div>
 					<dt>Rentang rujukan</dt>
-					<dd>{record.reference_range || 'Tidak dicantumkan'}</dd>
+					<dd>{currentResult?.reference_range || 'Tidak dicantumkan'}</dd>
 				</div>
 				<div>
 					<dt>Penanda dari laboratorium</dt>
-					<dd>{record.flag || 'unknown'}</dd>
+					<dd>{currentResult?.flag || 'unknown'}</dd>
 				</div>
 				<div>
 					<dt>Catatan</dt>
-					<dd>{record.note || 'Tidak ada catatan'}</dd>
+					<dd>{currentResult?.note || 'Tidak ada catatan'}</dd>
 				</div>
 				<div>
 					<dt>Dikirim</dt>
-					<dd>{dateText(record.submitted_at)}</dd>
+					<dd>{dateText(latestCorrection?.corrected_at || record.submitted_at)}</dd>
 				</div>
 			</dl>
-			{#each record.corrections || [] as correction (correction.id)}
-				<section class="wf-medication">
-					<h3>Koreksi hasil · {dateText(correction.corrected_at)}</h3>
-					<p>{correction.value} {correction.unit} · {correction.flag}</p>
-					<p>Rentang rujukan: {correction.reference_range || 'Tidak dicantumkan'}</p>
-					{#if correction.reason}<p>Alasan: {correction.reason}</p>{/if}
-					{#if correction.note}<p>Catatan: {correction.note}</p>{/if}
-				</section>
-			{/each}
+			{#if latestCorrection}<p role="status">Hasil ini telah dikoreksi oleh laboratorium.</p>
+				{#if latestCorrection.reason}<p>Alasan koreksi terbaru: {latestCorrection.reason}</p>{/if}
+				<details>
+					<summary>Riwayat hasil dan koreksi</summary>
+					<section class="wf-medication">
+						<h3>Hasil awal · {dateText(record.submitted_at)}</h3>
+						<p>{record.value} {record.unit} · {record.flag}</p>
+						<p>Rentang rujukan: {record.reference_range || 'Tidak dicantumkan'}</p>
+						{#if record.note}<p>Catatan: {record.note}</p>{/if}
+					</section>
+					{#each [...(record.corrections || [])].reverse() as correction (correction.id)}
+						<section class="wf-medication">
+							<h3>Koreksi hasil · {dateText(correction.corrected_at)}</h3>
+							<p>{correction.value} {correction.unit} · {correction.flag}</p>
+							<p>Rentang rujukan: {correction.reference_range || 'Tidak dicantumkan'}</p>
+							{#if correction.reason}<p>Alasan: {correction.reason}</p>{/if}
+							{#if correction.note}<p>Catatan: {correction.note}</p>{/if}
+						</section>
+					{/each}
+				</details>
+			{/if}
 			<p class="muted">Interpretasi hasil dilakukan oleh dokter yang menangani Anda.</p>{:else}<p>
 				{statusText[record.status || ''] || record.status} · {record.pharmacy_name ||
 					'Apotek belum dipilih'}

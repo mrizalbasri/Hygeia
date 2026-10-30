@@ -1,6 +1,7 @@
 <script lang="ts">
 	import PagedList from './PagedList.svelte';
 	import DirectoryPicker from './DirectoryPicker.svelte';
+	import CancelAction from './CancelAction.svelte';
 	import { formText, statusText, dateText, type Run } from './api.js';
 	let {
 		doctor,
@@ -17,6 +18,7 @@
 	} = $props();
 	let episode = $state(''),
 		lab = $state('');
+	let replacementLabs = $state<Record<string, string>>({});
 	async function create(event: SubmitEvent) {
 		event.preventDefault();
 		if (!episode || !lab) return;
@@ -102,7 +104,47 @@
 					onclick={() => show('lab_result', item.result_id!)}>Buka hasil pemeriksaan</button
 				>{/if}
 		</div>
+		{#if item.status !== 'completed' && item.status !== 'cancelled'}
+			<CancelAction path={`/lab-requests/${item.id}`} {run} {busy} />
+		{/if}
 		{#if item.status === 'cancelled'}<p class="muted">
 				Permintaan dibatalkan; pemeriksaan ini tidak dapat dilanjutkan.
-			</p>{/if}{/snippet}
+			</p>
+			{#if item.cancellation_note}<p>Alasan pembatalan: {item.cancellation_note}</p>{/if}
+			{#if doctor}<details>
+					<summary>Ajukan pemeriksaan pengganti</summary>
+					<form
+						onsubmit={async (event) => {
+							event.preventDefault();
+							if (!replacementLabs[item.id]) return;
+							if (
+								await run('/lab-requests', {
+									episode_id: item.episode_id,
+									lab_org_id: replacementLabs[item.id],
+									test_code: item.test_code,
+									test_name: item.test_name
+								})
+							)
+								replacementLabs[item.id] = '';
+						}}
+					>
+						<DirectoryPicker
+							path="/laboratories"
+							listKey="laboratories"
+							label="Laboratorium pengganti"
+							bind:value={
+								() => replacementLabs[item.id] || '', (value) => (replacementLabs[item.id] = value)
+							}
+						/>
+						<p>
+							Permintaan baru untuk {item.test_name}. Pasien perlu menyetujui pengiriman kembali.
+						</p>
+						<button class="button primary" disabled={busy || !replacementLabs[item.id]}
+							>Kirim pemeriksaan pengganti</button
+						>
+					</form>
+				</details>{:else}<p>
+					Hubungi dokter untuk permintaan baru jika masih memerlukan pemeriksaan.
+				</p>{/if}
+		{/if}{/snippet}
 </PagedList>
