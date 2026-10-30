@@ -2,7 +2,7 @@ import { API_BASE_URL } from '$app/env/private';
 import { proxyApi } from '#lib/server/api-proxy.js';
 import type { RequestHandler } from './$types';
 
-export const config = { runtime: 'nodejs24.x', maxDuration: 240, split: true };
+export const config = { runtime: 'nodejs22.x', maxDuration: 60, split: true };
 
 const proxy: RequestHandler = ({ request, url }) => proxyApi(request, url, API_BASE_URL);
 export const GET = proxy;

@@ -18,6 +18,9 @@ function cleanHeaders(source: Headers) {
 	return headers;
 }
 
+const DEFAULT_ORIGIN =
+	'https://env-hygeia-jp.bravecliff-18f241ae.japaneast.azurecontainerapps.io';
+
 // Fixed backend origin: the browser cannot choose the upstream destination.
 export async function proxyApi(
 	request: Request,
@@ -25,9 +28,26 @@ export async function proxyApi(
 	apiOrigin: string,
 	upstreamFetch: typeof fetch = fetch
 ) {
-	const target = new URL(apiOrigin);
-	target.pathname = url.pathname;
-	target.search = url.search;
+	let target: URL;
+	try {
+		let origin = (apiOrigin || '').trim();
+		if (
+			!origin ||
+			origin.includes('0.0.0.0') ||
+			(process.env.VERCEL && (origin.includes('localhost') || origin.includes('127.0.0.1')))
+		) {
+			origin = DEFAULT_ORIGIN;
+		}
+		if (!origin.startsWith('http://') && !origin.startsWith('https://')) {
+			origin = `https://${origin}`;
+		}
+		target = new URL(origin);
+		target.pathname = url.pathname;
+		target.search = url.search;
+	} catch {
+		target = new URL(DEFAULT_ORIGIN + url.pathname + url.search);
+	}
+
 	const headers = cleanHeaders(request.headers);
 	for (const name of [...headers.keys()]) {
 		if (name === 'host' || name === 'forwarded' || name.startsWith('x-forwarded-'))
