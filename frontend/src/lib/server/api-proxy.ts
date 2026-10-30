@@ -63,7 +63,8 @@ export async function proxyApi(
 			responseHeaders.append('set-cookie', cookie);
 		responseHeaders.set('cache-control', 'no-store');
 		return new Response(upstream.body, { status: upstream.status, headers: responseHeaders });
-	} catch {
+	} catch (error) {
+		console.error('[API Proxy Error]', target.href, error);
 		return Response.json(
 			{ error: { code: 'unavailable', message: 'Layanan belum dapat dihubungi. Coba lagi.' } },
 			{ status: 502, headers: { 'cache-control': 'no-store' } }
