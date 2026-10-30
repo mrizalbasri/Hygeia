@@ -3,9 +3,12 @@ import { error, redirect } from '@sveltejs/kit';
 import { roles, type User } from '#lib/auth.js';
 import type { Cookies } from '@sveltejs/kit';
 import { AUTH_PROVIDER } from '$app/env/private';
+import { PUBLIC_CLERK_PUBLISHABLE_KEY } from '$app/env/public';
 
 export async function requireUser(cookies: Cookies, serverFetch: typeof fetch): Promise<User> {
-	const clerk = AUTH_PROVIDER === 'clerk';
+	const clerk =
+		AUTH_PROVIDER === 'clerk' &&
+		Boolean(PUBLIC_CLERK_PUBLISHABLE_KEY && PUBLIC_CLERK_PUBLISHABLE_KEY.trim());
 	const session = cookies.get(clerk ? '__session' : 'hygeia_session');
 	if (!session) redirect(303, '/login');
 	let response: Response;
