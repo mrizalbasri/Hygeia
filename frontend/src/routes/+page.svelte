@@ -451,10 +451,6 @@
 
 			<div class="footer-bottom">
 				<p>© 2026 Hygeia. Hak cipta dilindungi.</p>
-				<div class="footer-status">
-					<span class="status-dot" aria-hidden="true"></span>
-					<span>Layanan Aktif & Terlindungi</span>
-				</div>
 			</div>
 		</div>
 	</footer>

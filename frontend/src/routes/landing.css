@@ -813,25 +813,6 @@ body:has(.landing) {
 .footer-bottom p {
 	margin: 0;
 }
-.footer-status {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	font-size: 12px;
-	font-weight: 500;
-	color: #0f766e;
-	background: #f0fdf4;
-	border: 1px solid #bbf7d0;
-	padding: 4px 12px;
-	border-radius: 999px;
-}
-.status-dot {
-	width: 8px;
-	height: 8px;
-	border-radius: 50%;
-	background: #10b981;
-	box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
-}
 
 /* Section scroll anchor */
 .landing section[id] {
