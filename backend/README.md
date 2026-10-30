@@ -141,19 +141,20 @@ API dan container tidak menjalankan migrasi otomatis. Jalankan migrasi sebagai
 langkah terpisah sebelum merilis API, dengan koneksi direct untuk Neon.
 
 Seed hanya diizinkan saat `APP_ENV=development` atau `test`, memakai
-`DEMO_PASSWORD` dari `.env` (minimal 12 byte). Seed bisa diulang dan tidak
-mengubah password atau akun yang sudah ada. Mengganti `DEMO_PASSWORD` setelah
-seed tidak otomatis mengganti password akun yang sudah dibuat.
+`DEMO_PASSWORD` dari `.env` (default: `Hygeia2026!#`, minimal 12 byte). Seed bisa diulang dan
+memperbarui data dummy klinis secara konsisten.
 
-| Peran                    | Email sintetis            |
-| ------------------------ | ------------------------- |
-| Pasien                   | `aulia@demo.hygeia.test`  |
-| Dokter episode           | `maya@demo.hygeia.test`   |
-| Dokter lintas organisasi | `budi@demo.hygeia.test`   |
-| Dokter IGD               | `rina@demo.hygeia.test`   |
-| Laboratorium             | `lab@demo.hygeia.test`    |
-| Apotek                   | `apotek@demo.hygeia.test` |
-| Admin                    | `admin@demo.hygeia.test`  |
+| Peran | Akun Resmi (`@hygeia.id`) | Akun Uji Tambahan (`@demo.hygeia.test`) | Organisasi / Tugas |
+| --- | --- | --- | --- |
+| **Pasien** | `pasien@hygeia.id` | `aulia@demo.hygeia.test` | Pasien utama (Aulia Rahman, ref: `HYG-2026-PASIEN-01`) |
+| **Dokter episode** | `dokter@hygeia.id` | `maya@demo.hygeia.test` | dr. Maya Sp.PD (Klinik Pratama Sentra) |
+| **Dokter lintas faskes** | — | `budi@demo.hygeia.test` | dr. Budi (Klinik Harapan - uji CarePass) |
+| **Dokter IGD** | — | `rina@demo.hygeia.test` | dr. Rina (RSUP Sentra IGD - uji Break-Glass) |
+| **Laboratorium** | `lab@hygeia.id` | `lab@demo.hygeia.test` | Analis Lab (Laboratorium Sentra Medika) |
+| **Apotek** | `apotek@hygeia.id` | `apotek@demo.hygeia.test` | Apoteker (Apotek Sentra Farma) |
+| **Admin** | `admin@hygeia.id` | `admin@demo.hygeia.test` | Administrator Sistem Hygeia |
+
+Seed otomatis menginisialisasi data klinis realistis: episode perawatan aktif, hasil lab Hematologi lengkap, antrean lab Lipid (`sent`), resep siap ambil di apotek (`ready`), dan resep menunggu persetujuan pasien (`pending_patient_approval`).
 
 ## Menjalankan
 

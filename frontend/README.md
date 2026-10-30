@@ -23,10 +23,7 @@ Administrator pertama perlu diprovisikan dengan perintah operator pada
 sebagai pasien harus masih kosong sebelum dapat dialihkan. Tidak ada akun manusia yang otomatis diberi
 peran admin oleh integrasi ini.
 
-Mode lokal tetap tersedia hanya untuk development/test sintetis:
-tetapkan `AUTH_PROVIDER=local` pada frontend **dan** backend. Fixture E2E
-memilih mode ini secara eksplisit. Tes live klinis lama menggunakan password
-demo lokal dan tidak boleh dijalankan ke API mode Clerk.
+Mode lokal native (`AUTH_PROVIDER=local`) didukung penuh baik untuk development lokal maupun deployment production/staging mandiri tanpa ketergantungan Clerk eksternal. Fixture E2E memilih mode ini secara eksplisit.
 
 Untuk memeriksa tampilan Clerk development tanpa mengirim email atau membuat
 akun pengguna, jalankan `HYGEIA_CLERK_LIVE=1 node tests/clerk-ui.live.js` dengan
@@ -71,8 +68,7 @@ pnpm install
 pnpm dev
 ```
 
-Buka port yang dilaporkan Vite. Akun demo tersedia dari seed backend; password
-berasal dari `backend/.env`. Jangan commit file `.env` atau data pasien.
+Buka port yang dilaporkan Vite. Akun demo resmi (`@hygeia.id`) dan uji (`@demo.hygeia.test`) tersedia dari seed backend dengan password default `Hygeia2026!#` (atau nilai `DEMO_PASSWORD` di `.env`). Jangan commit file `.env` atau data pasien.
 Jalur `/api/v1` diteruskan oleh route server SvelteKit ke `API_BASE_URL`, baik
 pada development maupun Vercel. Adapter Vercel dipilih ketika `VERCEL` tersedia;
 build lokal memakai adapter-auto. Lihat [konfigurasi backend dan autentikasi](../backend/README.md#backend-melalui-docker).

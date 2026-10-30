@@ -109,18 +109,18 @@ Hak akses dari hubungan perawatan atau izin lain tetap mengikuti ketentuannya.
 ## Teknologi
 
 Hygeia menggunakan antarmuka SvelteKit, backend Go, dan basis data PostgreSQL.
-Autentikasi pengguna terintegrasi dengan Clerk.
+Autentikasi pengguna mendukung sesi lokal native (Argon2id) dan integrasi Clerk.
 
 | Komponen | Teknologi | Peran |
 | --- | --- | --- |
 | Antarmuka | TypeScript 6, Svelte 5, SvelteKit 3 | Halaman publik, autentikasi, dan ruang kerja pengguna. |
 | Tampilan | HTML, CSS, Tailwind CSS 4 | Tata letak responsif dan komponen antarmuka. |
 | Backend | Go 1.26, `net/http` | REST API, aturan akses, dan alur layanan. |
-| Basis data | PostgreSQL, SQL | Penyimpanan data aplikasi. |
-| Identitas | Clerk | Login dan pengaturan keamanan akun. |
-| Notifikasi | Server-Sent Events (SSE) | Pembaruan notifikasi di dalam aplikasi. |
-| Pengujian | Go testing, Vitest, Playwright | Pengujian backend, komponen, dan alur browser. |
-| Pengembangan | Vite 8, pnpm, Docker Compose, GitHub Actions | Build, lingkungan lokal, container backend, dan pemeriksaan CI. |
+| Basis data | PostgreSQL, SQL (Docker / Neon) | Penyimpanan data aplikasi dan migrasi skema. |
+| Identitas | Argon2id lokal & Clerk | Login, cookie sesi aman, CSRF, dan autentikasi multi-faktor (MFA). |
+| Notifikasi | Server-Sent Events (SSE) | Pembaruan notifikasi dan status alur secara langsung. |
+| Pengujian | Go testing, Vitest, Playwright | Pengujian backend, komponen, dan alur browser (E2E). |
+| Deployment & CI | Vercel, Azure Container Apps, GitHub Actions | Hosting frontend SSR, backend API, containerisasi, dan otomatisasi CI. |
 
 Versi dependensi tercatat pada [go.mod](backend/go.mod),
 [package.json](frontend/package.json), dan lockfile frontend.
@@ -188,22 +188,30 @@ pnpm dev
 Buka URL yang ditampilkan Vite, biasanya `http://localhost:5173/`. Halaman masuk
 berada di `/login`, registrasi pasien di `/register`.
 
-### Akun demo lokal
+### Akun demo dan pengujian
 
-Akun berikut dibuat oleh perintah seed dan digunakan pada mode
-`AUTH_PROVIDER=local` di lingkungan development/test. Login Clerk menggunakan
-identitas yang dikelola pada instance Clerk terkait.
+Perintah `go run ./cmd/seed` menginisialisasi akun demo resmi beserta data klinis sintetis lengkap (rekam medis aktif, hasil lab, resep di apotek, dan timeline perawatan). Mode `AUTH_PROVIDER=local` dapat langsung digunakan di lingkungan lokal maupun staging/produksi.
 
-| Peran        | Email                     |
-| ------------ | ------------------------- |
-| Pasien       | `aulia@demo.hygeia.test`  |
-| Dokter       | `maya@demo.hygeia.test`   |
-| Laboratorium | `lab@demo.hygeia.test`    |
-| Apotek       | `apotek@demo.hygeia.test` |
-| Admin        | `admin@demo.hygeia.test`  |
+Password default untuk seluruh akun demo adalah: **`Hygeia2026!#`** (atau nilai dari `DEMO_PASSWORD` pada `.env`).
 
-Password mengikuti `DEMO_PASSWORD` pada seed pertama. Seed tidak mengganti
-password akun yang sudah ada. Akun tambahan ada pada [panduan seed](backend/README.md#migrasi-dan-akun-demo).
+| Peran | Akun Demo Resmi (`@hygeia.id`) | Akun Demo Alternatif (`@demo.hygeia.test`) | Keterangan / Organisasi |
+| --- | --- | --- | --- |
+| **Pasien** | `pasien@hygeia.id` | `aulia@demo.hygeia.test` | Aulia Rahman (Kode Pasien: `HYG-2026-PASIEN-01`) |
+| **Dokter** | `dokter@hygeia.id` | `maya@demo.hygeia.test` | dr. Maya Sp.PD (Klinik Pratama Sentra) |
+| **Laboratorium** | `lab@hygeia.id` | `lab@demo.hygeia.test` | Analis Lab (Laboratorium Sentra Medika) |
+| **Apotek** | `apotek@hygeia.id` | `apotek@demo.hygeia.test` | Apoteker (Apotek Sentra Farma) |
+| **Admin** | `admin@hygeia.id` | `admin@demo.hygeia.test` | Administrator Sistem Hygeia |
+
+Akun khusus skenario lanjutan:
+- **Dokter Lintas Faskes**: `budi@demo.hygeia.test` (Klinik Harapan) — untuk pengujian penebusan CarePass antar-faskes.
+- **Dokter IGD**: `rina@demo.hygeia.test` (RSUP Sentra IGD) — untuk simulasi akses darurat (*break-glass*).
+
+Data klinis bawaan seed meliputi:
+- Hubungan perawatan aktif antara dr. Maya dan Aulia Rahman
+- Hasil tes laboratorium Hematologi terstruktur (status selesai)
+- Permintaan tes laboratorium Profil Lipid (antrean `sent` untuk diproses lab)
+- Resep obat siap diambil di Apotek Sentra Farma (Amoxicillin, Paracetamol, Vitamin C)
+- Resep obat Cetirizine berstatus menunggu persetujuan pasien (`pending_patient_approval`)
 
 ## Pengujian
 
