@@ -1,6 +1,6 @@
 # Hygeia Backend
 
-[README proyek](../README.md) · [Dokumentasi](../docs/README.md) · [Kontribusi](../CONTRIBUTING.md)
+[README proyek](../README.md) · [Kontribusi](../CONTRIBUTING.md)
 
 REST API Go (`net/http`) dengan PostgreSQL melalui connection pool `pgx`.
 Memerlukan Go 1.26 atau lebih baru.
@@ -56,13 +56,13 @@ Migrasi 6 menambah ledger admin, 7 inbox notifikasi, 8 grant akses darurat,
 dan 9 CarePass berbatas waktu. Migrasi 10 menambah koreksi hasil lab yang
 append-only. Backend inti dan fitur tambahan kini tersedia:
 
-| Modul                               | Kontrak aktual                                    |
+| Modul                               | Implementasi                                    |
 | ----------------------------------- | ------------------------------------------------- |
-| Admin akun/organisasi dan ledger    | [Admin](../docs/09-BACKEND-ADMIN.md)              |
-| Inbox dan read state                | [Notifikasi](../docs/10-BACKEND-NOTIFICATIONS.md) |
-| Akses darurat 60 menit dan tinjauan | [Emergency](../docs/11-backend-emergency-api.md)  |
-| CarePass/QR dan pencabutan          | [CarePass](../docs/12-BACKEND-CAREPASS.md)        |
-| SSE/replay notifikasi               | [Realtime](../docs/13-BACKEND-REALTIME.md)        |
+| Admin akun/organisasi dan ledger    | [implementasi admin](internal/admin)              |
+| Inbox dan read state                | [implementasi notifikasi](internal/notification) |
+| Akses darurat 60 menit dan tinjauan | [implementasi akses darurat](internal/breakglass)  |
+| CarePass/QR dan pencabutan          | [implementasi CarePass](internal/carepass)        |
+| SSE/replay notifikasi               | [implementasi realtime](internal/notification)        |
 
 CarePass memerlukan `PUBLIC_APP_URL` berupa origin aplikasi, default development
 `http://localhost:5173`. Production wajib origin HTTPS. QR mengarah ke route
@@ -208,7 +208,7 @@ setelah server menyelesaikan request aktif, dengan batas waktu 10 detik.
 ## Backend melalui Docker
 
 Profil pasien mandiri memerlukan migrasi 11. Endpoint, validasi, dan perilaku data
-lama dijelaskan dalam [kontrak profil pasien](../docs/15-PATIENT-PROFILE.md).
+lama dijelaskan dalam [implementasi profil pasien](internal/patientprofile).
 
 Isi `DATABASE_URL_DOCKER` pada `backend/.env` dengan koneksi PostgreSQL host,
 misalnya host `host.docker.internal` dan port `5434`, memakai kredensial lokal
@@ -233,7 +233,7 @@ Compose memeriksa `/api/v1/readyz` di dalam container; `--wait` menunggu API
 sehat sebelum perintah selesai. Database PostgreSQL yang sudah ada harus aktif.
 
 Untuk Neon, Docker Hub, dan penghubung Vercel, lihat
-[panduan deployment](../docs/DOCKER-VERCEL-SETUP-2026-10-29.md).
+[konfigurasi backend dan autentikasi](#backend-melalui-docker).
 
 ## Health dan readiness
 
@@ -375,9 +375,9 @@ dan penghapusan ekor melalui perbandingan kepala rantai. Pemegang DB dan kunci
 HMAC bisa menulis ulang seluruh rantai; checkpoint eksternal belum tersedia.
 
 Kontrak request/response dan alur integrasi untuk frontend:
-[`docs/05-BACKEND-API.md`](../docs/05-BACKEND-API.md).
+[implementasi API](internal).
 Batas lingkup, kebijakan akses, dan format audit:
-[`docs/06-BACKEND-CARE.md`](../docs/06-BACKEND-CARE.md).
+[implementasi perawatan dan audit](internal/care).
 
 ## API laboratorium
 
@@ -467,7 +467,7 @@ Audit dan aksi ditulis dalam transaksi yang sama, termasuk pembacaan berbasis
 consent. Context memuat ID izin dan waktu habis, tanpa nilai hasil. Tes khusus:
 `go test ./internal/care -run Consent -v` dengan `TEST_DATABASE_URL` lokal.
 Contoh payload dan panduan frontend ada di
-[`docs/05-BACKEND-API.md`](../docs/05-BACKEND-API.md#consent-untuk-satu-hasil-laboratorium).
+[implementasi API](internal).
 
 ## API resep dan apotek
 
@@ -483,7 +483,7 @@ yang ditugaskan selama penugasan aktif. Apotek hanya melihat ID, referensi
 pasien, item obat, dan status. Pending dibatalkan saat episode berakhir;
 penugasan yang sudah disetujui tetap dapat diselesaikan. Aksi dan audit berbagi
 transaksi. Kontrak lengkap, validasi, dan contoh payload:
-[`docs/07-BACKEND-PRESCRIPTIONS.md`](../docs/07-BACKEND-PRESCRIPTIONS.md).
+[implementasi resep](internal/prescription).
 
 ## Timeline perjalanan pasien
 
@@ -496,7 +496,7 @@ Timeline tidak memuat pembacaan data atau akses ditolak; aktivitas itu tetap
 tersedia pada riwayat akses. Isi hasil lab dan obat tidak disertakan. Proyeksi
 menggunakan audit yang sudah ada tanpa tabel/migrasi baru dan tanpa perubahan
 format hash. Kontrak lengkap:
-[`docs/08-BACKEND-TIMELINE.md`](../docs/08-BACKEND-TIMELINE.md).
+[implementasi timeline](internal/timeline).
 Tes khusus: `go test ./internal/care -run Timeline -v` dengan `TEST_DATABASE_URL`.
 
 ## Validasi dan build
@@ -579,11 +579,11 @@ nama tersembunyi `.go-mod` agar tidak ikut ditemukan oleh `go test ./...`.
 Frontend SvelteKit berada di `../frontend`, pada port default `5173`, dengan
 proxy `/api`, halaman `/login`, dashboard, helper SSR, dan workflow pasien/dokter.
 Antarmuka lab/apotek/admin sudah terintegrasi sesuai
-[panduan API](../docs/05-BACKEND-API.md) dan
-[rencana handoff](../docs/plans/2026-10-15-patient-doctor-and-provider-handoff.md).
+[implementasi API](internal) dan
+[alur penggunaan](../README.md#panduan-demonstrasi).
 
-Lihat [hasil kesiapan backend](../docs/14-BACKEND-READINESS.md) untuk bukti
-verifikasi terbaru, urutan menjalankan layanan, dan batas kesiapan deployment.
+Lihat [panduan validasi dan build](#validasi-dan-build) untuk menjalankan
+pemeriksaan backend. Hasil pemeriksaan CI tersedia pada GitHub Actions.
 
 Referensi: [pgx](https://github.com/jackc/pgx),
 [PostgreSQL Docker image](https://hub.docker.com/_/postgres).

@@ -15,3 +15,6 @@ backend/bin/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Internal documentation is maintained locally
+/docs/

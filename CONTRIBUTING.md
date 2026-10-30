@@ -5,9 +5,9 @@ contoh, fixture, screenshot, laporan masalah, dan pengujian.
 
 ## Siapkan development
 
-Ikuti [panduan mulai](README.md#mulai-development), lalu baca
+Ikuti [panduan mulai](README.md#instalasi-lokal), lalu baca
 [frontend](frontend/README.md) atau [backend](backend/README.md) sesuai bagian
-yang diubah. [Indeks dokumentasi](docs/README.md) memuat kontrak tiap modul.
+yang diubah. Periksa implementasi dan tes modul sebelum mengubah kontrak API.
 
 Jangan memasukkan `.env`, password, cookie sesi, token CarePass, kunci audit,
 atau data pasien nyata ke Git maupun deskripsi issue/PR.
