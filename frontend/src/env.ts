@@ -24,7 +24,10 @@ export const variables = defineEnvVars({
 		description: 'Private Go API origin for SSR identity checks and the same-origin API proxy.',
 		schema: (value: string | undefined) => {
 			let raw = (value || '').trim();
-			if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
+			if (
+				(raw.startsWith('"') && raw.endsWith('"')) ||
+				(raw.startsWith("'") && raw.endsWith("'"))
+			) {
 				raw = raw.slice(1, -1).trim();
 			}
 			if (!raw) {
