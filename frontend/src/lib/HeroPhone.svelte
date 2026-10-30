@@ -54,7 +54,7 @@
 				>
 			</defs>
 			<image
-				href="/hero-phone-front.png"
+				href="/hero-phone-front.webp"
 				width="1122"
 				height="1402"
 				mask="url(#phone-image-mask)"

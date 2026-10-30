@@ -77,7 +77,7 @@
 	<div class="hero-three-stage" bind:this={stage}>
 		<img
 			class="hero-three-backdrop"
-			src="/hero-clinic-v2.png"
+			src="/hero-clinic-v2.webp"
 			alt="Visual buatan AI: pasien dan dokter berdiskusi di ruang konsultasi bernuansa biru."
 			width="1860"
 			height="845"

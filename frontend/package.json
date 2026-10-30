@@ -4,7 +4,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"engines": {
-		"node": "24.x"
+		"node": "26.x"
 	},
 	"packageManager": "pnpm@11.18.0",
 	"scripts": {
@@ -18,7 +18,7 @@
 		"format": "prettier --write .",
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run",
-		"test:e2e": "node tests/dashboard-theme.e2e.mjs && node tests/clinical-workflows.e2e.js && node tests/provider-workflows.e2e.js && node tests/registration.e2e.js && node tests/role-overviews.e2e.mjs && node tests/admin-directory.e2e.js && node tests/workflow-recovery.e2e.js && node tests/dashboard-reliability.e2e.mjs && node tests/patient-profile.e2e.mjs",
+		"test:e2e": "node tests/dashboard-theme.e2e.mjs && node tests/clinical-workflows.e2e.js && node tests/carepass.e2e.js && node tests/provider-workflows.e2e.js && node tests/registration.e2e.js && node tests/role-overviews.e2e.mjs && node tests/admin-directory.e2e.js && node tests/workflow-recovery.e2e.js && node tests/dashboard-reliability.e2e.mjs && node tests/patient-profile.e2e.mjs",
 		"test:demo": "node tests/demo-workflow.live.js"
 	},
 	"devDependencies": {
@@ -28,7 +28,7 @@
 		"@sveltejs/kit": "^3.0.0",
 		"@sveltejs/vite-plugin-svelte": "^7.2.0",
 		"@tailwindcss/vite": "^4.3.0",
-		"@types/node": "^24",
+		"@types/node": "^26",
 		"@vitest/browser-playwright": "4.1.12",
 		"eslint": "^10.4.1",
 		"eslint-config-prettier": "^10.1.8",

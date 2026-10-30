@@ -206,7 +206,7 @@
 </script>
 
 <svelte:head>
-	<link rel="preload" as="image" href="/hero-clinic-v2.png" />
+	<link rel="preload" as="image" href="/hero-clinic-v2.webp" />
 	<title>Hygeia · Perawatan terhubung, kendali di tangan Anda</title>
 	<meta
 		name="description"
