@@ -30,12 +30,16 @@ export const variables = defineEnvVars({
 			) {
 				raw = raw.slice(1, -1).trim();
 			}
+			const defaultOrigin =
+				'https://env-hygeia-jp.bravecliff-18f241ae.japaneast.azurecontainerapps.io';
 			if (
 				!raw ||
+				raw.toLowerCase() === 'local' ||
 				raw.includes('0.0.0.0') ||
-				(process.env.VERCEL && (raw.includes('localhost') || raw.includes('127.0.0.1')))
+				(process.env.VERCEL &&
+					(raw.includes('localhost') || raw.includes('127.0.0.1') || !raw.includes('.')))
 			) {
-				return 'https://env-hygeia-jp.bravecliff-18f241ae.japaneast.azurecontainerapps.io';
+				return defaultOrigin;
 			}
 			if (!raw.startsWith('http://') && !raw.startsWith('https://')) {
 				raw = `https://${raw}`;
@@ -46,13 +50,15 @@ export const variables = defineEnvVars({
 					process.env.VERCEL &&
 					(url.hostname === 'localhost' ||
 						url.hostname === '127.0.0.1' ||
-						url.hostname === '0.0.0.0')
+						url.hostname === '0.0.0.0' ||
+						url.hostname === 'local' ||
+						!url.hostname.includes('.'))
 				) {
-					return 'https://env-hygeia-jp.bravecliff-18f241ae.japaneast.azurecontainerapps.io';
+					return defaultOrigin;
 				}
 				return url.origin;
 			} catch {
-				return 'https://env-hygeia-jp.bravecliff-18f241ae.japaneast.azurecontainerapps.io';
+				return defaultOrigin;
 			}
 		}
 	}
