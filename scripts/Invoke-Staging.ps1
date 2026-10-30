@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 $backendPath = Join-Path (Split-Path $PSScriptRoot -Parent) 'backend'
 $envPath = Join-Path $backendPath '.env.staging'
 if (-not (Test-Path -LiteralPath $envPath)) {
-    throw 'Configure backend/.env.staging first; see docs/NEON-STAGING-2026-10-29.md.'
+    throw 'Configure backend/.env.staging first; use backend/.env.staging.example as a template.'
 }
 $settings = @{}
 foreach ($line in [IO.File]::ReadAllLines($envPath)) {

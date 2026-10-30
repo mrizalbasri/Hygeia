@@ -1,6 +1,6 @@
 # Hygeia Frontend
 
-[README proyek](../README.md) · [Dokumentasi](../docs/README.md) · [Kontribusi](../CONTRIBUTING.md)
+[README proyek](../README.md) · [Kontribusi](../CONTRIBUTING.md)
 
 ## Clerk dan keamanan akun
 
@@ -60,7 +60,7 @@ sent→accepted→in_progress, dan penyerahan hasil terstruktur sekali pakai.
 Apotek: antrean resep, transisi sent→accepted→preparing→ready→completed, dan
 konfirmasi penyerahan. Admin: organisasi, akun, status audit HMAC, tinjauan
 akses darurat, dan log aktivitas. Kontrak dan urutan kerja ada di
-[handoff pengembang](../docs/plans/2026-10-15-patient-doctor-and-provider-handoff.md).
+[alur penggunaan](../README.md#panduan-demonstrasi).
 
 ## Menjalankan
 
@@ -75,7 +75,7 @@ Buka port yang dilaporkan Vite. Akun demo tersedia dari seed backend; password
 berasal dari `backend/.env`. Jangan commit file `.env` atau data pasien.
 Jalur `/api/v1` diteruskan oleh route server SvelteKit ke `API_BASE_URL`, baik
 pada development maupun Vercel. Adapter Vercel dipilih ketika `VERCEL` tersedia;
-build lokal memakai adapter-auto. Lihat [panduan deployment](../docs/DOCKER-VERCEL-SETUP-2026-10-29.md).
+build lokal memakai adapter-auto. Lihat [konfigurasi backend dan autentikasi](../backend/README.md#backend-melalui-docker).
 
 ## Pengujian
 
@@ -162,7 +162,7 @@ ditampilkan tanpa menghapus isian, dan pengiriman ganda diblokir selama proses.
 Pasien dapat mengubah data diri melalui menu **Profil saya**. Email dan nomor
 pasien hanya baca; tanggal lahir lengkap serta kontak bersifat opsional.
 Data lama yang hanya berisi tahun lahir tidak diubah menjadi tanggal buatan.
-Lihat [kontrak profil pasien](../docs/15-PATIENT-PROFILE.md).
+Lihat [implementasi profil pasien](../backend/internal/patientprofile).
 
 Tes profil dengan API/PostgreSQL nyata (database sementara saja, bukan produksi):
 

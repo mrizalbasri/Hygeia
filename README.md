@@ -4,6 +4,14 @@
   <p><strong>Perawatan terhubung, akses data dalam kendali pasien.</strong></p>
   <p>Platform pertukaran data kesehatan antara pasien, dokter, laboratorium, dan apotek<br />dengan persetujuan pasien serta jejak akses yang dapat diverifikasi.</p>
   <p>
+    <img src="https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&amp;logo=go&amp;logoColor=white" alt="Go" />
+    <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&amp;logo=typescript&amp;logoColor=white" alt="TypeScript" />
+    <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&amp;logo=javascript&amp;logoColor=black" alt="JavaScript" />
+    <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&amp;logo=html5&amp;logoColor=white" alt="HTML5" />
+    <img src="https://img.shields.io/badge/CSS-663399?style=for-the-badge&amp;logo=css&amp;logoColor=white" alt="CSS" />
+    <img src="https://img.shields.io/badge/SQL-4169E1?style=for-the-badge&amp;logo=postgresql&amp;logoColor=white" alt="SQL (PostgreSQL)" />
+  </p>
+  <p>
     <a href="https://github.com/mrizalbasri/Hygeia/actions/workflows/verify.yml"><img src="https://github.com/mrizalbasri/Hygeia/actions/workflows/verify.yml/badge.svg" alt="Status workflow Verify" /></a>
     <img src="https://img.shields.io/badge/status-prototipe-475569" alt="Status: prototipe" />
   </p>
@@ -11,7 +19,7 @@
     <a href="#tentang-hygeia">Tentang</a> ·
     <a href="#fitur-utama">Fitur</a> ·
     <a href="#panduan-demonstrasi">Panduan demonstrasi</a> ·
-    <a href="#arsitektur-dan-teknologi">Teknologi</a> ·
+    <a href="#teknologi">Teknologi</a> ·
     <a href="#instalasi-lokal">Instalasi</a>
   </p>
 </div>
@@ -99,45 +107,18 @@ sesuai kebutuhan pada hubungan perawatan aktif.
 Pencabutan CarePass berlaku pada izin yang diberikan melalui CarePass tersebut.
 Hak akses dari hubungan perawatan atau izin lain tetap mengikuti ketentuannya.
 
-## Pengendalian akses dan audit
+## Teknologi
 
-- **Otorisasi di server.** Hak baca dan perubahan data diperiksa berdasarkan
-  peran, organisasi, kepemilikan, hubungan perawatan, serta status layanan.
-- **Persetujuan pasien.** Pengiriman permintaan lab dan resep memerlukan
-  keputusan pasien; izin baca tertentu memiliki masa berlaku dan pencabutan.
-- **Perlindungan perubahan data.** Operasi perubahan data menggunakan
-  perlindungan CSRF dan validasi input.
-- **Audit berantai.** Kejadian terkait pasien dicatat secara transaksional
-  menggunakan rantai HMAC-SHA256 untuk mendukung pemeriksaan integritas.
-- **Akses darurat.** Jalur khusus memerlukan alasan, memberikan notifikasi
-  kepada pasien, dan menyediakan tinjauan administrator.
-
-Rantai audit mendukung deteksi perubahan pada catatan. Perlindungannya
-bergantung pada keamanan kunci HMAC: pihak yang menguasai database sekaligus
-seluruh kunci audit dapat menulis ulang rantai tersebut.
-
-## Arsitektur dan teknologi
-
-```text
-Browser
-  │
-  ▼
-SvelteKit · antarmuka pasien dan penyedia layanan
-  │ /api/v1 melalui proxy pada origin yang sama
-  ▼
-Go REST API · autentikasi, otorisasi, alur layanan, audit, notifikasi
-  │ transaksi SQL melalui pgx
-  ▼
-PostgreSQL · data layanan, persetujuan, dan rantai audit
-```
+Hygeia menggunakan antarmuka SvelteKit, backend Go, dan basis data PostgreSQL.
+Autentikasi pengguna terintegrasi dengan Clerk.
 
 | Komponen | Teknologi | Peran |
 | --- | --- | --- |
 | Antarmuka | TypeScript 6, Svelte 5, SvelteKit 3 | Halaman publik, autentikasi, dan ruang kerja pengguna. |
 | Tampilan | HTML, CSS, Tailwind CSS 4 | Tata letak responsif dan komponen antarmuka. |
 | Backend | Go 1.26, `net/http` | REST API, aturan akses, dan alur layanan. |
-| Basis data | PostgreSQL, SQL, `pgx/v5`, `golang-migrate` | Penyimpanan relasional, transaksi, dan migrasi skema. |
-| Identitas | Clerk; Argon2id pada mode lokal | Autentikasi Clerk dan akun sintetis untuk pengembangan lokal. |
+| Basis data | PostgreSQL, SQL | Penyimpanan data aplikasi. |
+| Identitas | Clerk | Login dan pengaturan keamanan akun. |
 | Notifikasi | Server-Sent Events (SSE) | Pembaruan notifikasi di dalam aplikasi. |
 | Pengujian | Go testing, Vitest, Playwright | Pengujian backend, komponen, dan alur browser. |
 | Pengembangan | Vite 8, pnpm, Docker Compose, GitHub Actions | Build, lingkungan lokal, container backend, dan pemeriksaan CI. |
@@ -166,30 +147,15 @@ Copy-Item backend/.env.example backend/.env
 Copy-Item frontend/.env.example frontend/.env
 ```
 
-Salin contoh hanya pada checkout baru yang belum mempunyai `.env`. Isi
-`backend/.env` dengan konfigurasi lokal:
-
-| Variabel         | Isi yang diperlukan                                          |
-| ---------------- | ------------------------------------------------------------ |
-| `DATABASE_URL`   | URL koneksi ke database Hygeia.                              |
-| `APP_ENV`        | `development` untuk menjalankan seed demo.                   |
-| `AUTH_PROVIDER`  | `local` untuk demonstrasi lokal dengan akun sintetis.        |
-| `SESSION_SECRET` | 32 byte acak, ditulis sebagai 64 karakter hex.               |
-| `AUDIT_HMAC_KEY` | Kunci acak dengan format yang sama, berbeda dari kunci sesi. |
-| `DEMO_PASSWORD`  | Password akun sintetis, minimal 12 byte.                     |
-| `PUBLIC_APP_URL` | Origin frontend; default `http://localhost:5173`.            |
+Salin contoh hanya pada checkout baru yang belum mempunyai `.env`.
+Lengkapi koneksi PostgreSQL, kunci sesi dan audit, serta password demo pada
+`backend/.env` mengikuti keterangan di file contoh. Untuk demonstrasi lokal,
+gunakan `APP_ENV=development` dan `AUTH_PROVIDER=local`.
 
 Pada `frontend/.env`, gunakan `AUTH_PROVIDER=local` dan
-`API_BASE_URL=http://127.0.0.1:8080` untuk mengikuti demonstrasi lokal ini.
-
-Buat kedua kunci dengan **dua pemanggilan terpisah** dan simpan hasilnya hanya di `.env`:
-
-```powershell
-[Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
-```
-
-Perintah pembangkitan kunci memerlukan PowerShell 7+. Konfigurasi Docker dan
-pengelolaan kunci dijelaskan dalam [README backend](backend/README.md).
+`API_BASE_URL=http://127.0.0.1:8080`. Simpan nilai konfigurasi dan kredensial
+hanya pada environment lokal. Petunjuk konfigurasi tersedia pada
+[panduan backend](backend/README.md#menjalankan).
 
 ### 2. Jalankan backend
 
@@ -221,8 +187,7 @@ pnpm dev
 ```
 
 Buka URL yang ditampilkan Vite, biasanya `http://localhost:5173/`. Halaman masuk
-berada di `/login`, registrasi pasien di `/register`. Browser memakai proxy
-`/api`; SSR memakai `API_BASE_URL` dari `frontend/.env`.
+berada di `/login`, registrasi pasien di `/register`.
 
 ### Akun demo lokal
 
@@ -281,7 +246,6 @@ Hygeia/
 │   ├── src/routes/   # Halaman dan route SvelteKit
 │   ├── static/       # Logo dan aset visual
 │   └── tests/        # Pengujian alur browser
-├── docs/             # Dokumentasi teknis dan riwayat pengembangan
 ├── scripts/          # Skrip verifikasi lokal
 └── .github/          # Workflow CI
 ```
