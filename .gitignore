@@ -9,6 +9,9 @@ node_modules/
 .svelte-kit/
 backend/bin/
 
+# Local proposal drafts, exports, screenshots, and temporary submission files
+/output/
+
 # OS files
 .DS_Store
 Thumbs.db
