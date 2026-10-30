@@ -225,7 +225,7 @@ try {
 		console.log(
 			'PASS four role views and five FAQ disclosures by keyboard, complete care flow, footer navigation'
 		);
-		assert.equal((await page.request.get(`${base}/hero-clinic-v2.png`)).status(), 200);
+		assert.equal((await page.request.get(`${base}/hero-clinic-v2.webp`)).status(), 200);
 		await page
 			.getByRole('navigation', { name: 'Navigasi beranda' })
 			.getByRole('button', { name: 'Fitur', exact: true })
