@@ -182,7 +182,13 @@ try {
 	await view('labs');
 	await page.getByRole('button', { name: 'Buka hasil pemeriksaan', exact: true }).click();
 	await page.getByRole('dialog').getByText('Nilai koreksi fixture demo', { exact: true }).waitFor();
-	await page.getByRole('dialog').getByText('Riwayat hasil dan koreksi', { exact: true }).click();
+	const historyDetails = page
+		.getByRole('dialog')
+		.locator('details', { hasText: 'Riwayat hasil dan koreksi' });
+	await historyDetails.locator('summary').click();
+	await historyDetails.evaluate((el) => {
+		el.open = true;
+	});
 	await page
 		.getByRole('dialog')
 		.getByText(/Nilai rahasia fixture demo/)

@@ -12,7 +12,9 @@
 		record = $state<Entry | null>(null),
 		error = $state(''),
 		loading = $state(true),
-		retry = $state(0);
+		retry = $state(0),
+		historyOpen = $state(false),
+		lastResourceId = '';
 	let latestCorrection = $derived(record?.corrections?.at(-1));
 	let currentResult = $derived(latestCorrection || record);
 	onMount(() => subscribeRealtime(() => retry++));
@@ -29,8 +31,12 @@
 			refresh = retry;
 		void refresh;
 		const controller = new AbortController();
-		record = null;
-		loading = true;
+		if (lastResourceId !== resource) {
+			lastResourceId = resource;
+			record = null;
+			loading = true;
+			historyOpen = false;
+		}
 		error = '';
 		if (expiry && Date.parse(expiry) <= Date.now()) {
 			loading = false;
@@ -118,7 +124,7 @@
 			</dl>
 			{#if latestCorrection}<p role="status">Hasil ini telah dikoreksi oleh laboratorium.</p>
 				{#if latestCorrection.reason}<p>Alasan koreksi terbaru: {latestCorrection.reason}</p>{/if}
-				<details>
+				<details bind:open={historyOpen}>
 					<summary>Riwayat hasil dan koreksi</summary>
 					<section class="wf-medication">
 						<h3>Hasil awal · {dateText(record.submitted_at)}</h3>
