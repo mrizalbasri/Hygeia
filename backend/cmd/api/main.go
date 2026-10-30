@@ -83,16 +83,13 @@ func run(logger *slog.Logger) error {
 	}
 	secure := appEnv == "production"
 	provider := os.Getenv("AUTH_PROVIDER")
-	if provider == "" && !secure {
+	if provider == "" {
 		provider = "local"
 	}
 	if provider != "local" && provider != "clerk" {
 		return errors.New("AUTH_PROVIDER must be local or clerk")
 	}
-	if secure && provider != "clerk" {
-		return errors.New("production requires AUTH_PROVIDER=clerk")
-	}
-	if secure {
+	if provider == "clerk" && secure {
 		pk := os.Getenv("CLERK_PUBLISHABLE_KEY")
 		if pk == "" {
 			pk = os.Getenv("VITE_CLERK_PUBLISHABLE_KEY")
@@ -156,7 +153,21 @@ func run(logger *slog.Logger) error {
 		return errors.New("could not initialize authentication")
 	}
 	frontendURL, _ := url.Parse(shareBase) // ShareBase validated the origin above.
-	authHandler.CSRFTrustedOrigins = []string{frontendURL.Host}
+	var trustedOrigins []string
+	if frontendURL.Host != "" {
+		trustedOrigins = append(trustedOrigins, frontendURL.Host)
+	}
+	if extraOrigins := os.Getenv("CSRF_TRUSTED_ORIGINS"); extraOrigins != "" {
+		for _, o := range strings.Split(extraOrigins, ",") {
+			o = strings.TrimSpace(o)
+			if u, err := url.Parse(o); err == nil && u.Host != "" {
+				trustedOrigins = append(trustedOrigins, u.Host)
+			} else if o != "" {
+				trustedOrigins = append(trustedOrigins, o)
+			}
+		}
+	}
+	authHandler.CSRFTrustedOrigins = trustedOrigins
 	var clerkGate *auth.ClerkGate
 	if provider == "clerk" {
 		publishable := os.Getenv("CLERK_PUBLISHABLE_KEY")
